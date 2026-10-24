@@ -7,6 +7,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseCell } from '../src/core/cells';
 import { parseRemoteMarks } from '../src/marks';
+import { approvedUrl, authHeaders } from '../src/sync';
 import { bucketCells, convertElements, type OverpassElement } from '../src/pipeline/osm';
 
 const URLS = (process.env.OVERPASS_URLS ?? 'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter').split(',');
@@ -64,17 +65,20 @@ async function main(): Promise<void> {
       await sleep(1000);
     }
   }
-  // Dấu camera đã duyệt từ Google Sheet (địa chỉ giữ trong biến bí mật MARKS_URL, không để trong repo công khai).
-  if (process.env.MARKS_URL) {
-    try {
-      const res = await fetch(`${process.env.MARKS_URL}?action=approved`, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
+  // Dấu camera đã duyệt trong Supabase (đọc bằng khoá công khai; chỉ trả các dấu có trạng thái "duyệt").
+  try {
+    const extra: ReturnType<typeof parseRemoteMarks> = [];
+    for (let offset = 0; offset < 20_000; offset += 1000) {
+      const res = await fetch(approvedUrl(offset, 1000), { headers: authHeaders(), signal: AbortSignal.timeout(60_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const extra = parseRemoteMarks(await res.json());
-      for (const a of extra) alerts.set(a.id, a);
-      console.log(`Dấu camera đã duyệt: ${extra.length}`);
-    } catch (e) {
-      console.warn('Không lấy được dấu camera đã duyệt, bỏ qua:', String(e));
+      const rows = (await res.json()) as unknown[];
+      extra.push(...parseRemoteMarks({ marks: rows }));
+      if (rows.length < 1000) break;
     }
+    for (const a of extra) alerts.set(a.id, a);
+    console.log(`Dấu camera đã duyệt: ${extra.length}`);
+  } catch (e) {
+    console.warn('Không lấy được dấu camera đã duyệt, bỏ qua:', String(e));
   }
   const cells = bucketCells({ segments: [...segments.values()], alerts: [...alerts.values()] });
   if (cells.size === 0) throw new Error('Không có ô dữ liệu nào — dừng để không ghi đè bản cũ.');

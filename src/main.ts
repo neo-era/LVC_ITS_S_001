@@ -5,7 +5,7 @@ import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
 import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
-import { isValidSyncUrl, pushMarks } from './sync';
+import { pushMarks } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
 import { searchPlaces, type Place } from './nav/geocode';
 import { fetchRoute, type Route } from './nav/route';
@@ -115,7 +115,6 @@ let tickTimer: number | null = null;
 
 /* ---------- Camera tự đánh dấu ---------- */
 const MARKS_KEY = 'lat.marks.v1';
-const SYNC_KEY = 'lat.sync.url';
 const DEVICE_KEY = 'lat.device';
 
 function lsGet(k: string): string | null {
@@ -174,21 +173,20 @@ function refreshMapAlerts(): void {
 }
 
 async function syncMarks(silent: boolean): Promise<void> {
-  const url = (lsGet(SYNC_KEY) ?? '').trim();
   const status = $('sync-status');
   const say = (t: string) => {
     if (!silent) status.textContent = t;
   };
-  if (!isValidSyncUrl(url)) return say('Chưa có địa chỉ đồng bộ hợp lệ (phải là địa chỉ https://script.google.com/…/exec).');
   const pending = marks.filter((m) => !m.synced);
   if (!pending.length) return say('Không có dấu nào cần đồng bộ.');
+  if (!navigator.onLine) return say('Đang ngoại tuyến. Dấu vẫn lưu trên máy, sẽ gửi khi có mạng.');
   say('Đang đồng bộ…');
   try {
-    const saved = new Set(await pushMarks(url, deviceId(), pending));
+    const saved = new Set(await pushMarks(deviceId(), pending));
     marks = marks.map((m) => (saved.has(m.id) ? { ...m, synced: true } : m));
     saveMarks();
     refreshMarksInfo();
-    say(`Đã gửi ${saved.size} dấu. Dấu sẽ vào dữ liệu cảnh báo sau khi được duyệt trong Google Sheet.`);
+    say(`Đã gửi ${saved.size} dấu. Dấu vào dữ liệu cảnh báo sau khi được duyệt.`);
   } catch (e) {
     say(`Chưa gửi được: ${(e as Error).message}. Dấu vẫn lưu trên máy.`);
   }
@@ -221,8 +219,6 @@ let clearArmed = false;
 $('btn-mark').addEventListener('click', markHere);
 $('toast-undo').addEventListener('click', () => undoFn?.());
 $('btn-sync').addEventListener('click', () => void syncMarks(false));
-($('set-sync') as HTMLInputElement).value = lsGet(SYNC_KEY) ?? '';
-$('set-sync').addEventListener('change', (e) => lsSet(SYNC_KEY, (e.target as HTMLInputElement).value.trim()));
 $('btn-clear-marks').addEventListener('click', () => {
   const b = $('btn-clear-marks');
   if (!clearArmed) {
@@ -652,7 +648,10 @@ destQ.addEventListener('input', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && mode !== 'idle') void holdScreen();
 });
-window.addEventListener('online', refreshNotes);
+window.addEventListener('online', () => {
+  refreshNotes();
+  void syncMarks(true);
+});
 window.addEventListener('offline', refreshNotes);
 
 /* ---------- Cài đặt ứng dụng (PWA) ---------- */

@@ -100,20 +100,33 @@ describe('Engine: dấu tự đánh dấu', () => {
   });
 });
 
-import { isValidSyncUrl, parseSyncResponse } from '../src/sync';
+import { approvedUrl, buildInsertRows, insertUrl, SUPABASE_URL } from '../src/sync';
 
-describe('đồng bộ Google Sheet', () => {
-  it('chỉ nhận địa chỉ Apps Script https', () => {
-    expect(isValidSyncUrl('https://script.google.com/macros/s/AKfy123/exec')).toBe(true);
-    expect(isValidSyncUrl('http://script.google.com/macros/s/x/exec')).toBe(false);
-    expect(isValidSyncUrl('https://evil.example.com/macros/s/x/exec')).toBe(false);
-    expect(isValidSyncUrl('')).toBe(false);
-    expect(isValidSyncUrl('not a url')).toBe(false);
+describe('đồng bộ Supabase', () => {
+  it('địa chỉ gửi và đọc trỏ đúng bảng; đọc chỉ lấy dấu đã duyệt, phân trang', () => {
+    expect(insertUrl()).toBe(`${SUPABASE_URL}/rest/v1/lat_camera_marks?on_conflict=id`);
+    const u = new URL(approvedUrl(1000, 500));
+    expect(u.pathname).toBe('/rest/v1/lat_camera_marks');
+    expect(u.searchParams.get('status')).toBe('eq.duyet');
+    expect(u.searchParams.get('offset')).toBe('1000');
+    expect(u.searchParams.get('limit')).toBe('500');
+    expect(u.searchParams.get('select')).toBe('id,type,lat,lng,dir');
   });
-  it('đọc phản hồi: trả danh sách id đã lưu; lỗi/hỏng → ném lỗi', () => {
-    expect(parseSyncResponse({ ok: true, saved: ['a', 'b', 5] })).toEqual(['a', 'b']);
-    expect(() => parseSyncResponse({ ok: false, error: 'x' })).toThrow();
-    expect(() => parseSyncResponse(null)).toThrow();
-    expect(() => parseSyncResponse({ ok: true })).toThrow();
+  it('dòng gửi đi chỉ có trường cho phép, hướng thiếu thì để null, không gửi cờ synced', () => {
+    const rows = buildInsertRows(
+      [
+        { id: 'm1', type: 'camera', lat: 10.77, lng: 106.7, dir: 90, t: 5, synced: false },
+        { id: 'm2', type: 'blackspot', lat: 10.78, lng: 106.71, t: 6 },
+      ],
+      'dev123',
+    );
+    expect(rows).toEqual([
+      { id: 'm1', type: 'camera', lat: 10.77, lng: 106.7, dir: 90, device: 'dev123', t_client: 5 },
+      { id: 'm2', type: 'blackspot', lat: 10.78, lng: 106.71, dir: null, device: 'dev123', t_client: 6 },
+    ]);
+  });
+  it('dòng dir=null từ máy chủ vẫn đọc được qua parseRemoteMarks', () => {
+    const a = parseRemoteMarks({ marks: [{ id: 'abc', type: 'camera', lat: 10.77, lng: 106.7, dir: null }] });
+    expect(a).toEqual([{ id: 'sabc', type: 'camera', lat: 10.77, lng: 106.7 }]);
   });
 });
