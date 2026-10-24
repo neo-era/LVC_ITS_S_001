@@ -19,6 +19,7 @@ import { filterProvinces, formatMB, suggestProvince, type ProvinceInfo } from '.
 import { OfflineMaps } from './offline/store';
 import { Simulator, simData } from './sim';
 import { updateAction } from './update';
+import { setupFeatures } from './features/wire';
 import { Voice } from './voice';
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
@@ -477,6 +478,7 @@ function onGeo(p: GeolocationPosition): void {
   const v = engine.push(g, p.coords.heading);
   render(v);
   updateMap(g, p.coords.heading, v);
+  features.onSample(g, v);
 }
 
 async function holdScreen(): Promise<void> {
@@ -539,6 +541,7 @@ function startSim(): void {
     const v = engine.push(g, null);
     render(v);
     updateMap(g, 0, v); // mô phỏng luôn đi về phía bắc
+    features.onSample(g, v);
   });
   startTicker();
   void holdScreen();
@@ -546,6 +549,7 @@ function startSim(): void {
 }
 
 function stopAll(): void {
+  features.onStop();
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
   sim.stop();
@@ -567,6 +571,7 @@ function applyMapPadding(): void {
   if (!mapView) return;
   if (mapbox.classList.contains('full')) return mapView.setPadding({ top: 0, bottom: 0 });
   const bar = document.querySelector('.bar') as HTMLElement;
+  if (bar) document.documentElement.style.setProperty('--bar-h', `${bar.offsetHeight}px`);
   let top = 0;
   for (const el of document.querySelectorAll<HTMLElement>('.main > :not(.mapbox)')) {
     const r = el.getBoundingClientRect();
@@ -874,6 +879,7 @@ function renderResults(places: Place[]): void {
         b.append(sm);
       }
       b.addEventListener('click', () => void choose(p));
+      (b as HTMLButtonElement & { _place?: Place })._place = p;
       li.append(b);
       return li;
     }),
@@ -1036,6 +1042,34 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     })
     .catch(() => {});
 }
+
+/* ---------- 8 tính năng (HUD, địa điểm lưu, nhắc nghỉ, báo đèn, chuyến đi, đội xe, lệnh giọng nói, camera hành trình) ---------- */
+const features = setupFeatures({
+  $,
+  lsGet,
+  lsSet,
+  speak: (t) => voice.speak(t),
+  toast,
+  lastFix: () => lastFix,
+  heading: () => engine.currentHeading(),
+  mode: () => mode,
+  deviceId,
+  goTo: async (p) => {
+    await beginRoute(p, true);
+    if (destDlg.open) destDlg.close();
+  },
+  stopNav,
+  markCamera: markHere,
+  toggleVoice: (on) => {
+    voice.enabled = on;
+    settings.voice = on;
+    saveSettings();
+    applyVoiceUi();
+    voice.speak(on ? 'Đã bật giọng nói.' : 'Đã tắt giọng nói.', true);
+  },
+  openSettings: () => settingsDlg.showModal(),
+  closeSettings: () => settingsDlg.close(),
+});
 
 applyTheme();
 applyVoiceUi();

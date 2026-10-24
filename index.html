@@ -118,6 +118,18 @@
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       <span>Đánh dấu camera</span>
     </button>
+    <button class="bar-btn" id="btn-light" type="button" aria-label="Báo đèn tắt" title="Báo đèn tắt">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
+      <span>Báo đèn tắt</span>
+    </button>
+    <button class="bar-btn" id="btn-cam" type="button" aria-label="Camera hành trình" title="Camera hành trình" aria-pressed="false">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <span>Camera hành trình</span>
+    </button>
+    <button class="bar-btn" id="btn-mic" type="button" aria-label="Ra lệnh bằng giọng nói" title="Ra lệnh bằng giọng nói" hidden>
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+      <span>Ra lệnh bằng giọng nói</span>
+    </button>
     <button class="bar-btn" id="btn-voice" type="button" aria-pressed="true" aria-label="Giọng nói" title="Giọng nói">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
       <span id="btn-voice-text">Giọng nói: Bật</span>
@@ -127,6 +139,20 @@
       <span>Dừng</span>
     </button>
   </nav>
+
+  <div class="rec" id="rec" hidden><span class="rec-dot" aria-hidden="true"></span><span id="rec-text">REC</span></div>
+  <video class="cam-preview" id="cam-preview" muted playsinline hidden></video>
+
+  <div class="hudmode" id="hudmode" hidden>
+    <div class="hm-inner" id="hm-inner">
+      <div class="hm-row">
+        <span class="hm-speed" id="hm-speed">--</span>
+        <div class="sign hm-sign" id="hm-limit" hidden></div>
+      </div>
+      <div class="hm-line" id="hm-line"></div>
+    </div>
+    <button class="hm-exit" id="btn-hud-exit" type="button">Thoát HUD</button>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span id="toast-text"></span>
@@ -157,7 +183,9 @@
       <span>Tên nơi hoặc địa chỉ</span>
       <input id="dest-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Ví dụ: Chợ Bến Thành">
     </label>
+    <div class="saved" id="saved-places"></div>
     <button class="secondary" id="btn-dest-map" type="button">Chọn trên bản đồ</button>
+    <button class="secondary" id="btn-save-here" type="button">Lưu vị trí hiện tại (tên = chữ đang gõ)</button>
     <ul class="results" id="dest-results"></ul>
     <p class="muted note" id="dest-status" role="status" aria-live="polite"></p>
   </div>
@@ -187,6 +215,77 @@
     <h3 class="settings-sub">Tất cả tỉnh/thành</h3>
     <div class="off-chips" id="off-all"></div>
     <p class="muted note" id="off-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+
+<dialog id="trips" class="settings" aria-labelledby="trips-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="trips-title">Chuyến đi</h2>
+      <button class="icon-btn" data-close="trips" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note">Mỗi lần bấm “Bắt đầu lái xe” đến khi bấm Dừng là một chuyến. Điểm lái an toàn trừ khi vượt tốc độ (biển thật) và phanh gấp.</p>
+    <ul class="off-list" id="trip-list"></ul>
+    <button class="secondary" id="btn-trip-csv" type="button">Xuất CSV (Excel)</button>
+    <button class="secondary" id="btn-trip-clear" type="button">Xoá lịch sử chuyến đi</button>
+  </div>
+</dialog>
+
+<dialog id="clips" class="settings" aria-labelledby="clips-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="clips-title">Video hành trình</h2>
+      <button class="icon-btn" data-close="clips" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note" id="clip-usage"></p>
+    <label class="field" for="set-cam-limit">
+      <span>Dung lượng tối đa</span>
+      <select id="set-cam-limit"><option value="1">1 GB</option><option value="2">2 GB</option><option value="4">4 GB</option><option value="8">8 GB</option></select>
+    </label>
+    <label class="field check" for="set-cam-auto"><span>Tự khoá video khi va chạm mạnh</span><input id="set-cam-auto" type="checkbox"></label>
+    <button class="secondary" id="btn-cam-lock" type="button">Khoá đoạn đang quay</button>
+    <ul class="off-list" id="clip-list"></ul>
+    <video class="clip-player" id="clip-player" controls playsinline hidden></video>
+    <button class="secondary" id="btn-clip-clear" type="button">Xoá tất cả video không khoá</button>
+    <p class="muted note">Bản chạy trên trình duyệt chỉ quay khi app đang mở và màn hình sáng. Video chỉ lưu trên điện thoại, không gửi đi đâu.</p>
+  </div>
+</dialog>
+
+<dialog id="reports" class="settings" aria-labelledby="reports-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="reports-title">Báo cáo chiếu sáng</h2>
+      <button class="icon-btn" data-close="reports" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note" id="rep-info"></p>
+    <ul class="off-list" id="rep-list"></ul>
+    <button class="primary" id="btn-rep-csv" type="button">Xuất CSV (Excel)</button>
+    <button class="secondary" id="btn-rep-sync" type="button">Gửi lên máy chủ</button>
+    <button class="secondary" id="btn-rep-clear" type="button">Xoá danh sách trên máy</button>
+    <p class="muted note" id="rep-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+
+<dialog id="fleet" class="settings" aria-labelledby="fleet-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="fleet-title">Đội xe</h2>
+      <button class="icon-btn" data-close="fleet" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note">Khi bật, xe gửi vị trí mỗi 15 giây trong lúc chạy cho người có cùng mã đội xem trên trang điều độ. Tắt là ngừng gửi ngay.</p>
+    <label class="field stack" for="fleet-name"><span>Tên xe / tài xế</span><input id="fleet-name" type="text" autocomplete="off" placeholder="Ví dụ: Xe thang 51C-123.45"></label>
+    <label class="field stack" for="fleet-team"><span>Mã đội (≥ 8 ký tự, chữ/số/-)</span><input id="fleet-team" type="text" autocomplete="off" placeholder="Ví dụ: KVTT-DOIXE-01"></label>
+    <label class="field check" for="fleet-on"><span>Chia sẻ vị trí khi lái</span><input id="fleet-on" type="checkbox"></label>
+    <a class="secondary link-btn" id="fleet-open" href="./fleet.html" target="_blank" rel="noopener">Mở trang điều độ</a>
+    <p class="muted note" id="fleet-status" role="status" aria-live="polite"></p>
   </div>
 </dialog>
 
@@ -251,6 +350,21 @@
     <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
     <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>
     <button class="secondary" id="btn-offline" type="button">Bản đồ offline theo tỉnh…</button>
+    <h3 class="settings-sub">Lái xe</h3>
+    <label class="field" for="set-rest">
+      <span>Nhắc nghỉ khi lái liên tục</span>
+      <select id="set-rest"><option value="0">Tắt</option><option value="120">2 giờ</option><option value="180">3 giờ</option><option value="240">4 giờ</option></select>
+    </label>
+    <p class="muted note">Xe kinh doanh vận tải / vận tải nội bộ: luật cho lái liên tục tối đa 4 giờ và 10 giờ mỗi ngày (Điều 64 Luật TTATGT đường bộ 2024). App báo khi đủ 10 giờ lái trong ngày.</p>
+    <label class="field" for="set-hud-flip">
+      <span>Chiếu kính lái (HUD)</span>
+      <select id="set-hud-flip"><option value="none">Không lật</option><option value="x">Lật ngang</option><option value="y">Lật dọc</option></select>
+    </label>
+    <button class="secondary" id="btn-hud" type="button">Bật chế độ chiếu kính lái</button>
+    <button class="secondary" id="btn-trips" type="button">Chuyến đi đã lưu…</button>
+    <button class="secondary" id="btn-clips" type="button">Video hành trình…</button>
+    <button class="secondary" id="btn-reports" type="button">Báo cáo chiếu sáng…</button>
+    <button class="secondary" id="btn-fleet" type="button">Đội xe…</button>
     <h3 class="settings-sub">Camera tự đánh dấu</h3>
     <p class="muted note" id="marks-info"></p>
     <button class="secondary" id="btn-sync" type="button">Đồng bộ ngay</button>

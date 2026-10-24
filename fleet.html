@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Điều độ đội xe — Lái An Toàn</title>
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" type="image/png" href="./icons/favicon.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<script type="module" src="/src/fleet-page.ts"></script>
+</head>
+<body>
+<div class="fleet-app">
+  <header class="fleet-head">
+    <h1>Điều độ đội xe</h1>
+    <form id="team-form" class="fleet-form">
+      <label for="team" class="sr-only">Mã đội</label>
+      <input id="team" type="text" autocomplete="off" placeholder="Nhập mã đội (≥ 8 ký tự)">
+      <button class="primary" type="submit">Xem</button>
+    </form>
+    <p class="muted note" id="fleet-msg" role="status" aria-live="polite">Vị trí cập nhật mỗi 10 giây. Chỉ người có mã đội mới xem được.</p>
+  </header>
+  <div class="fleet-body">
+    <div id="fleet-map" class="fleet-map"></div>
+    <ul id="fleet-list" class="fleet-list"></ul>
+  </div>
+</div>
+</body>
+</html>

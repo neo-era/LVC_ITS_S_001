@@ -1216,3 +1216,312 @@ select {
     min-width: 48px;
   }
 }
+
+/* ===== 8 tính năng mới ===== */
+.field input[type='text'] {
+  min-height: 52px;
+  border-radius: var(--radius-s);
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 17px;
+  padding: 0 14px;
+}
+.link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+/* Cột nút: 8 nút, thu nhỏ trên màn hình thấp */
+.mapbox:not(.full) .map-expand {
+  bottom: calc(24px + var(--bar-h, 272px) + 12px + env(safe-area-inset-bottom));
+}
+@media (max-height: 760px) {
+  .bar {
+    gap: 8px;
+  }
+  .bar-btn {
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .main {
+    padding-right: 58px;
+  }
+}
+.bar-btn.rec-on {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+  opacity: 1;
+}
+.rec {
+  position: absolute;
+  z-index: 3;
+  left: calc(14px + env(safe-area-inset-left));
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  background: rgb(198 40 40 / 0.9);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.rec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  animation: blink 1.2s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.cam-preview {
+  position: absolute;
+  z-index: 3;
+  left: calc(14px + env(safe-area-inset-left));
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid rgb(255 255 255 / 0.8);
+  background: #000;
+}
+.cam-preview.big {
+  width: 60vw;
+  height: 45vw;
+}
+/* Chế độ chiếu kính lái: nền đen, số rất to, chữ sáng (phản chiếu rõ trên kính) */
+.hudmode {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  color: #e8fff0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hm-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+}
+.hm-row {
+  display: flex;
+  align-items: center;
+  gap: 6vw;
+}
+.hm-speed {
+  font-size: min(42vw, 40vh);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hm-speed[data-state='over'] {
+  color: #ff5a4f;
+}
+.hm-speed[data-state='near'] {
+  color: #ffc247;
+}
+.hm-sign {
+  width: min(24vw, 22vh);
+  border-width: min(2.6vw, 2.4vh);
+  font-size: min(10vw, 9vh);
+}
+.hm-sign.est {
+  border-style: dashed;
+  border-color: #9fb0c3;
+}
+.hm-line {
+  font-size: min(7vw, 6vh);
+  font-weight: 800;
+  text-align: center;
+  max-width: 92vw;
+}
+.hm-exit {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  right: calc(10px + env(safe-area-inset-right));
+  min-height: 44px;
+  border: 1px solid #333;
+  background: #111;
+  color: #888;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-weight: 700;
+}
+/* Địa điểm lưu */
+.saved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.saved:empty {
+  display: none;
+}
+.saved-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.saved-chip button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.saved-chip .x {
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 20px;
+}
+.results li {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.results li > button:first-child {
+  flex: 1;
+}
+.save-star {
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  padding: 0 10px;
+  min-width: 64px;
+  cursor: pointer;
+}
+.score {
+  min-width: 44px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+.score.good {
+  color: var(--ok);
+}
+.score.mid {
+  color: var(--accent);
+}
+.score.bad {
+  color: var(--over);
+}
+.mini-link {
+  color: var(--focus);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 10px 6px;
+}
+.clip-player {
+  width: 100%;
+  max-height: 40vh;
+  border-radius: var(--radius-s);
+  background: #000;
+}
+#clip-list .off-row button {
+  min-width: 48px;
+  padding: 0 8px;
+}
+
+/* Trang điều độ đội xe */
+.fleet-app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+.fleet-head {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fleet-head h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.fleet-form {
+  display: flex;
+  gap: 8px;
+}
+.fleet-form input {
+  flex: 1;
+  min-height: 48px;
+  border-radius: var(--radius-s);
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  padding: 0 12px;
+}
+.fleet-form .primary {
+  min-height: 48px;
+  padding: 0 18px;
+}
+.fleet-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+@media (min-width: 900px) {
+  .fleet-body {
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: 1fr;
+  }
+}
+.fleet-map {
+  min-height: 50vh;
+}
+.fleet-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  max-height: 40vh;
+}
+@media (min-width: 900px) {
+  .fleet-list {
+    max-height: none;
+  }
+}
+.fleet-list .stale {
+  opacity: 0.6;
+}
+.fleet-marker {
+  background: #14532d;
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+}
+.fleet-marker.stale {
+  background: #6b7280;
+}
