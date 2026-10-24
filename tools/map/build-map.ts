@@ -47,6 +47,7 @@ async function prepare(): Promise<void> {
     console.log(`::warning title=Dùng khung bao cho ${fb.name}::Không có đa giác ranh giới trong dữ liệu`);
   }
   provinces.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  if (provinces.length !== 34) console.log(`::warning title=Số tỉnh/thành::${provinces.length} (mong đợi 34)`);
   if (provinces.length < 20) throw new Error(`Chỉ tìm thấy ${provinces.length} tỉnh — dữ liệu ranh giới bất thường`);
   await mkdir(REGIONS, { recursive: true });
   for (const p of provinces) await writeFile(join(REGIONS, `${p.slug}.geojson`), JSON.stringify(p.feature));

@@ -51,13 +51,13 @@ export class MapView {
           const base = new URL('./', location.href).href;
           if (typeof j.glyphs === 'string' && !/^https?:/.test(j.glyphs)) j.glyphs = base + j.glyphs;
           if (typeof j.sprite === 'string' && !/^https?:/.test(j.sprite)) j.sprite = base + j.sprite;
-          st = j;
+          this.styles.set(key, j); // chỉ nhớ style tự dựng; bản dự phòng trực tuyến thì lần sau thử lại
+          return j;
         }
       } catch {
         /* giữ style trực tuyến */
       }
     }
-    this.styles.set(key, st);
     return st;
   }
 
@@ -82,7 +82,14 @@ export class MapView {
     map.on('error', (e) => {
       // Style chính lỗi (mạng, URL) → thử style dự phòng một lần.
       const msg = String((e as { error?: unknown }).error ?? '');
-      if (!this.triedFallback && /style|404|Failed to fetch|NetworkError/i.test(msg) && !map.isStyleLoaded()) {
+      const usingOwn = [...this.styles.values()].length > 0; // style tự dựng (latmap) không đổi sang trực tuyến
+      if (
+        !usingOwn &&
+        navigator.onLine &&
+        !this.triedFallback &&
+        /style|404|Failed to fetch|NetworkError|Load failed/i.test(msg) &&
+        !map.isStyleLoaded()
+      ) {
         this.triedFallback = true;
         map.setStyle(STYLE_URLS.fallback);
       }
@@ -158,6 +165,16 @@ export class MapView {
     this.onFollowChange(v);
   }
 
+  /** Tải lại các ô bản đồ (vd khi có mạng trở lại sau đoạn mất sóng). */
+  reloadTiles(): void {
+    const m = this.map;
+    if (!m) return;
+    for (const id of Object.keys(m.getStyle()?.sources ?? {})) {
+      const src = m.getSource(id) as { type?: string; setTiles?: (t: string[]) => void; tiles?: string[] } | undefined;
+      if (src?.type === 'vector' && src.setTiles && src.tiles) src.setTiles([...src.tiles]);
+    }
+  }
+
   /** Tâm bản đồ hiện tại (dùng khi chọn điểm đến). */
   center(): { lat: number; lng: number } | null {
     const c = this.map?.getCenter();
@@ -189,7 +206,9 @@ export class MapView {
     if (this.dark === dark) return;
     this.dark = dark;
     this.triedFallback = false;
-    void this.styleFor(dark).then((st) => this.map?.setStyle(st as never));
+    void this.styleFor(dark).then((st) => {
+      if (this.dark === dark) this.map?.setStyle(st as never);
+    });
   }
 
   setAlerts(alerts: AlertPoint[]): void {

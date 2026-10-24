@@ -21,7 +21,7 @@ export function collectFontstacks(layers: Layer[]): string[] {
     const tf = l.layout?.['text-font'];
     if (tf) walk(tf);
   }
-  return [...out].filter((s) => !/^(get|case|match|step|coalesce)$/.test(s));
+  return [...out].filter((s) => /\s/.test(s) || s.includes(',')); // tên font có khoảng trắng; bỏ toán tử như get/zoom
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

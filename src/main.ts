@@ -87,7 +87,7 @@ const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(
 const sim = new Simulator();
 
 const offline = new OfflineMaps();
-const offlineReady = offline.init().catch(() => {});
+void offline.init();
 const mapbox = $('mapbox');
 let mapView: MapView | null = null;
 let mapStarting = false;
@@ -100,7 +100,6 @@ async function ensureMap(lat: number, lng: number): Promise<void> {
   if (mapView || mapStarting) return;
   mapStarting = true;
   try {
-    await offlineReady;
     const mv = new MapView($('map'), isDark(), offline);
     mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
     await mv.init({ lat, lng });
@@ -688,15 +687,24 @@ function offRow(p: { slug: string; name: string; bytes: number }, kind: 'mine' |
     btn.addEventListener('click', () => dl?.ctl.abort());
   } else if (offline.has(p.slug)) {
     const m = offline.list().find((x) => x.slug === p.slug)!;
+    const newer = provincesUpdated && m.updated && provincesUpdated > m.updated && provinces.some((x) => x.slug === p.slug);
     sm.className = 'ok';
     sm.textContent = `Đã tải · ${formatMB(m.bytes)}${m.updated ? ` · ${m.updated.split('-').reverse().join('/')}` : ''}`;
     name.append(sm);
-    btn.className = 'del';
-    btn.textContent = 'Xoá';
-    btn.addEventListener('click', async () => {
-      await offline.remove(p.slug);
-      void renderOffline();
-    });
+    if (newer) {
+      sm.textContent += ' · có bản mới';
+      btn.className = 'dl';
+      btn.textContent = 'Cập nhật';
+      btn.disabled = dl !== null;
+      btn.addEventListener('click', () => void startDownload(p.slug));
+    } else {
+      btn.className = 'del';
+      btn.textContent = 'Xoá';
+      btn.addEventListener('click', async () => {
+        await offline.remove(p.slug);
+        void renderOffline();
+      });
+    }
   } else {
     sm.textContent = formatMB(p.bytes);
     name.append(sm);
@@ -906,6 +914,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', () => {
   refreshNotes();
+  mapView?.reloadTiles();
   void syncMarks(true);
 });
 window.addEventListener('offline', refreshNotes);

@@ -44,6 +44,8 @@ export function pickProvinces(features: unknown[]): Province[] {
     const ft = f as { properties?: Record<string, unknown>; geometry?: { type: string; coordinates: unknown } };
     const p = ft.properties ?? {};
     if (p.boundary !== 'administrative' || String(p.admin_level) !== '4') continue;
+    const iso = p['ISO3166-2'];
+    if (typeof iso === 'string' && !iso.startsWith('VN-')) continue; // tỉnh nước láng giềng
     const name = typeof p['name:vi'] === 'string' ? (p['name:vi'] as string) : typeof p.name === 'string' ? p.name : '';
     if (!name) continue;
     const bbox = featureBBox(ft.geometry);

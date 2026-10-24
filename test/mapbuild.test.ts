@@ -93,3 +93,15 @@ describe('tileBBox / bboxContains', () => {
     expect(bboxContains([0, 0, 10, 10], [11, 11, 12, 12])).toBe(false);
   });
 });
+
+describe('các sửa sau review', () => {
+  it('bỏ tỉnh nước láng giềng (ISO3166-2 không bắt đầu bằng VN-)', () => {
+    const ring: [number, number][] = [[105, 20], [106, 20], [106, 21], [105, 20]];
+    const r = pickProvinces([poly('Hà Nội', ring, { 'ISO3166-2': 'VN-HN' }), poly('Yunnan', ring, { 'ISO3166-2': 'CN-YN' })]);
+    expect(r.map((p) => p.name)).toEqual(['Hà Nội']);
+  });
+  it('không coi "zoom", "get" là tên font', () => {
+    const layers = [{ id: 'a', type: 'symbol', layout: { 'text-font': ['step', ['zoom'], ['literal', ['Noto Sans Regular']], 10, ['literal', ['Noto Sans Bold']]] } }];
+    expect(collectFontstacks(layers).sort()).toEqual(['Noto Sans Bold', 'Noto Sans Regular']);
+  });
+});

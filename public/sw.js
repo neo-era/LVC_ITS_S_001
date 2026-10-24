@@ -1,4 +1,4 @@
-const VERSION = 'lat-v4';
+const VERSION = 'lat-v5';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 
@@ -32,6 +32,22 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
   // Tệp bản đồ theo tỉnh rất lớn: app tự lưu khi người dùng bấm Tải, service worker không giữ thêm bản sao.
   if (url.pathname.includes('/map/tiles/')) return;
+
+  if (url.pathname.includes('/map/')) {
+    // Danh sách tỉnh, style, sprite, font: ưu tiên bản mới; mất mạng thì lấy bản đã lưu (kể cả bản lưu kèm tỉnh đã tải).
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            e.waitUntil(caches.open(SHELL).then((c) => c.put(req, copy)));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || new Response('', { status: 503 }))),
+    );
+    return;
+  }
 
   if (url.pathname.includes('/data/')) {
     // Dữ liệu: ưu tiên bản mới nhất, mất mạng thì dùng bản đã lưu.
