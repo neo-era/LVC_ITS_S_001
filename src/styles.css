@@ -784,3 +784,51 @@ select {
 .mapbox.full .map-follow {
   bottom: calc(120px + env(safe-area-inset-bottom));
 }
+
+/* Chọn điểm đến trên bản đồ: ghim cố định giữa màn hình, kéo bản đồ để chọn */
+.mapbox.full .map-pick:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.45));
+}
+.map-pick-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  pointer-events: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-m);
+  padding: 14px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.map-pick-hint {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.map-pick-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+}
+.map-pick-actions button {
+  min-height: 56px;
+}
+.mapbox.picking .map-hud,
+.mapbox.picking .map-alert,
+.mapbox.picking .map-follow {
+  display: none !important;
+}

@@ -7,7 +7,7 @@ import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
 import { pushMarks } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
-import { searchPlaces, type Place } from './nav/geocode';
+import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geocode';
 import { fetchRoute, type Route } from './nav/route';
 import { mapHud } from './hud';
 import { MapView } from './map';
@@ -544,6 +544,7 @@ function stopAll(): void {
 
 /* ---------- Sự kiện ---------- */
 function setMapFull(full: boolean): void {
+  if (!full) endPick();
   mapbox.classList.toggle('full', full);
   $('btn-map-expand').setAttribute('aria-pressed', String(full));
   $('btn-map-expand').setAttribute('aria-label', full ? 'Thu nhỏ bản đồ' : 'Mở rộng bản đồ');
@@ -691,6 +692,46 @@ $('btn-nav').addEventListener('click', () => {
   destQ.focus();
 });
 $('btn-dest-close').addEventListener('click', () => destDlg.close());
+
+/* Chọn điểm đến bằng cách kéo bản đồ dưới ghim cố định */
+function startPick(): void {
+  if (!mapView || !lastFix) {
+    destMsg('Hãy bấm “Bắt đầu lái xe” và chờ bản đồ hiện rồi chọn trên bản đồ.');
+    return;
+  }
+  destDlg.close();
+  setMapFull(true);
+  mapView.stopFollow();
+  mapbox.classList.add('picking');
+  $('map-pick').hidden = false;
+  $('map-pick-hint').textContent = 'Kéo bản đồ để đặt ghim vào nơi muốn đến';
+}
+function endPick(): void {
+  mapbox.classList.remove('picking');
+  $('map-pick').hidden = true;
+}
+$('btn-dest-map').addEventListener('click', startPick);
+$('btn-pick-cancel').addEventListener('click', () => {
+  endPick();
+  mapView?.recenter();
+});
+$('btn-pick-go').addEventListener('click', async () => {
+  const c = mapView?.center();
+  if (!c) return;
+  const btn = $('btn-pick-go') as HTMLButtonElement;
+  btn.disabled = true;
+  $('map-pick-hint').textContent = 'Đang tìm đường…';
+  try {
+    const place = pickedPlace(c.lat, c.lng, navigator.onLine ? await reversePlace(c.lat, c.lng) : []);
+    await beginRoute(place, true);
+    endPick();
+    mapView?.recenter();
+  } catch (e) {
+    $('map-pick-hint').textContent = (e as Error).message || 'Không tìm được đường đi tới điểm này.';
+  } finally {
+    btn.disabled = false;
+  }
+});
 $('btn-nav-stop').addEventListener('click', stopNav);
 destQ.addEventListener('input', () => {
   if (searchTimer !== null) window.clearTimeout(searchTimer);

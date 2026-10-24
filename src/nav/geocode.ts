@@ -57,3 +57,27 @@ export async function searchPlaces(q: string, near: { lat: number; lng: number }
   if (!res.ok) throw new Error(`Máy chủ tìm địa điểm trả lỗi ${res.status}`);
   return parsePhoton(await res.json());
 }
+
+/** Điểm người dùng chọn trên bản đồ: tên lấy từ kết quả tra ngược (nếu có), toạ độ giữ đúng điểm đã chọn. */
+export function pickedPlace(lat: number, lng: number, nearby: Place[]): Place {
+  const n = nearby[0];
+  return n
+    ? { name: n.name, detail: n.detail, lat, lng }
+    : { name: 'Vị trí đã chọn', detail: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng };
+}
+
+/** Tra ngược toạ độ → tên nơi (Photon). Lỗi/mất mạng → danh sách rỗng. */
+export async function reversePlace(lat: number, lng: number, signal?: AbortSignal): Promise<Place[]> {
+  try {
+    const url = new URL('https://photon.komoot.io/reverse');
+    url.searchParams.set('lat', String(lat));
+    url.searchParams.set('lon', String(lng));
+    url.searchParams.set('limit', '1');
+    url.searchParams.set('lang', 'default');
+    const res = await fetch(url, { signal });
+    if (!res.ok) return [];
+    return parsePhoton(await res.json());
+  } catch {
+    return [];
+  }
+}

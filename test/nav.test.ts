@@ -166,3 +166,15 @@ describe('Guidance', () => {
     expect(() => g.update({ lat: Number.NaN, lng: BASE.lng, t: 1 })).not.toThrow();
   });
 });
+
+import { pickedPlace } from '../src/nav/geocode';
+
+describe('pickedPlace (điểm chọn trên bản đồ)', () => {
+  it('có kết quả tra ngược → dùng tên gần nhất, giữ đúng toạ độ đã chọn', () => {
+    const p = pickedPlace(10.7712345, 106.7012345, [{ name: 'Chợ Bến Thành', detail: 'Quận 1', lat: 10.772, lng: 106.698 }]);
+    expect(p).toEqual({ name: 'Chợ Bến Thành', detail: 'Quận 1', lat: 10.7712345, lng: 106.7012345 });
+  });
+  it('không có tên → "Vị trí đã chọn" kèm toạ độ', () => {
+    expect(pickedPlace(10.77123, 106.70123, [])).toEqual({ name: 'Vị trí đã chọn', detail: '10.77123, 106.70123', lat: 10.77123, lng: 106.70123 });
+  });
+});

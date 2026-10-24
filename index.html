@@ -76,6 +76,16 @@
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
       </button>
       <button class="map-btn map-follow" id="btn-map-follow" type="button" hidden>Theo xe</button>
+      <div class="map-pick" id="map-pick" hidden>
+        <svg class="map-pin" aria-hidden="true" width="44" height="44" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="#E53935" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>
+        <div class="map-pick-bar">
+          <p class="map-pick-hint" id="map-pick-hint">Kéo bản đồ để đặt ghim vào nơi muốn đến</p>
+          <div class="map-pick-actions">
+            <button class="secondary" id="btn-pick-cancel" type="button">Huỷ</button>
+            <button class="primary" id="btn-pick-go" type="button">Đi đến đây</button>
+          </div>
+        </div>
+      </div>
       <div class="map-hud" id="map-hud" aria-hidden="true">
         <div class="map-speed"><b id="mh-speed">--</b><small>km/h</small></div>
         <div class="map-limit" id="mh-limit-box" hidden>
@@ -147,6 +157,7 @@
       <span>Tên nơi hoặc địa chỉ</span>
       <input id="dest-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Ví dụ: Chợ Bến Thành">
     </label>
+    <button class="secondary" id="btn-dest-map" type="button">Chọn trên bản đồ</button>
     <ul class="results" id="dest-results"></ul>
     <p class="muted note" id="dest-status" role="status" aria-live="polite"></p>
   </div>

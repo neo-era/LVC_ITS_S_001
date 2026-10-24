@@ -118,6 +118,17 @@ export class MapView {
     this.onFollowChange(v);
   }
 
+  /** Tâm bản đồ hiện tại (dùng khi chọn điểm đến). */
+  center(): { lat: number; lng: number } | null {
+    const c = this.map?.getCenter();
+    return c ? { lat: c.lat, lng: c.lng } : null;
+  }
+
+  /** Ngừng bám theo xe (để người dùng kéo bản đồ chọn điểm). */
+  stopFollow(): void {
+    this.setFollow(false);
+  }
+
   recenter(): void {
     this.setFollow(true);
     if (this.last) this.move(this.last.lat, this.last.lng, this.last.heading, this.last.kmh);
