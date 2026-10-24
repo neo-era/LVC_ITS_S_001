@@ -174,7 +174,20 @@
     </label>
 
     <button class="secondary" id="btn-sim" type="button"><span id="btn-sim-text">Chạy thử mô phỏng</span></button>
+    <label class="field" for="set-voice-name">
+      <span>Giọng đọc</span>
+      <select id="set-voice-name"><option value="">Tự chọn</option></select>
+    </label>
+    <label class="field" for="set-voice-style">
+      <span>Kiểu giọng</span>
+      <select id="set-voice-style">
+        <option value="cute">Dễ thương</option>
+        <option value="normal">Bình thường</option>
+        <option value="warm">Trầm ấm</option>
+      </select>
+    </label>
     <button class="secondary" id="btn-test-voice" type="button">Thử giọng đọc</button>
+    <p class="muted note" id="voice-hint">Muốn giọng hay hơn: iPhone vào Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt và tải giọng bản nâng cao nếu có; Android vào Cài đặt → Chuyển văn bản thành giọng nói, chọn Google và tải giọng tiếng Việt. Tải xong mở lại app.</p>
     <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
     <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>
     <h3 class="settings-sub">Camera tự đánh dấu</h3>

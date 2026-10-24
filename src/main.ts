@@ -18,8 +18,10 @@ interface Settings {
   radius: number;
   voice: boolean;
   theme: 'auto' | 'dark' | 'light';
+  voiceName: string;
+  voiceStyle: string;
 }
-const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto' };
+const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto', voiceName: '', voiceStyle: 'normal' };
 const KEY = 'lat.settings.v1';
 
 function loadSettings(): Settings {
@@ -28,7 +30,9 @@ function loadSettings(): Settings {
     if (raw && typeof raw === 'object') {
       const radius = [300, 500, 800, 1000].includes(raw.radius) ? raw.radius : DEFAULTS.radius;
       const theme = ['auto', 'dark', 'light'].includes(raw.theme) ? raw.theme : DEFAULTS.theme;
-      return { radius, theme, voice: raw.voice !== false };
+      const voiceName = typeof raw.voiceName === 'string' ? raw.voiceName : '';
+      const voiceStyle = ['cute', 'normal', 'warm'].includes(raw.voiceStyle) ? raw.voiceStyle : 'normal';
+      return { radius, theme, voice: raw.voice !== false, voiceName, voiceStyle };
     }
   } catch {
     /* bỏ qua */
@@ -71,6 +75,8 @@ const settingsDlg = $('settings') as HTMLDialogElement;
 
 const voice = new Voice();
 voice.enabled = settings.voice;
+voice.voiceName = settings.voiceName;
+voice.style = settings.voiceStyle;
 const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(t) });
 const sim = new Simulator();
 
@@ -548,6 +554,8 @@ $('btn-voice').addEventListener('click', () => {
 $('btn-settings').addEventListener('click', () => {
   ($('set-radius') as HTMLSelectElement).value = String(settings.radius);
   ($('set-theme') as HTMLSelectElement).value = settings.theme;
+  ($('set-voice-style') as HTMLSelectElement).value = settings.voiceStyle;
+  fillVoiceList();
   applyVoiceUi();
   settingsDlg.showModal();
 });
@@ -569,10 +577,35 @@ $('set-voice').addEventListener('change', (e) => {
 });
 $('btn-test-voice').addEventListener('click', () => {
   voice.unlock();
-  const was = voice.enabled;
-  voice.enabled = true;
-  voice.speak('Phía trước 400 mét có camera phạt nguội. Chú ý tốc độ.');
-  voice.enabled = was;
+  voice.speak('Phía trước 400 mét có camera phạt nguội. Chú ý tốc độ.', true);
+});
+
+function fillVoiceList(): void {
+  const sel = $('set-voice-name') as HTMLSelectElement;
+  const opts = voice.list().map((v) => {
+    const o = document.createElement('option');
+    o.value = v.name;
+    o.textContent = v.name;
+    return o;
+  });
+  const auto = document.createElement('option');
+  auto.value = '';
+  auto.textContent = opts.length ? 'Tự chọn (giọng tốt nhất)' : 'Máy chưa có giọng tiếng Việt';
+  sel.replaceChildren(auto, ...opts);
+  sel.value = opts.some((o) => o.value === settings.voiceName) ? settings.voiceName : '';
+}
+voice.onVoicesChanged(fillVoiceList);
+$('set-voice-name').addEventListener('change', (e) => {
+  settings.voiceName = (e.target as HTMLSelectElement).value;
+  voice.setVoice(settings.voiceName);
+  saveSettings();
+  voice.speak('Xin chào, em sẽ đọc cảnh báo bằng giọng này.', true);
+});
+$('set-voice-style').addEventListener('change', (e) => {
+  settings.voiceStyle = (e.target as HTMLSelectElement).value;
+  voice.style = settings.voiceStyle;
+  saveSettings();
+  voice.speak('Xin chào, em sẽ đọc cảnh báo bằng giọng này.', true);
 });
 
 /* ---------- Tìm đích ---------- */
