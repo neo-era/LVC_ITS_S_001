@@ -47,6 +47,8 @@ export class OfflineMaps {
   private loaded: Loaded[] = [];
   private meta: Downloaded[] = readMeta();
   private ready: Promise<void> = Promise.resolve();
+  /** Tên các tỉnh đã tải nhưng bị trình duyệt xoá (vd Safari dọn dữ liệu khi lâu không mở). */
+  evicted: string[] = [];
 
   list(): Downloaded[] {
     return this.meta;
@@ -72,7 +74,10 @@ export class OfflineMaps {
           await cache.delete(urlOf(m.file)).catch(() => {}); // tệp hỏng: xoá hẳn, không để chiếm chỗ
         }
       }
-      if (keep.length !== this.meta.length) writeMeta((this.meta = keep));
+      if (keep.length !== this.meta.length) {
+        this.evicted = this.meta.filter((m) => !keep.includes(m)).map((m) => m.name);
+        writeMeta((this.meta = keep));
+      }
     })().catch(() => {});
     return this.ready;
   }

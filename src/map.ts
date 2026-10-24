@@ -51,6 +51,7 @@ export class MapView {
           const base = new URL('./', location.href).href;
           if (typeof j.glyphs === 'string' && !/^https?:/.test(j.glyphs)) j.glyphs = base + j.glyphs;
           if (typeof j.sprite === 'string' && !/^https?:/.test(j.sprite)) j.sprite = base + j.sprite;
+          if (Array.isArray(j.sprite)) for (const sp of j.sprite) if (!/^https?:/.test(sp.url)) sp.url = base + sp.url;
           this.styles.set(key, j); // chỉ nhớ style tự dựng; bản dự phòng trực tuyến thì lần sau thử lại
           return j;
         }

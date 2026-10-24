@@ -5,7 +5,7 @@
  */
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { pickProvinces } from '../../src/pipeline/provinces';
+import { pickProvinces, simplifyOutline } from '../../src/pipeline/provinces';
 import { collectFontstacks, GLYPH_RANGES, rewriteStyle } from '../../src/pipeline/style';
 
 const OUT = join(process.cwd(), 'public', 'map');
@@ -52,12 +52,20 @@ async function prepare(): Promise<void> {
   await mkdir(REGIONS, { recursive: true });
   for (const p of provinces) await writeFile(join(REGIONS, `${p.slug}.geojson`), JSON.stringify(p.feature));
   await mkdir(OUT, { recursive: true });
-  await writeFile(join(REGIONS, 'index.json'), JSON.stringify(provinces.map(({ name, slug, bbox }) => ({ name, slug, bbox }))));
+  await writeFile(
+    join(REGIONS, 'index.json'),
+    JSON.stringify(
+      provinces.map(({ name, slug, bbox, feature }) => {
+        const poly = simplifyOutline(feature.geometry as { type: string; coordinates: unknown }, 300);
+        return poly ? { name, slug, bbox, poly } : { name, slug, bbox };
+      }),
+    ),
+  );
   console.log(`::notice title=Tỉnh/thành::${provinces.length}: ${provinces.map((p) => p.name).join(', ')}`);
 }
 
 async function finish(): Promise<void> {
-  const list = JSON.parse(await readFile(join(REGIONS, 'index.json'), 'utf8')) as { name: string; slug: string; bbox: number[] }[];
+  const list = JSON.parse(await readFile(join(REGIONS, 'index.json'), 'utf8')) as { name: string; slug: string; bbox: number[]; poly?: unknown }[];
   const tiles = new Set(await readdir(join(OUT, 'tiles')));
   const out = [];
   let total = 0;
@@ -83,7 +91,8 @@ async function finish(): Promise<void> {
   const dark = await pick(['dark', 'fiord', 'positron']);
   const fonts = new Set<string>();
   for (const [key, s] of [['light', light], ['dark', dark]] as const) {
-    const spriteUrl: string = Array.isArray(s.style.sprite) ? s.style.sprite[0].url : s.style.sprite;
+    const spriteArr = Array.isArray(s.style.sprite) ? (s.style.sprite as { id: string; url: string }[]) : null;
+    const spriteUrl: string = spriteArr ? spriteArr[0].url : s.style.sprite;
     const spriteName = `${key}`;
     await mkdir(join(OUT, 'sprite'), { recursive: true });
     for (const suf of ['.json', '.png', '@2x.json', '@2x.png']) {
@@ -96,6 +105,8 @@ async function finish(): Promise<void> {
       glyphs: 'map/fonts/{fontstack}/{range}.pbf', // app đổi thành địa chỉ tuyệt đối khi nạp
       sprite: `map/sprite/${spriteName}`,
     });
+    // Style dùng sprite dạng mảng {id,url}: giữ id để biểu tượng "id:tên" vẫn tìm được.
+    if (spriteArr && spriteArr[0].id !== 'default') st.sprite = [{ id: spriteArr[0].id, url: `map/sprite/${spriteName}` }];
     await writeFile(join(OUT, `style-${key}.json`), JSON.stringify(st));
   }
   let nGlyph = 0;

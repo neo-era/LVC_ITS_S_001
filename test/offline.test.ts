@@ -61,3 +61,38 @@ describe('formatMB', () => {
     [1.5 * 1073741824, '1,5 GB'],
   ])('%d → %s', (b, s) => expect(formatMB(b)).toBe(s));
 });
+
+import { pointInPoly } from '../src/offline/core';
+import { simplifyOutline } from '../src/pipeline/provinces';
+
+describe('gợi ý tỉnh theo đường ranh giới thật (đa giác rút gọn)', () => {
+  // Hai tỉnh có khung bao chồng nhau: A hình chữ L lớn, B hình vuông nhỏ nằm trong khung của A nhưng ngoài đa giác A.
+  const A: ProvinceInfo = {
+    name: 'Tỉnh A', slug: 'a', bytes: 1, file: 'a', bbox: [0, 0, 10, 10],
+    poly: [[[[0, 0], [10, 0], [10, 2], [2, 2], [2, 10], [0, 10], [0, 0]]]],
+  };
+  const B: ProvinceInfo = { name: 'Tỉnh B', slug: 'b', bytes: 1, file: 'b', bbox: [3, 3, 9, 9], poly: [[[[3, 3], [9, 3], [9, 9], [3, 9], [3, 3]]]] };
+  it('điểm nằm trong khung A nhưng ngoài đa giác A → chọn B', () => {
+    expect(suggestProvince([A, B], { lat: 5, lng: 5 })?.slug).toBe('b');
+  });
+  it('điểm trong phần chân chữ L của A → chọn A dù khung B nhỏ hơn không chứa', () => {
+    expect(suggestProvince([A, B], { lat: 1, lng: 5 })?.slug).toBe('a');
+  });
+  it('pointInPoly: trong/ngoài, có lỗ', () => {
+    const sq = [[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]], [[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]];
+    expect(pointInPoly([sq], 3, 3)).toBe(true);
+    expect(pointInPoly([sq], 1.5, 1.5)).toBe(false); // trong lỗ
+    expect(pointInPoly([sq], 5, 5)).toBe(false);
+  });
+  it('simplifyOutline: rút gọn, làm tròn 4 chữ số, giữ vòng khép kín, bỏ vòng quá nhỏ', () => {
+    const ring: [number, number][] = [];
+    for (let i = 0; i <= 100; i++) ring.push([106 + i * 0.001, 10 + (i % 2) * 0.000001]);
+    ring.push([106.1, 10.1], [106, 10.1], [106, 10]);
+    const out = simplifyOutline({ type: 'Polygon', coordinates: [ring, [[1, 1], [1, 1], [1, 1]]] }, 300)!;
+    expect(out).toHaveLength(1);
+    const r = out[0][0];
+    expect(r.length).toBeLessThan(10);
+    expect(r[0]).toEqual(r[r.length - 1]);
+    expect(r.every(([x, y]) => Number.isInteger(Math.round(x * 1e4)) && Math.abs(x * 1e4 - Math.round(x * 1e4)) < 1e-6 && Math.abs(y * 1e4 - Math.round(y * 1e4)) < 1e-6)).toBe(true);
+  });
+});

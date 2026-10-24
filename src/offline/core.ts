@@ -6,6 +6,8 @@ export interface ProvinceInfo {
   bbox: BBox;
   bytes: number;
   file: string;
+  /** Đa giác ranh giới đã rút gọn (MultiPolygon, [kinh độ, vĩ độ]) để biết đang ở tỉnh nào. */
+  poly?: number[][][][];
 }
 
 export interface LocalSourceInfo {
@@ -34,9 +36,29 @@ export function filterProvinces<T extends { name: string }>(list: T[], q: string
   return f ? list.filter((p) => fold(p.name).includes(f)) : list;
 }
 
-/** Tỉnh đang đứng: khung bao chứa vị trí, ưu tiên khung nhỏ nhất. */
-export function suggestProvince<T extends { bbox: BBox }>(list: T[], pos: { lat: number; lng: number } | null): T | null {
+/** Điểm (kinh độ x, vĩ độ y) có nằm trong MultiPolygon không (tính cả lỗ). */
+export function pointInPoly(poly: number[][][][], x: number, y: number): boolean {
+  const inRing = (ring: number[][]) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  return poly.some((rings) => rings.length > 0 && inRing(rings[0]) && !rings.slice(1).some(inRing));
+}
+
+/** Tỉnh đang đứng: ưu tiên đa giác ranh giới thật; không có thì khung bao nhỏ nhất chứa vị trí. */
+export function suggestProvince<T extends { bbox: BBox; poly?: number[][][][] }>(
+  list: T[],
+  pos: { lat: number; lng: number } | null,
+): T | null {
   if (!pos) return null;
+  const byPoly = list.find((p) => p.poly && pointInPoly(p.poly, pos.lng, pos.lat));
+  if (byPoly) return byPoly;
+  list = list.filter((p) => !p.poly);
   const area = (b: BBox) => (b[2] - b[0]) * (b[3] - b[1]);
   const hits = list.filter((p) => pos.lng >= p.bbox[0] && pos.lng <= p.bbox[2] && pos.lat >= p.bbox[1] && pos.lat <= p.bbox[3]);
   hits.sort((a, b) => area(a.bbox) - area(b.bbox));

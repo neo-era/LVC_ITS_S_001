@@ -1,3 +1,4 @@
+import { simplify } from './compact';
 /** Ranh giới tỉnh/thành (OSM boundary=administrative, admin_level=4) → danh sách tỉnh để cắt bản đồ offline. */
 export type BBox = [number, number, number, number]; // [tây, nam, đông, bắc]
 
@@ -58,4 +59,27 @@ export function pickProvinces(features: unknown[]): Province[] {
     out.set(slug, { name, slug, bbox, feature: { type: 'Feature', properties: { name }, geometry: ft.geometry } });
   }
   return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+}
+
+/** Rút gọn ranh giới để gửi kèm danh sách tỉnh (đủ biết đang ở tỉnh nào): sai số tolM mét, toạ độ 4 chữ số. */
+export function simplifyOutline(geom: { type: string; coordinates: unknown } | null | undefined, tolM: number): number[][][][] | null {
+  if (!geom) return null;
+  const polys = (geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : []) as number[][][][];
+  const out: number[][][][] = [];
+  for (const rings of polys) {
+    const rs: number[][][] = [];
+    for (const ring of rings) {
+      const pts = simplify(ring.map(([lng, lat]) => ({ lat, lng })), tolM).map((p) => [
+        Math.round(p.lng * 1e4) / 1e4,
+        Math.round(p.lat * 1e4) / 1e4,
+      ]);
+      const uniq = new Set(pts.map((p) => p.join(','))).size;
+      if (uniq < 3) continue;
+      const [f, l] = [pts[0], pts[pts.length - 1]];
+      if (f[0] !== l[0] || f[1] !== l[1]) pts.push([...f]);
+      rs.push(pts);
+    }
+    if (rs.length) out.push(rs);
+  }
+  return out.length ? out : null;
 }

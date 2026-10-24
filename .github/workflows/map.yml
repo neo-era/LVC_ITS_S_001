@@ -31,11 +31,13 @@ jobs:
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
-          gh release download --repo protomaps/go-pmtiles --pattern '*Linux_x86_64.tar.gz' --output pmtiles.tgz
+          gh release download v1.31.2 --repo protomaps/go-pmtiles --pattern '*Linux_x86_64.tar.gz' --output pmtiles.tgz
+          echo "::notice title=sha256 go-pmtiles v1.31.2::$(sha256sum pmtiles.tgz | cut -d' ' -f1)"
           tar xzf pmtiles.tgz pmtiles && ./pmtiles version
       - name: Dựng ô bản đồ Việt Nam (Planetiler, lược đồ OpenMapTiles)
         run: |
-          curl -fsSL -o planetiler.jar https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
+          curl -fsSL -o planetiler.jar https://github.com/onthegomap/planetiler/releases/download/v0.10.2/planetiler.jar
+          echo "::notice title=sha256 planetiler v0.10.2::$(sha256sum planetiler.jar | cut -d' ' -f1)"
           set -o pipefail
           java -Xmx12g -jar planetiler.jar --download --area=vietnam --output=vn.pmtiles --force 2>&1 | tee planetiler.log | tail -40 \
             || { echo "::error title=Planetiler lỗi::$(tail -c 1500 planetiler.log | tr '\n' ' ')"; exit 1; }

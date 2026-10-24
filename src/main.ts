@@ -755,6 +755,8 @@ async function renderOffline(): Promise<void> {
   if (provinces.length && !rest.length && q) status.textContent = 'Không tìm thấy tỉnh/thành nào khớp.';
   const u = await offline.usage();
   $('off-usage').textContent = `Đã dùng ${formatMB(u.used)}${u.free !== null ? ` · còn trống khoảng ${formatMB(u.free)}` : ''}`;
+  if (offline.evicted.length && !status.textContent)
+    status.textContent = `Trình duyệt đã xoá bản đồ ${offline.evicted.join(', ')} (thường do lâu không mở app). Anh tải lại khi cần; cài app vào màn hình chính để hạn chế bị xoá.`;
 }
 
 async function startDownload(slug: string): Promise<void> {
