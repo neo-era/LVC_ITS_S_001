@@ -1,3 +1,4 @@
+import { COSTING, type Vehicle } from '../core/vehicle';
 import type { LatLng } from '../core/geo';
 import { decodePolyline } from './polyline';
 
@@ -23,13 +24,13 @@ export interface Route {
 /** Máy chủ tìm đường công cộng (FOSSGIS Valhalla). Có thể đổi sang nhà cung cấp khác — điều khoản dùng cần xem lại khi đưa ra rộng rãi. */
 export const VALHALLA_URL = 'https://valhalla1.openstreetmap.de/route';
 
-export function buildRouteBody(from: LatLng, to: LatLng): string {
+export function buildRouteBody(from: LatLng, to: LatLng, vehicle: Vehicle = 'car'): string {
   return JSON.stringify({
     locations: [
       { lat: from.lat, lon: from.lng, type: 'break' },
       { lat: to.lat, lon: to.lng, type: 'break' },
     ],
-    costing: 'auto',
+    costing: COSTING[vehicle],
     directions_options: { language: 'vi-VN', units: 'kilometers' },
   });
 }
@@ -65,8 +66,8 @@ export function parseValhalla(raw: unknown): Route | null {
 }
 
 /** Gọi bằng GET (tham số json) để tránh yêu cầu tiền kiểm CORS. */
-export async function fetchRoute(from: LatLng, to: LatLng, signal?: AbortSignal): Promise<Route> {
-  const url = `${VALHALLA_URL}?json=${encodeURIComponent(buildRouteBody(from, to))}`;
+export async function fetchRoute(from: LatLng, to: LatLng, vehicle: Vehicle = 'car', signal?: AbortSignal): Promise<Route> {
+  const url = `${VALHALLA_URL}?json=${encodeURIComponent(buildRouteBody(from, to, vehicle))}`;
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Máy chủ tìm đường trả lỗi ${res.status}`);
   const route = parseValhalla(await res.json());

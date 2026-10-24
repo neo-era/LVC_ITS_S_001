@@ -1,3 +1,4 @@
+import type { Vehicle } from './core/vehicle';
 import { AlertDeduper, findAlerts, type AlertHit, type AlertPoint } from './core/alerts';
 import type { CellData } from './core/cells';
 import { alertVoiceText, overspeedVoiceText, speedState, type SpeedState } from './core/format';
@@ -23,6 +24,7 @@ export interface ViewState {
 export interface EngineOptions {
   radiusM: number;
   speak: (text: string) => void;
+  vehicle?: Vehicle;
 }
 
 const OVERSPEED_REPEAT_MS = 20_000;
@@ -44,6 +46,7 @@ export class Engine {
   private readonly filter = new SpeedFilter();
   private deduper: AlertDeduper;
   private radiusM: number;
+  private vehicle: Vehicle;
   private readonly speak: (text: string) => void;
   private readonly cells = new Map<string, CellData>();
   private heading: number | null = null;
@@ -54,8 +57,13 @@ export class Engine {
 
   constructor(opts: EngineOptions) {
     this.radiusM = opts.radiusM;
+    this.vehicle = opts.vehicle ?? 'car';
     this.speak = opts.speak;
     this.deduper = new AlertDeduper(opts.radiusM);
+  }
+
+  setVehicle(v: Vehicle): void {
+    this.vehicle = v;
   }
 
   setRadius(m: number): void {
@@ -161,7 +169,7 @@ export class Engine {
 
   private compute(kmh: number | null, status: GpsStatus, pos: LatLng, t: number): void {
     const { segments, alerts } = this.nearby(pos);
-    const lim = kmh !== null ? findLimit(segments, pos, this.heading) : null;
+    const lim = kmh !== null ? findLimit(segments, pos, this.heading, this.vehicle) : null;
     const camRoute = matchSegment(segments, pos, this.heading)?.cam === true;
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);

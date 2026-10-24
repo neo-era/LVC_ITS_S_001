@@ -3,6 +3,7 @@ import { parseCell } from './core/cells';
 import { alertLabel, formatDistance, speakDistance } from './core/format';
 import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
+import { isVehicle, type Vehicle } from './core/vehicle';
 import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
 import { pushMarks } from './sync';
@@ -21,8 +22,9 @@ interface Settings {
   theme: 'auto' | 'dark' | 'light';
   voiceName: string;
   voiceStyle: string;
+  vehicle: Vehicle;
 }
-const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto', voiceName: '', voiceStyle: 'normal' };
+const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto', voiceName: '', voiceStyle: 'normal', vehicle: 'car' };
 const KEY = 'lat.settings.v1';
 
 function loadSettings(): Settings {
@@ -33,7 +35,8 @@ function loadSettings(): Settings {
       const theme = ['auto', 'dark', 'light'].includes(raw.theme) ? raw.theme : DEFAULTS.theme;
       const voiceName = typeof raw.voiceName === 'string' ? raw.voiceName : '';
       const voiceStyle = ['cute', 'normal', 'warm'].includes(raw.voiceStyle) ? raw.voiceStyle : 'normal';
-      return { radius, theme, voice: raw.voice !== false, voiceName, voiceStyle };
+      const vehicle = isVehicle(raw.vehicle) ? raw.vehicle : 'car';
+      return { radius, theme, voice: raw.voice !== false, voiceName, voiceStyle, vehicle };
     }
   } catch {
     /* bỏ qua */
@@ -78,7 +81,7 @@ const voice = new Voice();
 voice.enabled = settings.voice;
 voice.voiceName = settings.voiceName;
 voice.style = settings.voiceStyle;
-const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(t) });
+const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(t), vehicle: settings.vehicle });
 const sim = new Simulator();
 
 const mapbox = $('mapbox');
@@ -268,7 +271,7 @@ function renderNav(s: NavState | null): void {
 
 async function beginRoute(dest: Place, announce: boolean): Promise<void> {
   if (!lastFix) throw new Error('Chưa có vị trí GPS. Hãy bấm “Bắt đầu lái xe” và chờ có tín hiệu.');
-  const route = await fetchRoute({ lat: lastFix.lat, lng: lastFix.lng }, { lat: dest.lat, lng: dest.lng });
+  const route = await fetchRoute({ lat: lastFix.lat, lng: lastFix.lng }, { lat: dest.lat, lng: dest.lng }, settings.vehicle);
   navRoute = route;
   navDest = dest;
   guidance = new Guidance(route, (t) => voice.speak(t), () => void reroute());
@@ -580,10 +583,18 @@ $('btn-voice').addEventListener('click', () => {
 $('btn-settings').addEventListener('click', () => {
   ($('set-radius') as HTMLSelectElement).value = String(settings.radius);
   ($('set-theme') as HTMLSelectElement).value = settings.theme;
+  ($('set-vehicle') as HTMLSelectElement).value = settings.vehicle;
   ($('set-voice-style') as HTMLSelectElement).value = settings.voiceStyle;
   fillVoiceList();
   applyVoiceUi();
   settingsDlg.showModal();
+});
+$('set-vehicle').addEventListener('change', (e) => {
+  const v = (e.target as HTMLSelectElement).value;
+  if (!isVehicle(v)) return;
+  settings.vehicle = v;
+  engine.setVehicle(v);
+  saveSettings();
 });
 $('set-radius').addEventListener('change', (e) => {
   settings.radius = Number((e.target as HTMLSelectElement).value);

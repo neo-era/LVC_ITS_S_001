@@ -1,3 +1,5 @@
+import { estimateLimit } from './cells';
+import type { Vehicle } from './vehicle';
 import { angleDiff, bearing, distToSegment, type LatLng } from './geo';
 
 export interface RoadSegment {
@@ -8,7 +10,9 @@ export interface RoadSegment {
   maxspeed: number | null;
   /** Tuyến đường này nằm trong danh sách có camera phạt nguội (theo báo chí). */
   cam?: boolean;
-  /** Giới hạn ước tính theo luật khi chưa có số thật. */
+  /** Cờ để ước tính giới hạn theo luật khi chưa có số thật (xem estimateLimit). */
+  ef?: number;
+  /** Giới hạn ước tính cố định (dùng cho dữ liệu mô phỏng). */
   est?: number;
 }
 
@@ -70,11 +74,13 @@ export function findLimit(
   segments: RoadSegment[],
   pos: LatLng,
   heading: number | null,
+  vehicle: Vehicle = 'car',
 ): LimitResult | null {
   const seg = matchSegment(segments, pos, heading);
   if (!seg) return null;
   const distM = distToSegment(pos, seg.a, seg.b);
   if (validSpeed(seg.maxspeed)) return { kmh: seg.maxspeed, segmentId: seg.id, distM, estimated: false };
-  if (seg.est !== undefined && validSpeed(seg.est)) return { kmh: seg.est, segmentId: seg.id, distM, estimated: true };
+  const est = seg.ef !== undefined ? estimateLimit(seg.ef, vehicle) : (seg.est ?? null);
+  if (est !== null && validSpeed(est)) return { kmh: est, segmentId: seg.id, distM, estimated: true };
   return null;
 }

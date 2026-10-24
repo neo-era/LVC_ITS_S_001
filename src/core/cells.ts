@@ -1,3 +1,4 @@
+import { OUTSIDE_LIMITS, type Vehicle } from './vehicle';
 import type { AlertPoint, AlertType } from './alerts';
 import type { RoadSegment } from './speedlimit';
 
@@ -40,18 +41,22 @@ function parseAlerts(raw: unknown): AlertPoint[] {
 
 const validLimit = (x: unknown): x is number => num(x) && x >= 5 && x <= 150;
 
+/** Bit "khu đông dân cư" ghép vào cờ đoạn đường (ef) khi đọc ô. */
+export const EF_URBAN = 16;
+
 /**
- * Giới hạn ước tính theo luật cho ô tô con khi OSM chưa có số
+ * Giới hạn ước tính theo luật khi OSM chưa có số
  * (Thông tư 38/2024/TT-BGTVT, sửa đổi bởi 09/2025/TT-BXD — VBHN 74/2026/VBHN-BXD):
- * trong khu đông dân cư 60 (đường đôi) / 50; ngoài khu đông dân cư 90 / 80.
+ * trong khu đông dân cư mọi xe 60 (đường đôi) / 50; ngoài khu đông dân cư theo loại xe.
  * Cao tốc không ước tính; đường nhỏ ngoài khu dân cư không ước tính.
  */
-export function estimateLimit(flags: number, urban: boolean): number | null {
-  if (flags & 4) return null;
-  const divided = (flags & 2) !== 0;
-  if (urban) return divided ? 60 : 50;
-  if (flags & 8) return null;
-  return divided ? 90 : 80;
+export function estimateLimit(ef: number, vehicle: Vehicle = 'car'): number | null {
+  if (ef & 4) return null;
+  const divided = (ef & 2) !== 0;
+  if (ef & EF_URBAN) return divided ? 60 : 50;
+  if (ef & 8) return null;
+  const [d, t] = OUTSIDE_LIMITS[vehicle];
+  return divided ? d : t;
 }
 
 /** Định dạng v2 (gọn): mỗi mục là một dãy đoạn liên tiếp của một way, toạ độ ×1e5 dạng hiệu số. */
@@ -79,11 +84,10 @@ function parseV2(raw: Record<string, unknown>): CellData {
       }
       if (!ok) continue;
       const maxspeed = validLimit(ms) ? ms : null;
-      const est = estimateLimit(flags, urban);
+      const ef = (flags & 14) | (urban ? EF_URBAN : 0);
       for (let i = 0; i + 1 < pts.length; i++) {
-        const seg: RoadSegment = { id: `w${wayId}_${start + i}`, a: pts[i], b: pts[i + 1], maxspeed };
+        const seg: RoadSegment = { id: `w${wayId}_${start + i}`, a: pts[i], b: pts[i + 1], maxspeed, ef };
         if (flags & 1) seg.cam = true;
-        if (est !== null) seg.est = est;
         segments.push(seg);
       }
     }

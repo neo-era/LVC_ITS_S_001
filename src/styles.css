@@ -832,3 +832,7 @@ select {
 .mapbox.picking .map-follow {
   display: none !important;
 }
+
+.field.stack select {
+  width: 100%;
+}

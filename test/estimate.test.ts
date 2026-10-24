@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCell } from '../src/core/cells';
+import { estimateLimit, parseCell } from '../src/core/cells';
 import { findLimit, type RoadSegment } from '../src/core/speedlimit';
 import { CellWriter, URBAN_KM, wayFlags, FLAG } from '../src/pipeline/compact';
 import { Engine } from '../src/engine';
@@ -35,7 +35,8 @@ function cellWith(extraKm: number, tags: Record<string, string>, maxspeed: numbe
   }
   const files = [...w.files().values()];
   const f = files.find((x) => x.w.some((e) => e[0] === 1))!;
-  return parseCell(JSON.parse(JSON.stringify(f)))!.segments.find((s) => s.id === 'w1_0')!;
+  const seg = parseCell(JSON.parse(JSON.stringify(f)))!.segments.find((s) => s.id === 'w1_0')!;
+  return { ...seg, est: estimateLimit(seg.ef ?? 0, 'car') ?? undefined };
 }
 
 describe('ước tính giới hạn theo luật (VBHN 74/2026/VBHN-BXD)', () => {
