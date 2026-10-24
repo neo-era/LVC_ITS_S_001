@@ -130,3 +130,17 @@ $('team-form').addEventListener('submit', (e) => {
 });
 if (team) void load();
 setInterval(() => team && void load(), 10_000);
+
+// Nút quay lại: mở từ app → quay lại đúng trạng thái cũ; mở từ link chia sẻ → vào app.
+$('fleet-back').addEventListener('click', (e) => {
+  let fromApp = false;
+  try {
+    fromApp = !!document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1;
+  } catch {
+    /* bỏ qua */
+  }
+  if (fromApp) {
+    e.preventDefault();
+    history.back();
+  }
+});
