@@ -6,32 +6,45 @@ import type { ViewState } from '../engine';
 import { authHeaders, SUPABASE_URL } from '../sync';
 import { ImpactDetector } from './dashcam-plan';
 import { fleetPingBody, shareName } from './fleet';
-import { Obd } from './obd';
-import { nextPole, parsePoles, patrolCsv, STATUS_LABEL, type PatrolRecord, type Pole, type PoleStatus } from './patrol';
+import { Obd, ObdSanity } from './obd';
+import { dupCodes, parsePoles, patrolCsv, PoleTracker, STATUS_LABEL, type PatrolRecord, type Pole, type PoleStatus } from './patrol';
 import { poleFromSearch, poleUrl, qrSvg } from './qr';
 import { fmtVnTime, type Report } from './reports';
-import { glosa, parseSignals, phaseAt, pickApproach, type SignalPlan } from './signals';
+import { glosa, parseSignals, phaseAt, pickApproach, signalAhead, type SignalPlan } from './signals';
 import { DigitTemplates, findRedCircles, readLimit, SignVoter } from './signocr';
-import { smsUrl, sosMessage } from './sos';
+import { CrashConfirm, smsUrl, sosMessage, validPhone } from './sos';
 import { weatherAdvice, weatherUrl, type Advice } from './weather';
-import type { Ctx } from './wire';
+import type { Vehicle } from '../core/vehicle';
+import { freshFix, type Ctx } from './wire';
 
 export interface Ctx2 extends Ctx {
   view: () => ViewState;
   navInfo: () => { dest: string; etaT: number } | null;
-  reportHere: (kind: Report['kind'], pole?: string, at?: { lat: number; lng: number }) => void;
+  reportHere: (kind: Report['kind'], pole?: string, at?: { lat: number; lng: number }, now?: boolean) => boolean;
   camPreview: () => HTMLVideoElement | null;
   onImpact: (fn: () => void) => void;
   setSpeedOverride: (kmh: number | null) => void;
-  setSignLimit: (kmh: number | null) => void;
+  vehicle: () => Vehicle;
   showDialog: (id: string) => void;
 }
 
 const rand = (n: number) => {
-  const a = new Uint8Array(n);
-  crypto.getRandomValues(a);
-  return Array.from(a, (b) => (b % 36).toString(36)).join('').toUpperCase();
+  const out: string[] = [];
+  while (out.length < n) {
+    const a = new Uint8Array(n * 2);
+    crypto.getRandomValues(a);
+    // 252 = 7 × 36: bỏ giá trị ≥ 252 để phân bố đều
+    for (const b of a) if (b < 252 && out.length < n) out.push((b % 36).toString(36));
+  }
+  return out.join('').toUpperCase();
 };
+
+/** fetch có hạn giờ (AbortSignal.timeout chưa có trên iOS < 16). */
+function fetchT(url: string, ms: number, init: RequestInit = {}): Promise<Response> {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  return fetch(url, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
+}
 
 function download(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
@@ -47,12 +60,16 @@ function download(name: string, text: string): void {
 export function setupFeatures2(ctx: Ctx2) {
   const { $ } = ctx;
   const chips = $('status-chips');
-  const chip = (id: string, text: string, cls = '') => {
+  const chip = (id: string, text: string, cls = '', onClick?: () => void) => {
     let el = document.getElementById(`chip-${id}`);
     if (!text) return el?.remove();
     if (!el) {
-      el = document.createElement('span');
+      el = document.createElement(onClick ? 'button' : 'span');
       el.id = `chip-${id}`;
+      if (onClick) {
+        (el as HTMLButtonElement).type = 'button';
+        el.addEventListener('click', onClick);
+      }
       chips.append(el);
     }
     el.className = `status-chip ${cls}`;
@@ -60,11 +77,35 @@ export function setupFeatures2(ctx: Ctx2) {
   };
 
   /* ===== 15. Chia sẻ hành trình ===== */
-  let shareToken: string | null = null;
+  const SHARE_KEY = 'lat.share';
+  const ssGet = (k: string) => {
+    try {
+      return sessionStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  };
+  const ssSet = (k: string, v: string | null) => {
+    try {
+      if (v === null) sessionStorage.removeItem(k);
+      else sessionStorage.setItem(k, v);
+    } catch {
+      /* bỏ qua */
+    }
+  };
+  // app bị hệ điều hành đóng/tự cập nhật giữa chuyến → tiếp tục chia sẻ với cùng link
+  let shareToken: string | null = ssGet(SHARE_KEY);
   let lastShare = 0;
+  const showShare = () => {
+    $('btn-share').classList.toggle('active', !!shareToken);
+    chip('share', shareToken ? 'Đang chia sẻ hành trình · bấm để tắt' : '', 'ok', () => {
+      stopShare();
+      ctx.toast('Đã tắt chia sẻ hành trình.');
+    });
+  };
   async function shareLink(): Promise<void> {
-    if (!shareToken) shareToken = `S-${rand(14)}`;
-    const url = new URL('./fleet.html', location.href).href + `#${shareToken}`;
+    const tok = shareToken ?? `S-${rand(14)}`;
+    const url = new URL('./fleet.html', location.href).href + `#${tok}`;
     const text = `Theo dõi hành trình của tôi: ${url}`;
     try {
       if (navigator.share) await navigator.share({ title: 'Theo dõi hành trình', text, url });
@@ -72,10 +113,14 @@ export function setupFeatures2(ctx: Ctx2) {
         await navigator.clipboard.writeText(url);
         ctx.toast('Đã chép link theo dõi. Gửi cho người nhà qua Zalo/tin nhắn.');
       }
-    } catch {
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return; // người dùng huỷ: không bật chia sẻ
       ctx.toast(url, undefined, undefined, 15_000);
     }
-    $('btn-share').classList.add('active');
+    shareToken = tok;
+    ssSet(SHARE_KEY, tok);
+    lastShare = 0;
+    showShare();
     ctx.speak('Đang chia sẻ hành trình.');
   }
   async function pingShare(f: GpsSample, v: ViewState): Promise<void> {
@@ -97,13 +142,15 @@ export function setupFeatures2(ctx: Ctx2) {
     if (!shareToken) return;
     const tok = shareToken;
     shareToken = null;
-    $('btn-share').classList.remove('active');
+    ssSet(SHARE_KEY, null);
+    showShare();
     void fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ p_team: tok, p_device: ctx.deviceId() }),
     }).catch(() => {});
   }
+  if (shareToken) showShare();
   $('btn-share').addEventListener('click', () => (shareToken ? (stopShare(), ctx.toast('Đã tắt chia sẻ hành trình.')) : void shareLink()));
 
   /* ===== 12. Thời tiết ===== */
@@ -114,7 +161,7 @@ export function setupFeatures2(ctx: Ctx2) {
     if (!navigator.onLine || Date.now() - weatherAt < 15 * 60_000 || ctx.lsGet('lat.weather') === '0') return;
     weatherAt = Date.now();
     try {
-      const r = await fetch(weatherUrl(f.lat, f.lng), { signal: AbortSignal.timeout(8000) });
+      const r = await fetchT(weatherUrl(f.lat, f.lng), 8000);
       const j = (await r.json()) as { current?: { weather_code?: number; rain?: number; precipitation?: number; visibility?: number } };
       const c = j.current ?? {};
       advice = weatherAdvice({ code: c.weather_code ?? null, rainMm: c.rain ?? c.precipitation ?? null, visibilityM: c.visibility ?? null });
@@ -144,14 +191,28 @@ export function setupFeatures2(ctx: Ctx2) {
   const sosOn = $('set-sos-on') as HTMLInputElement;
   sosPhone.value = ctx.lsGet('lat.sos.phone') ?? '';
   sosOn.checked = ctx.lsGet('lat.sos.on') === '1';
-  sosPhone.addEventListener('change', () => ctx.lsSet('lat.sos.phone', sosPhone.value.trim()));
-  const sosDetector = new ImpactDetector();
+  sosPhone.addEventListener('change', () => {
+    const v = sosPhone.value.trim();
+    ctx.lsSet('lat.sos.phone', v);
+    if (v && !validPhone(v)) ctx.toast('Số điện thoại SOS chưa đúng (cần 9–12 chữ số).');
+  });
+  // xe máy dằn xóc nhiều hơn → ngưỡng cao hơn
+  const sosDetector = new ImpactDetector(2.5);
+  const sosDetectorMoto = new ImpactDetector(3.5);
+  const crash = new CrashConfirm();
   let sosMotionOn = false;
   const onSosMotion = (e: DeviceMotionEvent) => {
     const a = e.accelerationIncludingGravity;
     if (!a || a.x === null || a.y === null || a.z === null || ctx.mode() !== 'gps') return;
-    if (sosDetector.push({ x: a.x, y: a.y, z: a.z }, Date.now())) triggerSos();
+    const det = ctx.vehicle() === 'motorbike' ? sosDetectorMoto : sosDetector;
+    if (det.push({ x: a.x, y: a.y, z: a.z }, Date.now())) onShock();
   };
+  /** Cú sốc mạnh: chưa báo ngay, chờ xác nhận xe dừng hẳn (tránh báo nhầm khi qua ổ gà). */
+  function onShock(): void {
+    if (!sosOn.checked || ctx.mode() !== 'gps') return;
+    crash.shock(Date.now());
+  }
+  setInterval(() => crash.tick(Date.now()) === 'trigger' && triggerSos(), 1000);
   const motionPermissionFn = (): (() => Promise<string>) | null => {
     if (typeof DeviceMotionEvent === 'undefined') return null;
     const f = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
@@ -179,7 +240,11 @@ export function setupFeatures2(ctx: Ctx2) {
     void armSos(sosOn.checked);
   });
   if (sosOn.checked && !motionPermissionFn()) void armSos(true);
-  ctx.onImpact(() => triggerSos());
+  // iOS: quyền cảm biến phải xin trong thao tác chạm → xin lại mỗi lần bấm "Bắt đầu lái xe"
+  $('btn-start').addEventListener('click', () => {
+    if (sosOn.checked && motionPermissionFn()) void armSos(true);
+  });
+  ctx.onImpact(() => onShock());
   let sosTimer: number | null = null;
   let sosTick: number | null = null;
   function triggerSos(): void {
@@ -210,8 +275,8 @@ export function setupFeatures2(ctx: Ctx2) {
     closeSos();
     const f = ctx.lastFix();
     const phone = sosPhone.value.trim();
-    if (!phone) return ctx.toast('Chưa có số điện thoại người thân trong Cài đặt → SOS.');
-    const msg = sosMessage(f?.lat ?? 0, f?.lng ?? 0, Date.now(), ctx.lsGet('lat.fleet.name') || '');
+    if (!phone || !validPhone(phone)) return ctx.toast('Chưa có số điện thoại người thân hợp lệ trong Cài đặt → SOS.');
+    const msg = sosMessage(f ? { lat: f.lat, lng: f.lng, t: f.t } : null, Date.now(), ctx.lsGet('lat.fleet.name') || '');
     ctx.speak('Đang mở tin nhắn khẩn cấp. Hãy bấm gửi.');
     location.href = smsUrl(phone, msg);
   }
@@ -230,7 +295,15 @@ export function setupFeatures2(ctx: Ctx2) {
   const PATROL = 'lat.patrol.v1';
   let poles: Pole[] = (() => {
     try {
-      return parsePoles(ctx.lsGet(POLES) ?? '');
+      const raw = ctx.lsGet(POLES) ?? '';
+      if (raw.startsWith('[')) {
+        const v = JSON.parse(raw) as unknown[];
+        if (!Array.isArray(v)) return [];
+        return v
+          .map((e): Pole | null => (Array.isArray(e) && typeof e[0] === 'string' && Number.isFinite(e[1]) && Number.isFinite(e[2]) ? { code: e[0], lat: e[1], lng: e[2], ...(typeof e[3] === 'string' ? { route: e[3] } : {}) } : null))
+          .filter((p): p is Pole => p !== null);
+      }
+      return parsePoles(raw); // bản cũ lưu nguyên văn CSV
     } catch {
       return [];
     }
@@ -245,8 +318,9 @@ export function setupFeatures2(ctx: Ctx2) {
   })();
   let patrolOn = false;
   let current: { pole: Pole; distM: number } | null = null;
+  const tracker = new PoleTracker();
   const checked = () => new Set(records.map((r) => r.code));
-  const savePatrol = () => ctx.lsSet(PATROL, JSON.stringify(records));
+  const savePatrol = () => ctx.lsSet(PATROL, JSON.stringify(records)) || ctx.toast('Bộ nhớ máy đầy: kết quả tuần tra chưa lưu được. Hãy xuất CSV ngay.');
   function renderPatrolInfo(): void {
     const done = checked().size;
     $('patrol-info').textContent = poles.length
@@ -261,15 +335,19 @@ export function setupFeatures2(ctx: Ctx2) {
     const p = parsePoles(text);
     if (!p.length) return ctx.toast('Không đọc được trụ nào từ file. Cần cột mã trụ, vĩ độ, kinh độ.');
     poles = p;
-    try {
-      ctx.lsSet(POLES, text.length < 4_000_000 ? text : '');
-    } catch {
-      ctx.toast('Danh sách quá lớn để lưu lâu dài; dùng được trong phiên này.');
-    }
+    tracker.reset();
+    // lưu bản đã đọc (gọn hơn nhiều so với nguyên văn file)
+    const stored = ctx.lsSet(POLES, JSON.stringify(p.map((x) => (x.route ? [x.code, +x.lat.toFixed(6), +x.lng.toFixed(6), x.route] : [x.code, +x.lat.toFixed(6), +x.lng.toFixed(6)]))));
     records = [];
     savePatrol();
     renderPatrolInfo();
-    ctx.toast(`Đã nạp ${p.length} trụ.`);
+    const dups = dupCodes(p);
+    ctx.toast(
+      `Đã nạp ${p.length} trụ.${dups.length ? ` Có ${dups.length} mã trùng (vd ${dups.slice(0, 3).join(', ')}) — mỗi mã chỉ ghi được một kết quả.` : ''}${stored ? '' : ' Danh sách quá lớn để lưu lâu dài: dùng được tới khi đóng app.'}`,
+      undefined,
+      undefined,
+      8000,
+    );
   });
   $('patrol-on').addEventListener('change', (e) => {
     patrolOn = (e.target as HTMLInputElement).checked;
@@ -279,8 +357,13 @@ export function setupFeatures2(ctx: Ctx2) {
       return ctx.toast('Nạp danh sách trụ trước.');
     }
     $('patrol-box').hidden = !patrolOn;
-    if (patrolOn) ctx.speak(`Bắt đầu tuần tra, ${poles.length - checked().size} trụ chưa kiểm.`);
-    else current = null;
+    if (patrolOn) {
+      ctx.speak(`Bắt đầu tuần tra, ${poles.length - checked().size} trụ chưa kiểm.`);
+      renderPatrol();
+    } else {
+      current = null;
+      tracker.reset();
+    }
   });
   $('btn-patrol').addEventListener('click', () => {
     renderPatrolInfo();
@@ -299,7 +382,8 @@ export function setupFeatures2(ctx: Ctx2) {
     records = [...records.filter((r) => r.code !== p.code), { code: p.code, status, t: Date.now() }];
     savePatrol();
     ctx.speak(`${p.code}: ${STATUS_LABEL[status].toLowerCase()}.`);
-    if (status !== 'sang') ctx.reportHere(status === 'tat' ? 'den_tat' : 'su_co', p.code);
+    // dùng toạ độ trụ trong danh sách (xe có thể đang cách trụ vài chục mét)
+    if (status !== 'sang') ctx.reportHere(status === 'tat' ? 'den_tat' : 'su_co', p.code, { lat: p.lat, lng: p.lng });
     current = null;
     renderPatrol();
   }
@@ -311,10 +395,17 @@ export function setupFeatures2(ctx: Ctx2) {
   function renderPatrol(f?: GpsSample): void {
     if (!patrolOn) return;
     if (f) lastPatrolFix = f;
-    const fx = f ?? lastPatrolFix;
-    if (fx) current = nextPole(poles, { lat: fx.lat, lng: fx.lng }, ctx.heading(), checked());
+    const fx = f ?? lastPatrolFix ?? ctx.lastFix();
     const box = $('patrol-box');
     box.hidden = false;
+    if (!fx) {
+      current = null;
+      $('pole-name').textContent = 'Bấm “Bắt đầu lái xe” để tuần tra';
+      $('pole-dist').textContent = `${checked().size}/${poles.length}`;
+      box.classList.remove('near');
+      return;
+    }
+    current = tracker.update(poles, { lat: fx.lat, lng: fx.lng }, ctx.heading(), checked(), fx.t);
     if (!current) {
       $('pole-name').textContent = 'Không có trụ chưa kiểm trong 80 m';
       $('pole-dist').textContent = `${checked().size}/${poles.length}`;
@@ -331,33 +422,74 @@ export function setupFeatures2(ctx: Ctx2) {
   }
 
   /* ===== 10. QR trụ đèn ===== */
+  const QR_BATCH = 200; // mỗi file in tối đa 200 mã (5.000 mã một lúc làm treo trình duyệt)
   $('btn-qr-print').addEventListener('click', () => {
     if (!poles.length) return ctx.toast('Nạp danh sách trụ trước (mục Tuần tra).');
     const base = new URL('./', location.href).href;
-    const items = poles
-      .map((p) => `<figure><div class="q">${qrSvg(poleUrl(base, p.code))}</div><figcaption>${p.code.replace(/[<>&]/g, '')}${p.route ? `<br><small>${p.route.replace(/[<>&]/g, '')}</small>` : ''}</figcaption></figure>`)
-      .join('');
-    const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Mã QR trụ đèn</title><style>
+    const esc = (t: string) => t.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`);
+    const batches = Math.ceil(poles.length / QR_BATCH);
+    const standalone = matchMedia('(display-mode: standalone)').matches;
+    for (let k = 0; k < batches; k++) {
+      const part = poles.slice(k * QR_BATCH, (k + 1) * QR_BATCH);
+      const items = part
+        .map((p) => `<figure><div class="q">${qrSvg(poleUrl(base, p.code))}</div><figcaption>${esc(p.code)}${p.route ? `<br><small>${esc(p.route)}</small>` : ''}</figcaption></figure>`)
+        .join('');
+      const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mã QR trụ đèn ${k + 1}/${batches}</title><style>
       body{font-family:Arial,sans-serif;margin:10mm}h1{font-size:16px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm}
       figure{margin:0;text-align:center;break-inside:avoid;border:1px solid #ccc;padding:3mm;border-radius:3mm}.q svg{width:38mm;height:38mm}
       figcaption{font-weight:700;font-size:13px;margin-top:2mm}small{font-weight:400;color:#555}@media print{h1,p{display:none}}</style></head>
-      <body><h1>Mã QR trụ đèn — quét bằng camera điện thoại để báo sự cố</h1><p>Bấm Ctrl+P / Chia sẻ → In. ${poles.length} mã.</p><div class="grid">${items}</div></body></html>`;
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      <body><h1>Mã QR trụ đèn — quét bằng camera điện thoại để báo sự cố</h1><p>Phần ${k + 1}/${batches} · ${part.length} mã. Bấm Ctrl+P / Chia sẻ → In.</p><div class="grid">${items}</div></body></html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      // 1 phần và không chạy dạng app cài đặt → mở tab in; còn lại tải file HTML về để mở và in
+      const win = batches === 1 && !standalone ? window.open(url, '_blank') : null;
+      if (!win) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ma-qr-tru-${k + 1}-${batches}.html`;
+        document.body.append(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
+    if (batches > 1 || standalone) ctx.toast(`Đã tải ${batches} file mã QR (mỗi file ≤ ${QR_BATCH} mã). Mở file để in.`, undefined, undefined, 8000);
   });
   const scanned = poleFromSearch(location.search);
   if (scanned) {
     history.replaceState(null, '', location.pathname);
     $('qr-pole').textContent = scanned;
     ctx.showDialog('qrreport');
+    let sending = false;
+    const done = (ok: boolean) => {
+      sending = false;
+      if (ok) ($('qrreport') as HTMLDialogElement).close();
+    };
     const send = (kind: Report['kind']) => {
+      if (sending) return;
       const p = poles.find((x) => x.code === scanned);
-      // đứng ngay trụ: dùng toạ độ trụ trong danh sách (chính xác hơn GPS); không có thì cần GPS tốt
-      if (p) ctx.reportHere(kind, scanned, { lat: p.lat, lng: p.lng });
-      else if (ctx.lastFix()) ctx.reportHere(kind, scanned);
-      else return ctx.toast('Chưa có vị trí. Bấm “Bắt đầu lái xe”, chờ GPS rồi quét lại.');
-      ($('qrreport') as HTMLDialogElement).close();
+      // đứng ngay trụ: dùng toạ độ trụ trong danh sách (chính xác hơn GPS)
+      if (p) return done(ctx.reportHere(kind, scanned, { lat: p.lat, lng: p.lng }, true));
+      const f = freshFix(ctx.lastFix());
+      if (f) return done(ctx.reportHere(kind, scanned, { lat: f.lat, lng: f.lng }, true));
+      // người dân quét QR: app chưa chạy GPS → xin vị trí một lần
+      if (!('geolocation' in navigator)) return ctx.toast('Điện thoại không cho lấy vị trí.');
+      sending = true;
+      ctx.toast('Đang lấy vị trí…', undefined, undefined, 15_000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (pos.coords.accuracy > 100) {
+            ctx.toast('Vị trí chưa đủ chính xác (sai số lớn). Ra chỗ thoáng rồi bấm lại.');
+            return done(false);
+          }
+          done(ctx.reportHere(kind, scanned, { lat: pos.coords.latitude, lng: pos.coords.longitude }, true));
+        },
+        () => {
+          ctx.toast('Không lấy được vị trí. Hãy cho phép quyền Vị trí rồi bấm lại.');
+          done(false);
+        },
+        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 10_000 },
+      );
     };
     $('btn-qr-off').addEventListener('click', () => send('den_tat'));
     $('btn-qr-bad').addEventListener('click', () => send('su_co'));
@@ -365,10 +497,18 @@ export function setupFeatures2(ctx: Ctx2) {
 
   /* ===== 11. Đèn tín hiệu ===== */
   let signals: SignalPlan[] = [];
-  void fetch('./rules/signals.json')
-    .then((r) => (r.ok ? r.json() : []))
-    .then((j) => (signals = parseSignals(j)))
-    .catch(() => {});
+  let signalsLoaded = false;
+  const loadSignals = () =>
+    !signalsLoaded &&
+    void fetch('./rules/signals.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j) => {
+        signals = parseSignals(j);
+        signalsLoaded = true;
+      })
+      .catch(() => {});
+  loadSignals();
+  window.addEventListener('online', loadSignals);
   const SIM_SIGNALS: SignalPlan[] = [
     { id: 'SIM-N', name: 'Nút mô phỏng', lat: 10.77 + 2200 / 111195, lng: 106.7, cycleS: 90, offsetS: 0, approaches: [{ heading: 0, greenStart: 0, greenEnd: 35, yellowS: 3 }] },
   ];
@@ -380,6 +520,7 @@ export function setupFeatures2(ctx: Ctx2) {
     for (const s of list) {
       const d = haversine(f, s);
       if (d > 400 || d < 15) continue;
+      if (!signalAhead(f, s, h)) continue; // nút đã ở sau lưng
       const a = pickApproach(s, h);
       if (a < 0) continue;
       if (!best || d < best.d) best = { s, a, d };
@@ -390,8 +531,7 @@ export function setupFeatures2(ctx: Ctx2) {
       return;
     }
     const ph = phaseAt(best.s, best.a, f.t);
-    const limit = v.limit ?? 50;
-    const g = glosa(best.d, ph, limit);
+    const g = glosa(best.d, ph, v.limit, v.kmh ?? 0);
     const color = ph.color === 'green' ? 'Xanh' : ph.color === 'yellow' ? 'Vàng' : 'Đỏ';
     let text = `${best.s.name}: ${color} còn ${ph.remainS}s`;
     if (g) text += ph.color === 'green' ? ` · giữ ${g.minKmh}–${g.maxKmh} km/h là qua` : ` · chạy ≤ ${g.maxKmh} km/h tới nơi vừa xanh`;
@@ -399,18 +539,33 @@ export function setupFeatures2(ctx: Ctx2) {
     const key = `${best.s.id}:${ph.color}`;
     if (sigSpoken !== key && best.d < 300) {
       sigSpoken = key;
-      ctx.speak(ph.color === 'red' ? `Đèn đỏ phía trước, còn ${ph.remainS} giây.` : ph.color === 'green' && g ? `Đèn xanh còn ${ph.remainS} giây, giữ ${g.minKmh} ki lô mét trên giờ là qua.` : '');
+      // chỉ đọc màu và số giây, không đọc lời khuyên tốc độ
+      const say = ph.color === 'red' ? `Đèn đỏ phía trước, còn ${ph.remainS} giây.` : ph.color === 'green' && g ? `Đèn xanh còn ${ph.remainS} giây.` : '';
+      if (say) ctx.speak(say);
     }
   }
 
   /* ===== 16. OBD-II ===== */
   const obd = new Obd();
+  const sanity = new ObdSanity();
   let obdAt = 0;
   let obdInfo = { rpm: 0, coolant: 0 };
+  let gps = { kmh: null as number | null, acc: Infinity, t: 0 };
+  let obdDistrusted = false;
   obd.onValue = (v) => {
     if (v.pid === 'speed') {
-      obdAt = Date.now();
-      ctx.setSpeedOverride(v.value);
+      const now = Date.now();
+      const good = now - gps.t < 3000 && gps.acc <= 20 ? gps.kmh : null;
+      if (sanity.push(v.value, good, now)) {
+        obdAt = now;
+        ctx.setSpeedOverride(v.value);
+      } else {
+        ctx.setSpeedOverride(null);
+        if (!obdDistrusted) {
+          obdDistrusted = true;
+          ctx.toast('Tốc độ OBD lệch nhiều so với GPS — tạm dùng GPS. Kiểm tra đầu đọc OBD.', undefined, undefined, 8000);
+        }
+      }
     } else if (v.pid === 'rpm') obdInfo.rpm = v.value;
     else obdInfo.coolant = v.value;
     chip('obd', `OBD · ${obdInfo.rpm} v/p · ${obdInfo.coolant}°C`, 'ok');
@@ -424,8 +579,10 @@ export function setupFeatures2(ctx: Ctx2) {
     if (!Obd.supported()) return ($('obd-status').textContent = 'Trình duyệt này không có Web Bluetooth (chỉ Chrome trên Android).');
     $('obd-status').textContent = 'Đang tìm đầu đọc…';
     try {
+      sanity.reset();
+      obdDistrusted = false;
       await obd.connect();
-      $('obd-status').textContent = 'Đã kết nối. Tốc độ lấy từ xe thay cho GPS.';
+      $('obd-status').textContent = 'Đã kết nối. Tốc độ lấy từ xe thay cho GPS (có đối chiếu với GPS).';
     } catch (e) {
       $('obd-status').textContent = (e as Error).message || 'Không kết nối được.';
     }
@@ -462,8 +619,19 @@ export function setupFeatures2(ctx: Ctx2) {
   }
   let lastOcr = 0;
   let signAt = 0;
+  const clearSign = () => {
+    signAt = 0;
+    chip('ocr', '');
+  };
+  const c2 = document.createElement('canvas');
+  c2.width = 96;
+  c2.height = 96;
+  const g2 = c2.getContext('2d', { willReadFrequently: true });
   function runOcr(): void {
-    if (!ocrOn.checked || !wctx || Date.now() - lastOcr < 1500) return;
+    // hết hạn 5 phút kiểm tra trước, kể cả khi đã tắt OCR/camera
+    if (signAt && Date.now() - signAt > 5 * 60_000) clearSign();
+    if (!ocrOn.checked) return clearSign();
+    if (!wctx || !g2 || Date.now() - lastOcr < 1500) return;
     const video = ctx.camPreview();
     if (!video || video.videoWidth === 0) return;
     lastOcr = Date.now();
@@ -479,13 +647,10 @@ export function setupFeatures2(ctx: Ctx2) {
       // lòng biển ≈ 60% đường kính, phóng to để đọc
       const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = (Math.min(b.w, b.h) / 2) * 0.62;
       const S = 96;
-      const c2 = document.createElement('canvas');
-      c2.width = S;
-      c2.height = S;
-      const g2 = c2.getContext('2d')!;
+      g2.clearRect(0, 0, S, S);
       g2.drawImage(work, cx - r, cy - r, 2 * r, 2 * r, 0, 0, S, S);
       const res = readLimit(g2.getImageData(8, 8, S - 16, S - 16), templates);
-      if (res && res.conf >= 0.15) {
+      if (res && res.conf >= 0.4) {
         found = res.value;
         break;
       }
@@ -493,12 +658,8 @@ export function setupFeatures2(ctx: Ctx2) {
     const v = voter.push(found);
     if (v !== null) {
       signAt = Date.now();
-      ctx.setSignLimit(v);
-      chip('ocr', `Biển nhận dạng: ${v}`, 'ok');
-    } else if (signAt && Date.now() - signAt > 5 * 60_000) {
-      signAt = 0;
-      ctx.setSignLimit(null);
-      chip('ocr', '');
+      // chỉ để tham khảo: không thay giới hạn tốc độ (dễ đọc nhầm decal tốc độ dán sau xe tải)
+      chip('ocr', `Biển nhận dạng: ${v} (tham khảo)`, 'ok');
     }
   }
 
@@ -508,6 +669,7 @@ export function setupFeatures2(ctx: Ctx2) {
       renderSignal(f, v);
       runOcr();
       if (ctx.mode() !== 'gps') return;
+      if (crash.pending && v.kmh !== null && crash.sample(Date.now(), v.kmh) === 'trigger') triggerSos();
       void refreshWeather(f);
       void pingShare(f, v);
       renderPatrol(f);
@@ -516,9 +678,26 @@ export function setupFeatures2(ctx: Ctx2) {
       stopShare();
       closeSos();
       obd.close();
+      crash.reset();
+      weatherAt = 0;
+      sigSpoken = '';
+      clearSign();
+      tracker.reset();
+      current = null;
+      $('patrol-box').hidden = true;
       chip('weather', '');
       chip('sig', '');
       chip('ban', '');
+    },
+    /** Tốc độ GPS gốc (trước khi thay bằng OBD) để đối chiếu. */
+    gpsSpeed(kmh: number | null, acc: number, t: number): void {
+      gps = { kmh, acc, t };
+    },
+    /** GPS mất tín hiệu: xoá các thẻ phụ thuộc vị trí để không đứng hình. */
+    onLost(): void {
+      chip('sig', '');
+      chip('ban', '');
+      sigSpoken = '';
     },
     advice: () => advice,
   };

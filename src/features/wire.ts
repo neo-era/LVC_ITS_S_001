@@ -14,7 +14,7 @@ import { parseCommand } from './voicecmd';
 export interface Ctx {
   $: <T extends HTMLElement>(id: string) => T;
   lsGet: (k: string) => string | null;
-  lsSet: (k: string, v: string) => void;
+  lsSet: (k: string, v: string) => boolean;
   speak: (t: string) => void;
   toast: (text: string, action?: () => void, label?: string, ms?: number) => void;
   lastFix: () => GpsSample | null;
@@ -225,10 +225,14 @@ export function setupFeatures(ctx: Ctx) {
     }
     renderReports();
   }
-  function reportHere(kind: Report['kind'] = 'den_tat', pole?: string, at?: { lat: number; lng: number }): void {
-    if (ctx.mode() === 'sim') return ctx.toast('Không báo khi đang chạy thử mô phỏng.');
+  /**
+   * Ghi báo cáo tại vị trí hiện tại (hoặc toạ độ `at`). Trả false nếu không ghi được.
+   * now = true: gửi ngay, không chờ hoàn tác (người quét QR thường đóng trang ngay sau khi bấm).
+   */
+  function reportHere(kind: Report['kind'] = 'den_tat', pole?: string, at?: { lat: number; lng: number }, now = false): boolean {
+    if (ctx.mode() === 'sim') return ctx.toast('Không báo khi đang chạy thử mô phỏng.'), false;
     const f = at ?? freshFix(ctx.lastFix());
-    if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt (cần tín hiệu mới, sai số ≤ 50 m).');
+    if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt (cần tín hiệu mới, sai số ≤ 50 m).'), false;
     const h = ctx.heading();
     const r: Report = { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind, lat: f.lat, lng: f.lng, t: Date.now() };
     if (pole) r.pole = pole;
@@ -242,6 +246,11 @@ export function setupFeatures(ctx: Ctx) {
     }
     saveReps();
     ctx.speak(`Đã ghi ${label}${pole ? ` trụ ${pole}` : ''}.`);
+    if (now) {
+      ctx.toast(`Đã ghi ${label}${pole ? ` (trụ ${pole})` : ''}. Đang gửi…`);
+      void syncReports(true);
+      return true;
+    }
     let undone = false;
     ctx.toast(`Đã ghi ${label}${pole ? ` (trụ ${pole})` : ''} tại vị trí này.`, () => {
       undone = true;
@@ -251,7 +260,12 @@ export function setupFeatures(ctx: Ctx) {
     });
     // chờ hết thời gian hoàn tác rồi mới gửi lên máy chủ
     setTimeout(() => !undone && void syncReports(true), 6500);
+    return true;
   }
+  // báo cáo còn kẹt trên máy (mất mạng, đóng app trước khi gửi) → gửi lại khi mở app và khi có mạng
+  const retryReports = () => reports.some((r) => !r.synced && !r.rejected) && navigator.onLine && void syncReports(true);
+  setTimeout(retryReports, 4000);
+  window.addEventListener('online', retryReports);
   function renderReports(): void {
     const pending = reports.filter((r) => !r.synced).length;
     $('rep-info').textContent = `${reports.length} báo cáo trên máy, ${pending} chưa gửi.`;
@@ -557,9 +571,9 @@ export function setupFeatures(ctx: Ctx) {
       case 'mark_camera':
         return ctx.markCamera();
       case 'report_light':
-        return reportHere('den_tat');
+        return void reportHere('den_tat');
       case 'report_flood':
-        return reportHere('ngap');
+        return void reportHere('ngap');
       case 'stop_nav':
         ctx.stopNav();
         return ctx.speak('Đã dừng dẫn đường.');

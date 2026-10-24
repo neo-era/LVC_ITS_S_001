@@ -66,12 +66,6 @@ export class Engine {
     this.deduper = new AlertDeduper(opts.radiusM);
   }
 
-  /** Biển nhận dạng từ camera (thử nghiệm): chỉ dùng khi dữ liệu không có biển thật. */
-  private signLimit: number | null = null;
-  setSignLimit(kmh: number | null): void {
-    this.signLimit = kmh;
-  }
-
   setVehicle(v: Vehicle): void {
     this.vehicle = v;
   }
@@ -182,7 +176,7 @@ export class Engine {
     const lim = kmh !== null ? findLimit(segments, pos, this.heading, this.vehicle) : null;
     const seg = matchSegment(segments, pos, this.heading);
     const camRoute = seg?.cam === true;
-    const truckBan = this.vehicle === 'truck' && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
+    const truckBan = (this.vehicle === 'truck' || this.vehicle === 'bus') && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);
 

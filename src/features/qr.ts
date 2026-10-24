@@ -5,9 +5,12 @@ export function poleUrl(base: string, code: string): string {
   return `${base}?tru=${encodeURIComponent(code)}`;
 }
 
+/** Mã trụ hợp lệ: ≤ 60 ký tự, không ký tự điều khiển/HTML, không bắt đầu bằng ký tự công thức Excel. */
+const SAFE_CODE = /^(?![=+\-@])[^<>"'`\u0000-\u001f]{1,60}$/u;
+
 export function poleFromSearch(search: string): string | null {
   const v = new URLSearchParams(search).get('tru');
-  return v && v.length <= 60 ? v : null;
+  return v && SAFE_CODE.test(v) ? v : null;
 }
 
 export function qrSvg(text: string, cell = 4): string {

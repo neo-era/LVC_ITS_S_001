@@ -1,6 +1,6 @@
 import { angleDiff, bearing, haversine } from '../core/geo';
 import { foldName } from '../pipeline/names';
-import { fmtVnTime } from './reports';
+import { csvCell, fmtVnTime } from './reports';
 
 /** Tuần tra chiếu sáng: nạp danh sách trụ, chạy dọc tuyến, ghi trạng thái từng trụ, xuất báo cáo. */
 export interface Pole {
@@ -56,7 +56,7 @@ export function parsePoles(text: string): Pole[] {
         const keys = Object.keys(props);
         const ck = keys[pickKey(keys, /^(ma tru|ma|code|id|so hieu|ten tru|name|ten)$/)];
         const rk = keys[pickKey(keys, ROUTE)];
-        const code = ck ? String(props[ck] ?? '').trim() : '';
+        const code = ck ? String(props[ck] ?? '').trim().slice(0, 60) : '';
         if (!code || !okVN(lat, lng)) continue;
         out.push({ code, lat, lng, ...(rk && props[rk] ? { route: String(props[rk]) } : {}) });
       }
@@ -79,7 +79,7 @@ export function parsePoles(text: string): Pole[] {
     const c = splitCsv(l, d);
     const lat = Number(c[la]?.replace(',', '.'));
     const lng = Number(c[lo]?.replace(',', '.'));
-    const code = c[ci];
+    const code = (c[ci] ?? '').slice(0, 60);
     if (!code || !Number.isFinite(lat) || !Number.isFinite(lng) || !okVN(lat, lng)) continue;
     out.push({ code, lat, lng, ...(ro >= 0 && c[ro] ? { route: c[ro] } : {}) });
   }
@@ -113,5 +113,39 @@ export function patrolCsv(poles: Pole[], records: PatrolRecord[]): string {
     const r = last.get(p.code);
     rows.push([String(i + 1), p.code, p.route ?? '', r ? STATUS_LABEL[r.status] : 'Chưa kiểm', r ? fmtVnTime(r.t) : '', p.lat.toFixed(6), p.lng.toFixed(6)]);
   });
-  return '﻿' + rows.map((r) => r.map((c) => (/[",\r\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\r\n') + '\r\n';
+  return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+
+/** Mã trụ bị trùng trong danh sách (mỗi mã chỉ ghi được một kết quả). */
+export function dupCodes(poles: Pole[]): string[] {
+  const seen = new Set<string>();
+  const dup = new Set<string>();
+  for (const p of poles) (seen.has(p.code) ? dup : seen).add(p.code);
+  return [...dup];
+}
+
+/**
+ * Chọn trụ hiển thị, "dính" trụ đang hiện: khi đã tới gần (< 30 m) thì giữ trụ đó thêm 4 s kể từ lần cuối còn
+ * gần (miễn xe chưa cách nó > 60 m), để tài xế bấm đúng trụ vừa nhìn. Trụ đã bấm thì chuyển ngay.
+ */
+export class PoleTracker {
+  private cur: Pole | null = null;
+  private nearAt = -Infinity;
+  update(poles: Pole[], pos: { lat: number; lng: number }, heading: number | null, checked: Set<string>, t: number): { pole: Pole; distM: number } | null {
+    if (this.cur && !checked.has(this.cur.code)) {
+      const d = haversine(pos, this.cur);
+      if (d < 30) this.nearAt = t;
+      if (t - this.nearAt < 4000 && d <= 60) return { pole: this.cur, distM: d };
+    }
+    const next = nextPole(poles, pos, heading, checked);
+    if (next?.pole !== this.cur) {
+      this.cur = next?.pole ?? null;
+      this.nearAt = next && next.distM < 30 ? t : -Infinity;
+    }
+    return next;
+  }
+  reset(): void {
+    this.cur = null;
+    this.nearAt = -Infinity;
+  }
 }

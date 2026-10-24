@@ -1708,3 +1708,19 @@ select {
 .app:has(#patrol-box:not([hidden])) .toast {
   bottom: calc(150px + env(safe-area-inset-bottom));
 }
+/* hộp tuần tra hiện: đẩy camera xem trước, REC và nút "Theo xe" lên trên hộp */
+.app:has(#patrol-box:not([hidden])) .cam-preview:not(.big) {
+  bottom: calc(170px + env(safe-area-inset-bottom));
+}
+.app:has(#patrol-box:not([hidden])) .rec {
+  bottom: calc(270px + env(safe-area-inset-bottom));
+}
+.app:has(#patrol-box:not([hidden])) .mapbox:not(.full) .map-follow {
+  bottom: calc(170px + env(safe-area-inset-bottom));
+}
+button.status-chip {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}

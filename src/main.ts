@@ -145,11 +145,13 @@ function lsGet(k: string): string | null {
     return null;
   }
 }
-function lsSet(k: string, v: string): void {
+/** Ghi localStorage; false nếu đầy bộ nhớ/bị chặn (để báo cho người dùng). */
+function lsSet(k: string, v: string): boolean {
   try {
     localStorage.setItem(k, v);
+    return true;
   } catch {
-    /* bỏ qua */
+    return false;
   }
 }
 
@@ -478,7 +480,8 @@ function onGeo(p: GeolocationPosition): void {
     speed: p.coords.speed,
     accuracy: p.coords.accuracy,
   };
-  if (speedOverrideKmh !== null) g.speed = speedOverrideKmh / 3.6; // OBD-II: tốc độ từ xe thay cho GPS
+  features2.gpsSpeed(p.coords.speed !== null && p.coords.speed >= 0 ? p.coords.speed * 3.6 : null, p.coords.accuracy, p.timestamp);
+  if (speedOverrideKmh !== null) g.speed = speedOverrideKmh / 3.6; // OBD-II: tốc độ từ xe thay cho GPS (đã đối chiếu với GPS)
   void ensureCells(g.lat, g.lng);
   feedNav(g);
   const v = engine.push(g, p.coords.heading);
@@ -498,7 +501,11 @@ async function holdScreen(): Promise<void> {
 
 function startTicker(): void {
   if (tickTimer !== null) return;
-  tickTimer = window.setInterval(() => render(engine.tick(Date.now())), 1000);
+  tickTimer = window.setInterval(() => {
+    const v = engine.tick(Date.now());
+    render(v);
+    if (v.status === 'lost') features2.onLost();
+  }, 1000);
 }
 
 function showStartError(msg: string): void {
@@ -1112,7 +1119,7 @@ const features2 = setupFeatures2({
   camPreview: features.camPreview,
   onImpact: features.onImpact,
   setSpeedOverride: (k) => (speedOverrideKmh = k),
-  setSignLimit: (k) => engine.setSignLimit(k),
+  vehicle: () => settings.vehicle,
   showDialog: (id) => {
     settingsDlg.close();
     ($(id) as HTMLDialogElement).showModal();

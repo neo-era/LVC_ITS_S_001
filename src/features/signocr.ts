@@ -193,13 +193,13 @@ export function readLimit(inner: ImageData, tpl: DigitTemplates): { value: numbe
   return { value: v, conf: worst };
 }
 
-/** Phải thấy cùng một số ≥ 2 lần trong 4 khung gần nhất mới công nhận. */
+/** Phải thấy cùng một số ≥ 3 lần trong 5 khung gần nhất mới công nhận. */
 export class SignVoter {
   private recent: number[] = [];
   push(v: number | null): number | null {
     this.recent.push(v ?? -1);
-    if (this.recent.length > 4) this.recent.shift();
+    if (this.recent.length > 5) this.recent.shift();
     if (v === null) return null;
-    return this.recent.filter((x) => x === v).length >= 2 ? v : null;
+    return this.recent.filter((x) => x === v).length >= 3 ? v : null;
   }
 }

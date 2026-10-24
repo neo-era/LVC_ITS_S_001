@@ -31,7 +31,8 @@ describe('weatherAdvice (giảm tốc theo thời tiết — khuyến nghị, kh
 
 describe('SOS', () => {
   it('tin nhắn có vị trí, link bản đồ, giờ Việt Nam', () => {
-    const m = sosMessage(10.7712341, 106.7012341, Date.UTC(2026, 9, 24, 14, 5), 'Xe 51C');
+    const now = Date.UTC(2026, 9, 24, 14, 5);
+    const m = sosMessage({ lat: 10.7712341, lng: 106.7012341, t: now - 5000 }, now, 'Xe 51C');
     expect(m).toContain('https://www.google.com/maps?q=10.771234,106.701234');
     expect(m).toContain('21:05');
     expect(m).toContain('Xe 51C');
@@ -104,12 +105,12 @@ describe('đèn tín hiệu (kế hoạch pha cố định)', () => {
     expect(pickApproach(plan, 200)).toBe(-1);
   });
   it('GLOSA: tốc độ để tới khi còn xanh; không vượt giới hạn; không khả thi → null', () => {
-    // còn 30 s xanh, cách 300 m → cần ≥ 36 km/h; giới hạn 50 → khuyên 36–50
-    expect(glosa(300, { color: 'green', remainS: 30 }, 50)).toEqual({ minKmh: 36, maxKmh: 50 });
+    // còn 30 s xanh (trừ biên 3 s = 27 s), cách 300 m → cần ≥ 40 km/h; đang 45, giới hạn 50 → khuyên 40–50
+    expect(glosa(300, { color: 'green', remainS: 30 }, 50, 45)).toEqual({ minKmh: 40, maxKmh: 50 });
     // đỏ còn 40 s, cách 300 m → đến lúc xanh nếu đi ≤ 27 km/h
-    expect(glosa(300, { color: 'red', remainS: 40 }, 50)).toEqual({ minKmh: 0, maxKmh: 27 });
-    // xanh còn 5 s, cách 300 m → cần 216 km/h > giới hạn → null
-    expect(glosa(300, { color: 'green', remainS: 5 }, 50)).toBeNull();
+    expect(glosa(300, { color: 'red', remainS: 40 }, 50, 45)).toEqual({ minKmh: 0, maxKmh: 27 });
+    // xanh còn 5 s → quá ít sau khi trừ biên → null
+    expect(glosa(300, { color: 'green', remainS: 5 }, 50, 45)).toBeNull();
   });
   it('parseSignals bỏ mục hỏng', () => {
     expect(parseSignals([plan, { id: 'x' }, { ...plan, cycleS: 0 }])).toHaveLength(1);
@@ -166,7 +167,7 @@ describe('cấm xe tải trong ô dữ liệu và Engine', () => {
   });
   it('xe tải trên đường cấm giờ này → truckBan; ô tô → không', () => {
     const M = 111195;
-    const mk = (vehicle: 'truck' | 'car') => {
+    const mk = (vehicle: 'truck' | 'car' | 'bus') => {
       const e = new Engine({ radiusM: 500, speak: () => {}, vehicle });
       e.loadData({ segments: [{ id: 'S', a: { lat: 10.77, lng: 106.7 }, b: { lat: 10.77 + 1000 / M, lng: 106.7 }, maxspeed: 50, hgv: [[360, 1260]] }], alerts: [] });
       const t0 = Date.UTC(2026, 9, 24, 3, 0); // 10:00 VN
@@ -175,6 +176,7 @@ describe('cấm xe tải trong ô dữ liệu và Engine', () => {
       return v;
     };
     expect(mk('truck').truckBan).toBe(true);
+    expect(mk('bus').truckBan).toBe(true); // đầu kéo sơ mi rơ moóc cũng là xe tải nặng
     expect(mk('car').truckBan).toBe(false);
   });
 });

@@ -79,7 +79,31 @@ Lõi: TypeScript + Vite + MapLibre GL. Vỏ native bằng Capacitor chỉ bổ s
 - An toàn: không thao tác khi xe chạy; chỉ bấm nút lớn và dùng giọng nói.
 - Pháp lý: dữ liệu camera/điểm đen chỉ mang tính tham khảo; hiển thị rõ khi dùng dữ liệu cũ (ngày cập nhật).
 
+## 8b. Tính năng mở rộng (nhóm 1: mục 1–8, nhóm 2: mục 9–17)
+| # | Tính năng | Module | Ghi chú thiết kế |
+|---|---|---|---|
+| 1 | Báo đèn tắt / báo ngập | `features/reports.ts`, `wire.ts` | 6,5 s hoàn tác rồi mới gửi `lat_reports`; gửi lại khi mở app / có mạng; CSV chặn công thức Excel |
+| 2 | Chuyến đi + điểm lái an toàn | `trip.ts` | lưu trên máy, CSV |
+| 3 | Đội xe + trang điều độ | `fleet.ts`, `fleet.html` | `fleet_ping` 15 s, `fleet_list`, `fleet_leave`; mã đội ≥ 8 ký tự; nút ‹ quay lại app |
+| 4 | Nơi đã lưu | `places.ts` | |
+| 5 | HUD chiếu kính lái | `hud.ts` | lật ngang/dọc |
+| 6 | Nhắc nghỉ | `rest.ts` | Điều 64 Luật TTATGT 2024 (4 h liên tục, 10 h/ngày), nghỉ ≥ 15 phút |
+| 7 | Lệnh giọng nói | `voicecmd.ts` | khớp nguyên từ, phân biệt “đèn/đến” |
+| 8 | Camera hành trình | `dashcam.ts` | IndexedDB, quay vòng theo dung lượng, tự khoá khi va chạm |
+| 9 | Tuần tra chiếu sáng | `patrol.ts` | CSV/GeoJSON; lưu danh sách đã đọc (JSON gọn); `PoleTracker` giữ trụ đang hiện 4 s; báo cáo dùng toạ độ trụ; cảnh báo mã trùng |
+| 10 | QR trên trụ | `qr.ts` | `?tru=` chỉ nhận mã an toàn; không có GPS thì xin vị trí 1 lần; gửi ngay; in theo lô 200 mã |
+| 11 | Đèn tín hiệu (GLOSA) | `signals.ts` | chỉ nút phía trước (±60°); không khuyên tăng tốc, biên 3 s, cần ≥ 8 s xanh; không có giới hạn → không khuyên; giọng chỉ đọc màu + giây |
+| 12 | Thời tiết | `weather.ts` | Open-Meteo, 15 phút/lần, hạn giờ bằng AbortController |
+| 13 | Cấm xe tải | `pipeline/hgv.ts` | áp cho xe tải và xe buýt/đầu kéo; `hgv=no` + `yes @ (giờ)` → cấm phần còn lại |
+| 14 | SOS va chạm | `sos.ts` | cú sốc → `CrashConfirm`: xe dừng < 5 km/h trong 8 s mới báo, vẫn chạy > 20 km/h thì bỏ; ngưỡng xe máy 3,5 g; không có vị trí → không gửi 0,0 |
+| 15 | Chia sẻ hành trình | `wire2.ts` | token lưu sessionStorage; thẻ “Đang chia sẻ · bấm để tắt”; huỷ share sheet thì không bật |
+| 16 | OBD-II (Android) | `obd.ts` | phản hồi phải đúng PID vừa hỏi, xoá bộ đệm mỗi lệnh; `ObdSanity` lệch GPS > 20 km/h trong 5 s → quay về GPS |
+| 17 | Đọc biển bằng camera | `signocr.ts` | chỉ hiện thẻ tham khảo, KHÔNG đổi giới hạn; 3/5 khung, độ tin ≥ 0,4; hết hạn 5 phút |
+
+Hướng dẫn sử dụng cho người dùng: `docs/Huong-dan-su-dung-Lai-An-Toan.docx`.
+
 ## 9. Trạng thái (2026-10-24)
+- Cập nhật cuối ngày: xong 17 tính năng mở rộng (mục 8b), 350 test; đã sửa 5 lỗi mức cao + các lỗi trung bình từ lượt rà soát độc lập nhóm 2.
 - Xong (PWA, repo `neo-era/LVC_ITS_S_001`, GitHub Pages bằng Actions): màn hình lái xe mẫu A (sáng/tối), mô phỏng, giọng đọc tiếng Việt (chọn giọng + kiểu Dễ thương/Bình thường/Trầm ấm), bản đồ + toàn màn hình có thẻ tốc độ/cảnh báo, dẫn đường (tìm theo tên hoặc chọn trên bản đồ, nhắc 300/100 m, tìm lại khi lệch), loại xe, dữ liệu toàn quốc, giới hạn ước tính, nhắc tuyến camera, đánh dấu camera, bản đồ offline theo tỉnh. 222 test.
 - Chờ anh: dán `supabase/lat_camera_marks.sql` vào SQL Editor dự án `lai-an-toan`; chạy thử trên xe (GPS, giọng, offline trên iPhone).
 - Tiếp theo: camera hành trình (Android/Capacitor), lưu địa điểm, iOS (khi quyết định tài khoản Apple), báo sự cố giai đoạn 2.

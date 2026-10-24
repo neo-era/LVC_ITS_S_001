@@ -50,6 +50,12 @@ export function fmtVnTime(t: number): string {
   return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 }
 
+/** Một ô CSV: chặn công thức Excel (= + - @ đầu ô) và đặt ngoặc kép khi cần. */
+export function csvCell(c: string): string {
+  const v = /^[=+\-@\t\r]/.test(c) && !/^-?\d+([.,]\d+)?$/.test(c) ? `'${c}` : c;
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
 /** CSV mở thẳng bằng Excel (UTF-8 có BOM), có link bản đồ từng điểm. */
 export function reportsToCsv(list: Report[]): string {
   const rows = [['STT', 'Loại', 'Mã trụ', 'Thời điểm', 'Vĩ độ', 'Kinh độ', 'Hướng', 'Bản đồ']];
@@ -58,5 +64,5 @@ export function reportsToCsv(list: Report[]): string {
     const lng = r.lng.toFixed(6);
     rows.push([String(i + 1), REPORT_LABEL[r.kind], r.pole ?? '', fmtVnTime(r.t), lat, lng, r.dir === undefined ? '' : String(r.dir), `https://www.google.com/maps?q=${lat},${lng}`]);
   });
-  return '﻿' + rows.map((r) => r.map((c) => (/[",\r\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\r\n') + '\r\n';
+  return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }

@@ -3,14 +3,9 @@ export type Windows = [number, number][];
 
 const HM = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/;
 
-export function parseHgv(tags: Record<string, string | undefined>): Windows | null {
-  if (tags.hgv === 'no') return [[0, 1440]];
-  const c = tags['hgv:conditional'];
-  if (!c) return null;
-  const m = /^\s*no\s*@\s*\(([^)]*)\)\s*$/.exec(c);
-  if (!m) return null;
+function windows(spec: string): Windows | null {
   const out: Windows = [];
-  for (const part of m[1].split(',').map((s) => s.trim())) {
+  for (const part of spec.split(',').map((s) => s.trim())) {
     const t = HM.exec(part);
     if (!t) return null; // có điều kiện ngày/khác → không tự hiểu, bỏ qua
     const s = Number(t[1]) * 60 + Number(t[2]);
@@ -19,6 +14,32 @@ export function parseHgv(tags: Record<string, string | undefined>): Windows | nu
     else out.push([s, 1440], [0, e]);
   }
   return out.length ? out : null;
+}
+
+/** Phần bù của các khung giờ trong ngày (ghép đoạn liền nhau). */
+function complement(w: Windows): Windows {
+  const sorted = [...w].sort((a, b) => a[0] - b[0]);
+  const out: Windows = [];
+  let cur = 0;
+  for (const [s, e] of sorted) {
+    if (s > cur) out.push([cur, s]);
+    cur = Math.max(cur, e);
+  }
+  if (cur < 1440) out.push([cur, 1440]);
+  return out;
+}
+
+export function parseHgv(tags: Record<string, string | undefined>): Windows | null {
+  const c = tags['hgv:conditional'];
+  if (tags.hgv === 'no') {
+    // hgv=no + "yes @ (21:00-06:00)": chỉ được chạy trong giờ đó → cấm phần còn lại
+    const y = c ? /^\s*yes\s*@\s*\(([^)]*)\)\s*$/.exec(c) : null;
+    const allow = y ? windows(y[1]) : null;
+    return allow ? complement(allow) : [[0, 1440]];
+  }
+  if (!c) return null;
+  const m = /^\s*no\s*@\s*\(([^)]*)\)\s*$/.exec(c);
+  return m ? windows(m[1]) : null;
 }
 
 export function hgvBlockedAt(w: Windows, t: number): boolean {

@@ -42,10 +42,11 @@ describe('segmentDigits', () => {
 });
 
 describe('SignVoter', () => {
-  it('cần thấy 2 lần trong 4 khung', () => {
+  it('cần thấy 3 lần trong 5 khung', () => {
     const v = new SignVoter();
     expect(v.push(60)).toBeNull();
     expect(v.push(null)).toBeNull();
+    expect(v.push(60)).toBeNull();
     expect(v.push(60)).toBe(60);
     expect(v.push(50)).toBeNull();
   });
