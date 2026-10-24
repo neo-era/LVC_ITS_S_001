@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lái An Toàn</title>
+<meta name="description" content="Hiện tốc độ, giới hạn tốc độ và cảnh báo camera phạt nguội, điểm đen khi lái xe.">
+<meta name="theme-color" content="#0B0F14">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icons/favicon.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lái An Toàn">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<script type="module" src="/src/main.ts"></script>
+</head>
+<body>
+<div id="app" class="app" data-state="unknown" data-gps="idle">
+  <header class="topbar">
+    <div class="chip" id="gps-chip"><span class="dot" aria-hidden="true"></span><span id="gps-text">Chưa bắt đầu</span></div>
+    <button class="icon-btn" id="btn-settings" type="button" aria-label="Cài đặt">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <main class="main">
+    <section class="hud" aria-label="Tốc độ hiện tại">
+      <div class="speed">
+        <span class="speed-num" id="speed-num">--</span>
+        <span class="speed-unit">km/h</span>
+      </div>
+      <div class="limit" id="limit" hidden>
+        <div class="sign" id="limit-sign" role="img" aria-label="Giới hạn tốc độ"></div>
+        <span class="limit-label">Giới hạn</span>
+      </div>
+    </section>
+
+    <div class="over-banner" id="over-banner" hidden>
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="over-text"></span>
+    </div>
+
+    <section class="alert" id="alert" role="status" aria-live="polite" hidden>
+      <svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <div class="alert-text">
+        <span class="alert-title" id="alert-title"></span>
+        <span class="alert-sub" id="alert-sub"></span>
+      </div>
+      <span class="alert-dist" id="alert-dist"></span>
+    </section>
+
+    <section class="panel" aria-label="Sắp tới">
+      <h2 class="panel-title">Sắp tới</h2>
+      <ul class="upcoming" id="upcoming"></ul>
+      <p class="muted" id="upcoming-empty">Phía trước chưa có cảnh báo.</p>
+      <p class="muted note" id="data-note"></p>
+      <p class="muted note" id="extra-note" hidden></p>
+    </section>
+  </main>
+
+  <nav class="bar" aria-label="Điều khiển">
+    <button class="bar-btn" id="btn-sim" type="button">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+      <span id="btn-sim-text">Chạy thử</span>
+    </button>
+    <button class="bar-btn" id="btn-voice" type="button" aria-pressed="true">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+      <span id="btn-voice-text">Giọng nói: Bật</span>
+    </button>
+    <button class="bar-btn" id="btn-stop" type="button">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+      <span>Dừng</span>
+    </button>
+  </nav>
+
+  <div class="start" id="start">
+    <div class="start-card">
+      <h1 class="start-title">Lái An Toàn</h1>
+      <p class="start-sub">Tốc độ, giới hạn tốc độ và cảnh báo camera phạt nguội, điểm đen phía trước.</p>
+      <button class="primary" id="btn-start" type="button">Bắt đầu lái xe</button>
+      <button class="secondary" id="btn-start-sim" type="button">Chạy thử mô phỏng</button>
+      <p class="muted note">Vị trí chỉ xử lý ngay trên máy, không gửi đi đâu. Chỉ thao tác khi xe đã dừng.</p>
+      <p class="muted note" id="start-error" hidden role="alert"></p>
+    </div>
+  </div>
+</div>
+
+<dialog id="settings" class="settings" aria-labelledby="settings-title">
+  <form method="dialog" class="settings-form">
+    <div class="settings-head">
+      <h2 id="settings-title">Cài đặt</h2>
+      <button class="icon-btn" value="close" aria-label="Đóng cài đặt">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <label class="field" for="set-radius">
+      <span>Báo cảnh báo trước</span>
+      <select id="set-radius">
+        <option value="300">300 m</option>
+        <option value="500">500 m</option>
+        <option value="800">800 m</option>
+        <option value="1000">1000 m</option>
+      </select>
+    </label>
+
+    <label class="field" for="set-theme">
+      <span>Giao diện</span>
+      <select id="set-theme">
+        <option value="auto">Theo thiết bị</option>
+        <option value="dark">Tối</option>
+        <option value="light">Sáng</option>
+      </select>
+    </label>
+
+    <label class="field check" for="set-voice">
+      <span>Đọc cảnh báo bằng giọng nói</span>
+      <input id="set-voice" type="checkbox">
+    </label>
+
+    <button class="secondary" id="btn-test-voice" type="button">Thử giọng đọc</button>
+    <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
+    <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>
+    <p class="muted note" id="settings-data"></p>
+    <p class="muted note">Dữ liệu cảnh báo chỉ mang tính tham khảo. Luôn tuân thủ biển báo và quy định giao thông.</p>
+  </form>
+</dialog>
+</body>
+</html>
