@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '30 19 * * *' # 02:30 giờ Việt Nam hằng đêm
 permissions:
   contents: read
   pages: write
@@ -23,6 +25,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Lấy dữ liệu cảnh báo từ OpenStreetMap
+        # Đêm: lỗi thì dừng để giữ bản đang chạy. Lúc đẩy code: lỗi vẫn triển khai (app chạy không có dữ liệu).
+        continue-on-error: ${{ github.event_name != 'schedule' }}
+        run: npm run data
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }

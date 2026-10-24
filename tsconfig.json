@@ -7,7 +7,8 @@
     "noEmit": true,
     "skipLibCheck": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "node"
     ],
     "lib": [
       "ES2022",
@@ -18,6 +19,7 @@
   "include": [
     "src",
     "test",
+    "tools",
     "vite.config.ts"
   ]
 }
