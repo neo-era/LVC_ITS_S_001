@@ -1,4 +1,4 @@
-const VERSION = 'lat-v1';
+const VERSION = 'lat-v2';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 

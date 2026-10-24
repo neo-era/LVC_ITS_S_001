@@ -3,8 +3,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: '30 19 * * *' # 02:30 giờ Việt Nam hằng đêm
 permissions:
   contents: read
   pages: write
@@ -25,26 +23,13 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Dữ liệu cảnh báo do quy trình riêng (data.yml) lấy hằng đêm và lưu lại; ở đây chỉ dùng lại bản mới nhất.
       - name: Khôi phục dữ liệu đã lưu
-        id: cache
         uses: actions/cache/restore@v4
         with:
           path: public/data
-          key: osm-data-${{ github.run_id }}
+          key: osm-data-none
           restore-keys: osm-data-
-      - name: Lấy dữ liệu cảnh báo từ OpenStreetMap
-        id: data
-        # Chỉ lấy mới vào ban đêm / khi chạy tay / khi chưa có bản lưu. Các lần đẩy code dùng lại bản đã lưu (nhanh).
-        if: github.event_name != 'push' || steps.cache.outputs.cache-matched-key == ''
-        # Đêm: lỗi thì dừng để giữ bản đang chạy. Lúc đẩy code: lỗi vẫn triển khai (app chạy không có dữ liệu).
-        continue-on-error: ${{ github.event_name != 'schedule' }}
-        run: npm run data
-      - name: Lưu dữ liệu cho các lần sau
-        if: steps.data.outcome == 'success'
-        uses: actions/cache/save@v4
-        with:
-          path: public/data
-          key: osm-data-${{ github.run_id }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }

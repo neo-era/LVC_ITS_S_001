@@ -1,0 +1,38 @@
+name: Lấy dữ liệu cảnh báo
+on:
+  schedule:
+    - cron: '30 19 * * *' # 02:30 giờ Việt Nam hằng đêm
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/build-data.ts
+      - src/pipeline/**
+      - src/core/cells.ts
+      - .github/workflows/data.yml
+permissions:
+  contents: read
+  actions: write # để gọi lại quy trình đăng trang sau khi có dữ liệu mới
+concurrency:
+  group: data
+  cancel-in-progress: false
+jobs:
+  data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Lấy dữ liệu từ OpenStreetMap + dấu camera đã duyệt
+        run: npm run data
+      - name: Lưu dữ liệu cho các lần đăng trang
+        uses: actions/cache/save@v4
+        with:
+          path: public/data
+          key: osm-data-${{ github.run_id }}
+      - name: Đăng lại trang với dữ liệu mới
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
