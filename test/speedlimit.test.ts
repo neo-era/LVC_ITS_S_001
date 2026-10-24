@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findLimit, type RoadSegment } from '../src/core/speedlimit';
+import { matchSegment, findLimit, type RoadSegment } from '../src/core/speedlimit';
 
 const eastWest = (id: string, lat: number, maxspeed: number | null): RoadSegment => ({
   id,
@@ -57,5 +57,16 @@ describe('findLimit', () => {
   it('heading null vẫn trả kết quả theo khoảng cách', () => {
     const r = findLimit([eastWest('S1', 10, 50)], { lat: 10.0001, lng: 106.005 }, null);
     expect(r?.kmh).toBe(50);
+  });
+});
+
+describe('matchSegment', () => {
+  it('trả đoạn khớp nhất kể cả khi chưa có giới hạn tốc độ (để đọc cờ tuyến)', () => {
+    const seg = { ...eastWest('A', 10, null), cam: true };
+    expect(matchSegment([seg], { lat: 10.0001, lng: 106.005 }, null)?.id).toBe('A');
+    expect(findLimit([seg], { lat: 10.0001, lng: 106.005 }, null)).toBeNull();
+  });
+  it('quá 25 m → null', () => {
+    expect(matchSegment([eastWest('A', 10, 50)], { lat: 10.001, lng: 106.005 }, null)).toBeNull();
   });
 });

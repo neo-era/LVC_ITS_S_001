@@ -1,5 +1,6 @@
 import type { AlertPoint } from '../core/alerts';
 import { cellKey } from '../core/geo';
+import { matchCameraRoute } from './camera-routes';
 import type { RoadSegment } from '../core/speedlimit';
 
 /** Phần Overpass (out geom) mà ta dùng. */
@@ -15,7 +16,7 @@ export interface OverpassElement {
 export interface CellFile {
   v: 1;
   cell: string;
-  segments: { id: string; a: [number, number]; b: [number, number]; maxspeed: number | null }[];
+  segments: { id: string; a: [number, number]; b: [number, number]; maxspeed: number | null; cam?: 1 }[];
   alerts: { id: string; type: 'camera' | 'blackspot'; lat: number; lng: number; dir?: number }[];
 }
 
@@ -50,16 +51,20 @@ export function convertElements(els: OverpassElement[]): { segments: RoadSegment
     const tags = e.tags ?? {};
     if (e.type === 'way' && tags.highway && DRIVABLE.has(tags.highway) && e.geometry && e.geometry.length >= 2) {
       const maxspeed = parseMaxspeed(tags.maxspeed);
+      const mid = e.geometry[Math.floor(e.geometry.length / 2)];
+      const cam = matchCameraRoute(tags.name, mid.lat, mid.lon);
       for (let i = 0; i + 1 < e.geometry.length; i++) {
         const p = e.geometry[i];
         const q = e.geometry[i + 1];
         if (p.lat === q.lat && p.lon === q.lon) continue;
-        segments.push({
+        const seg: RoadSegment = {
           id: `w${e.id}_${i}`,
           a: { lat: r6(p.lat), lng: r6(p.lon) },
           b: { lat: r6(q.lat), lng: r6(q.lon) },
           maxspeed,
-        });
+        };
+        if (cam) seg.cam = true;
+        segments.push(seg);
       }
     } else if (
       e.type === 'node' &&
@@ -91,7 +96,9 @@ export function bucketCells(data: { segments: RoadSegment[]; alerts: AlertPoint[
       cellKey((s.a.lat + s.b.lat) / 2, (s.a.lng + s.b.lng) / 2),
     ]);
     for (const k of keys) {
-      get(k).segments.push({ id: s.id, a: [s.a.lat, s.a.lng], b: [s.b.lat, s.b.lng], maxspeed: s.maxspeed });
+      const out: CellFile['segments'][number] = { id: s.id, a: [s.a.lat, s.a.lng], b: [s.b.lat, s.b.lng], maxspeed: s.maxspeed };
+      if (s.cam) out.cam = 1;
+      get(k).segments.push(out);
     }
   }
   const seen = new Set<string>();

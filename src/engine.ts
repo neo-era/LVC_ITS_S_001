@@ -3,7 +3,7 @@ import type { CellData } from './core/cells';
 import { alertVoiceText, overspeedVoiceText, speedState, type SpeedState } from './core/format';
 import { bearing, cellKey, cellsAround, haversine, type LatLng } from './core/geo';
 import { SpeedFilter, type GpsSample, type GpsStatus } from './core/gps';
-import { findLimit, type RoadSegment } from './core/speedlimit';
+import { findLimit, matchSegment, type RoadSegment } from './core/speedlimit';
 
 export interface ViewState {
   status: GpsStatus | 'idle';
@@ -14,6 +14,8 @@ export interface ViewState {
   alert: AlertHit | null;
   /** Các cảnh báo kế tiếp (không gồm cảnh báo gần nhất). */
   upcoming: AlertHit[];
+  /** Đang chạy trên tuyến đường được báo chí nêu có camera phạt nguội. */
+  camRoute: boolean;
 }
 
 export interface EngineOptions {
@@ -31,6 +33,7 @@ const idleView = (): ViewState => ({
   state: 'unknown',
   alert: null,
   upcoming: [],
+  camRoute: false,
 });
 
 /** Gom GPS → tốc độ lọc → giới hạn → cảnh báo → lời đọc. Không phụ thuộc DOM nên kiểm thử được. */
@@ -137,6 +140,7 @@ export class Engine {
   private compute(kmh: number | null, status: GpsStatus, pos: LatLng, t: number): void {
     const { segments, alerts } = this.nearby(pos);
     const lim = kmh !== null ? findLimit(segments, pos, this.heading) : null;
+    const camRoute = matchSegment(segments, pos, this.heading)?.cam === true;
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);
 
@@ -162,6 +166,7 @@ export class Engine {
       state,
       alert: hits[0] ?? null,
       upcoming: hits.slice(1, 4),
+      camRoute,
     };
   }
 }

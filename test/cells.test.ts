@@ -74,3 +74,18 @@ describe('parseCell', () => {
     expect(r?.alerts[0]).toEqual({ id: 'C5', type: 'camera', lat: 10.77, lng: 106.7 });
   });
 });
+
+describe('parseCell: cờ tuyến có camera', () => {
+  const base = { v: 1, cell: '1077_10670', alerts: [] };
+  it('cam=1 → cam true; thiếu hoặc giá trị lạ → không có cờ', () => {
+    const c = parseCell({
+      ...base,
+      segments: [
+        { id: 'a', a: [10.77, 106.7], b: [10.771, 106.7], maxspeed: 50, cam: 1 },
+        { id: 'b', a: [10.77, 106.7], b: [10.771, 106.7], maxspeed: 50 },
+        { id: 'c', a: [10.77, 106.7], b: [10.771, 106.7], maxspeed: 50, cam: 'x' },
+      ],
+    })!;
+    expect(c.segments.map((s) => s.cam === true)).toEqual([true, false, false]);
+  });
+});

@@ -6,6 +6,8 @@ export interface RoadSegment {
   b: LatLng;
   /** Giới hạn tốc độ (km/h); null nếu dữ liệu chưa có. */
   maxspeed: number | null;
+  /** Tuyến đường này nằm trong danh sách có camera phạt nguội (theo báo chí). */
+  cam?: boolean;
 }
 
 export interface LimitResult {
@@ -28,16 +30,12 @@ function alignment(heading: number, seg: RoadSegment): number {
   return Math.min(d, 180 - d);
 }
 
-/**
- * Tìm giới hạn tốc độ tại vị trí hiện tại.
- * Trả null (ẩn biển) khi không có đoạn nào trong 25 m hoặc đoạn khớp nhất chưa có dữ liệu hợp lệ —
- * không bao giờ mượn số của đoạn xa hơn.
- */
-export function findLimit(
+/** Đoạn đường khớp nhất với vị trí (trong 25 m, ưu tiên cùng hướng); null nếu không có. */
+export function matchSegment(
   segments: RoadSegment[],
   pos: LatLng,
   heading: number | null,
-): LimitResult | null {
+): RoadSegment | null {
   const near = segments
     .map((seg) => ({ seg, d: distToSegment(pos, seg.a, seg.b) }))
     .filter((x) => x.d <= MAX_MATCH_DIST_M);
@@ -56,7 +54,20 @@ export function findLimit(
   } else {
     best = candidates.reduce((p, c) => (c.d < p.d ? c : p));
   }
+  return best.seg;
+}
 
-  if (!validSpeed(best.seg.maxspeed)) return null;
-  return { kmh: best.seg.maxspeed, segmentId: best.seg.id, distM: best.d };
+/**
+ * Tìm giới hạn tốc độ tại vị trí hiện tại.
+ * Trả null (ẩn biển) khi không có đoạn nào trong 25 m hoặc đoạn khớp nhất chưa có dữ liệu hợp lệ —
+ * không bao giờ mượn số của đoạn xa hơn.
+ */
+export function findLimit(
+  segments: RoadSegment[],
+  pos: LatLng,
+  heading: number | null,
+): LimitResult | null {
+  const seg = matchSegment(segments, pos, heading);
+  if (!seg || !validSpeed(seg.maxspeed)) return null;
+  return { kmh: seg.maxspeed, segmentId: seg.id, distM: distToSegment(pos, seg.a, seg.b) };
 }

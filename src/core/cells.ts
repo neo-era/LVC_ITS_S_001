@@ -33,7 +33,9 @@ export function parseCell(raw: unknown): CellData | null {
       const a = point(s.a);
       const b = point(s.b);
       if (!a || !b) continue;
-      segments.push({ id: s.id, a, b, maxspeed: num(s.maxspeed) ? s.maxspeed : null });
+      const seg: RoadSegment = { id: s.id, a, b, maxspeed: num(s.maxspeed) ? s.maxspeed : null };
+      if (s.cam === 1) seg.cam = true;
+      segments.push(seg);
     }
   }
 

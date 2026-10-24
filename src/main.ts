@@ -191,6 +191,7 @@ function render(v: ViewState): void {
     limitBox.hidden = true;
   }
 
+  $('route-chip').hidden = !v.camRoute;
   const over = v.state === 'over' && v.limit !== null;
   overBanner.hidden = !over;
   if (over) overText.textContent = `Vượt tốc độ — giới hạn ${v.limit}`;
@@ -377,7 +378,7 @@ function stopAll(): void {
   mode = 'idle';
   stopNav();
   lastFix = null;
-  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [] });
+  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false });
   refreshNotes();
 }
 

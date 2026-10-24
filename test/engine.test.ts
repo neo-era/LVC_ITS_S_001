@@ -128,4 +128,20 @@ describe('Engine', () => {
     expect(e.alertsNear({ lat: at(700), lng: START.lng }, 300).map((a) => a.id)).toEqual(['CAM']);
     expect(e.alertsNear({ lat: at(0), lng: START.lng }, 300)).toEqual([]);
   });
+
+  it('camRoute: bật khi xe đang chạy trên đoạn đường được gắn cờ, kể cả đoạn chưa có giới hạn', () => {
+    const e = new Engine({ radiusM: 500, speak: () => {} });
+    const d = data(false); // maxspeed null
+    d.segments = d.segments.map((s) => ({ ...s, cam: true }));
+    e.loadData(d);
+    const v = run(e, 12, 300);
+    expect(v.limit).toBeNull();
+    expect(v.camRoute).toBe(true);
+  });
+
+  it('camRoute: tắt khi đường không gắn cờ', () => {
+    const e = new Engine({ radiusM: 500, speak: () => {} });
+    e.loadData(data());
+    expect(run(e, 12, 300).camRoute).toBe(false);
+  });
 });

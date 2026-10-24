@@ -69,3 +69,18 @@ describe('bucketCells', () => {
     expect([...cells.values()][0].alerts).toHaveLength(1);
   });
 });
+
+describe('cờ tuyến có camera trong dữ liệu', () => {
+  it('way có tên trong danh sách và đúng khu vực → mọi đoạn mang cờ; ghi ra tệp ô là cam: 1', () => {
+    const r = convertElements([
+      way(1, { highway: 'primary', name: 'Đường Lê Lợi', maxspeed: '50' }, [[10.777, 106.695], [10.778, 106.695]]),
+      way(2, { highway: 'primary', name: 'Đường Khác' }, [[10.777, 106.7], [10.778, 106.7]]),
+      way(3, { highway: 'primary', name: 'Đường Lê Lợi' }, [[10.98, 106.65], [10.981, 106.65]]),
+    ]);
+    expect(r.segments.map((s) => s.cam === true)).toEqual([true, false, false]);
+    const cells = bucketCells(r);
+    const all = [...cells.values()].flatMap((c) => c.segments);
+    expect(all.find((s) => s.id === 'w1_0')?.cam).toBe(1);
+    expect(all.find((s) => s.id === 'w2_0')?.cam).toBeUndefined();
+  });
+});

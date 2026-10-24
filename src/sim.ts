@@ -14,6 +14,7 @@ export function simData(): CellData {
       a: { lat: at(s), lng: SIM_START.lng },
       b: { lat: at(s + 400), lng: SIM_START.lng },
       maxspeed: s < 1200 ? 50 : 60,
+      ...(s >= 800 ? { cam: true } : {}),
     });
   }
   return {
