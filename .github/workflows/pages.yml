@@ -25,10 +25,26 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Khôi phục dữ liệu đã lưu
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: public/data
+          key: osm-data-${{ github.run_id }}
+          restore-keys: osm-data-
       - name: Lấy dữ liệu cảnh báo từ OpenStreetMap
+        id: data
+        # Chỉ lấy mới vào ban đêm / khi chạy tay / khi chưa có bản lưu. Các lần đẩy code dùng lại bản đã lưu (nhanh).
+        if: github.event_name != 'push' || steps.cache.outputs.cache-matched-key == ''
         # Đêm: lỗi thì dừng để giữ bản đang chạy. Lúc đẩy code: lỗi vẫn triển khai (app chạy không có dữ liệu).
         continue-on-error: ${{ github.event_name != 'schedule' }}
         run: npm run data
+      - name: Lưu dữ liệu cho các lần sau
+        if: steps.data.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: public/data
+          key: osm-data-${{ github.run_id }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
