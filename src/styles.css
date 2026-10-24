@@ -1525,3 +1525,24 @@ select {
 .fleet-marker.stale {
   background: #6b7280;
 }
+
+.save-row {
+  display: flex;
+  gap: 8px;
+}
+.save-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  border-radius: var(--radius-s);
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  padding: 0 12px;
+}
+.save-row .secondary {
+  min-height: 52px;
+  font-size: 15px;
+  padding: 0 12px;
+}

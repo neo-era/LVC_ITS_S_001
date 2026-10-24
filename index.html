@@ -185,7 +185,10 @@
     </label>
     <div class="saved" id="saved-places"></div>
     <button class="secondary" id="btn-dest-map" type="button">Chọn trên bản đồ</button>
-    <button class="secondary" id="btn-save-here" type="button">Lưu vị trí hiện tại (tên = chữ đang gõ)</button>
+    <div class="save-row">
+      <input id="save-name" type="text" autocomplete="off" placeholder="Tên (vd: Nhà, Cơ quan)" aria-label="Tên địa điểm để lưu vị trí hiện tại">
+      <button class="secondary" id="btn-save-here" type="button">Lưu vị trí hiện tại</button>
+    </div>
     <ul class="results" id="dest-results"></ul>
     <p class="muted note" id="dest-status" role="status" aria-live="polite"></p>
   </div>
@@ -282,7 +285,8 @@
     </div>
     <p class="muted note">Khi bật, xe gửi vị trí mỗi 15 giây trong lúc chạy cho người có cùng mã đội xem trên trang điều độ. Tắt là ngừng gửi ngay.</p>
     <label class="field stack" for="fleet-name"><span>Tên xe / tài xế</span><input id="fleet-name" type="text" autocomplete="off" placeholder="Ví dụ: Xe thang 51C-123.45"></label>
-    <label class="field stack" for="fleet-team"><span>Mã đội (≥ 8 ký tự, chữ/số/-)</span><input id="fleet-team" type="text" autocomplete="off" placeholder="Ví dụ: KVTT-DOIXE-01"></label>
+    <label class="field stack" for="fleet-team"><span>Mã đội (bí mật, ≥ 8 ký tự, chữ/số/-)</span><input id="fleet-team" type="text" autocomplete="off" placeholder="Bấm Tạo mã đội hoặc nhập mã được chia sẻ"></label>
+    <button class="secondary" id="btn-fleet-gen" type="button">Tạo mã đội mới (khó đoán)</button>
     <label class="field check" for="fleet-on"><span>Chia sẻ vị trí khi lái</span><input id="fleet-on" type="checkbox"></label>
     <a class="secondary link-btn" id="fleet-open" href="./fleet.html" target="_blank" rel="noopener">Mở trang điều độ</a>
     <p class="muted note" id="fleet-status" role="status" aria-live="polite"></p>

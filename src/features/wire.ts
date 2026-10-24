@@ -29,6 +29,14 @@ export interface Ctx {
   closeSettings: () => void;
 }
 
+/** Vị trí đủ tin cậy để ghi nhận: mới (≤ 10 giây) và sai số ≤ 50 m. */
+export function freshFix(f: GpsSample | null, now = Date.now()): GpsSample | null {
+  if (!f) return null;
+  if (now - f.t > 10_000) return null;
+  if (!(f.accuracy <= 50)) return null;
+  return f;
+}
+
 function readJson<T>(ctx: Ctx, key: string, parse: (v: unknown) => T, dflt: T): T {
   try {
     return parse(JSON.parse(ctx.lsGet(key) ?? 'null'));
@@ -93,9 +101,11 @@ export function setupFeatures(ctx: Ctx) {
     );
   }
   $('btn-save-here').addEventListener('click', () => {
-    const f = ctx.lastFix();
-    if (!f) return ctx.toast('Chưa có vị trí GPS để lưu.');
-    const name = ($('dest-q') as HTMLInputElement).value.trim() || `Điểm đã lưu ${places.length + 1}`;
+    const f = freshFix(ctx.lastFix());
+    if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt để lưu (cần tín hiệu mới, sai số ≤ 50 m).');
+    const nameBox = $('save-name') as HTMLInputElement;
+    const name = nameBox.value.trim() || `Điểm đã lưu ${places.length + 1}`;
+    nameBox.value = '';
     places = addPlace(places, { name, lat: f.lat, lng: f.lng });
     savePlaces();
     renderPlaces();
@@ -127,7 +137,9 @@ export function setupFeatures(ctx: Ctx) {
   /* ===== 6. Nhắc nghỉ ===== */
   const restSel = $('set-rest') as HTMLSelectElement;
   restSel.value = ctx.lsGet('lat.rest') ?? '120';
-  const rest = new RestTracker(Number(restSel.value));
+  const REST_STATE = 'lat.rest.state';
+  const rest = RestTracker.restore(Number(restSel.value), readJson(ctx, REST_STATE, (v) => (v && typeof v === 'object' ? (v as Record<string, unknown>) : null), null));
+  let restSavedAt = 0;
   restSel.addEventListener('change', () => {
     ctx.lsSet('lat.rest', restSel.value);
     rest.setThreshold(Number(restSel.value));
@@ -170,43 +182,73 @@ export function setupFeatures(ctx: Ctx) {
   const REPS = 'lat.reports.v1';
   let reports: Report[] = readJson(ctx, REPS, parseReports, []);
   const saveReps = () => ctx.lsSet(REPS, JSON.stringify(reports));
+  const postReports = async (rows: Report[]) =>
+    fetch(`${SUPABASE_URL}/rest/v1/lat_reports?on_conflict=id`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=minimal' },
+      body: JSON.stringify(rows.map((r) => ({ id: r.id, kind: r.kind, lat: r.lat, lng: r.lng, dir: r.dir ?? null, device: ctx.deviceId(), t_client: r.t }))),
+    });
+  let repSyncing = false;
   async function syncReports(silent: boolean): Promise<void> {
-    const pending = reports.filter((r) => !r.synced);
+    const pending = reports.filter((r) => !r.synced && !r.rejected);
     const say = (t: string) => !silent && ($('rep-status').textContent = t);
     if (!pending.length) return void say('Không có báo cáo nào cần gửi.');
     if (!navigator.onLine) return void say('Đang ngoại tuyến — báo cáo vẫn lưu trên máy.');
+    if (repSyncing) return;
+    repSyncing = true;
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/lat_reports?on_conflict=id`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=minimal' },
-        body: JSON.stringify(pending.map((r) => ({ id: r.id, kind: r.kind, lat: r.lat, lng: r.lng, dir: r.dir ?? null, device: ctx.deviceId(), t_client: r.t }))),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      const ids = new Set(pending.map((r) => r.id));
-      reports = reports.map((r) => (ids.has(r.id) ? { ...r, synced: true } : r));
-      saveReps();
-      say(`Đã gửi ${ids.size} báo cáo.`);
+      let res = await postReports(pending);
+      if (res.status >= 400 && res.status < 500 && pending.length > 1) {
+        // một dòng bị từ chối không được chặn cả lô: gửi từng dòng, dòng hỏng đánh dấu để không gửi lại
+        let okN = 0;
+        for (const r of pending) {
+          const one = await postReports([r]);
+          if (one.ok) okN++;
+          reports = reports.map((x) => (x.id === r.id ? { ...x, synced: one.ok, rejected: one.status >= 400 && one.status < 500 } : x));
+        }
+        saveReps();
+        say(`Đã gửi ${okN}/${pending.length} báo cáo.`);
+      } else if (res.ok) {
+        const ids = new Set(pending.map((r) => r.id));
+        reports = reports.map((r) => (ids.has(r.id) ? { ...r, synced: true } : r));
+        saveReps();
+        say(`Đã gửi ${ids.size} báo cáo.`);
+      } else if (res.status >= 400 && res.status < 500) {
+        reports = reports.map((r) => (r.id === pending[0].id ? { ...r, rejected: true } : r));
+        saveReps();
+        say(`Máy chủ từ chối báo cáo (mã ${res.status}). Đã giữ lại trên máy để xuất CSV.`);
+      } else throw new Error(String(res.status));
     } catch (e) {
       say(`Chưa gửi được (${(e as Error).message}). Báo cáo vẫn lưu trên máy, xuất CSV được.`);
+    } finally {
+      repSyncing = false;
     }
     renderReports();
   }
   function reportHere(): void {
     if (ctx.mode() === 'sim') return ctx.toast('Không báo khi đang chạy thử mô phỏng.');
-    const f = ctx.lastFix();
-    if (!f) return ctx.toast('Chưa có vị trí GPS.');
+    const f = freshFix(ctx.lastFix());
+    if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt (cần tín hiệu mới, sai số ≤ 50 m).');
     const h = ctx.heading();
     const r: Report = { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind: 'den_tat', lat: f.lat, lng: f.lng, t: Date.now() };
     if (h !== null) r.dir = Math.round(h) % 360;
-    reports = [...reports, r].slice(-1000);
+    // giữ tối đa 1000, bỏ các báo cáo ĐÃ GỬI cũ nhất trước
+    reports = [...reports, r];
+    while (reports.length > 1000) {
+      const i = reports.findIndex((x) => x.synced);
+      reports.splice(i >= 0 ? i : 0, 1);
+    }
     saveReps();
     ctx.speak('Đã ghi đèn tắt.');
+    let undone = false;
     ctx.toast('Đã ghi đèn tắt tại vị trí này.', () => {
+      undone = true;
       reports = reports.filter((x) => x.id !== r.id);
       saveReps();
       $('toast').hidden = true;
     });
-    void syncReports(true);
+    // chờ hết thời gian hoàn tác rồi mới gửi lên máy chủ
+    setTimeout(() => !undone && void syncReports(true), 6500);
   }
   function renderReports(): void {
     const pending = reports.filter((r) => !r.synced).length;
@@ -260,11 +302,18 @@ export function setupFeatures(ctx: Ctx) {
   /* ===== 2. Nhật ký chuyến đi ===== */
   const TRIPS = 'lat.trips.v1';
   let trips: TripSummary[] = readJson(ctx, TRIPS, (v) => (Array.isArray(v) ? (v as TripSummary[]) : []), []);
-  let trip: TripRecorder | null = null;
-  function endTrip(): void {
+  const TRIP_LIVE = 'lat.trip.live';
+  let trip: TripRecorder | null = TripRecorder.restore(readJson(ctx, TRIP_LIVE, (v) => v, null));
+  let tripSavedAt = 0;
+  let lastMovingT = trip?.lastT ?? 0;
+  const SPLIT_MS = 15 * 60_000;
+  // Chuyến đang dở từ lần trước: nếu đã dừng > 15 phút thì chốt luôn
+  if (trip && Date.now() - trip.lastT > SPLIT_MS) endTrip(trip.lastT);
+  function endTrip(endAt = Date.now()): void {
     if (!trip) return;
-    const s = trip.summary(Date.now());
+    const s = trip.summary(endAt);
     trip = null;
+    ctx.lsSet(TRIP_LIVE, 'null');
     if (s.distM < 200) return; // chuyến quá ngắn: bỏ
     trips = [...trips, s].slice(-100);
     ctx.lsSet(TRIPS, JSON.stringify(trips));
@@ -333,18 +382,32 @@ export function setupFeatures(ctx: Ctx) {
     ctx.lsSet('lat.fleet.team', fTeam.value.trim());
     syncFleetLink();
   });
+  $('btn-fleet-gen').addEventListener('click', () => {
+    const a = new Uint8Array(12);
+    crypto.getRandomValues(a);
+    fTeam.value = `D-${Array.from(a, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 18).toUpperCase()}`;
+    fTeam.dispatchEvent(new Event('change'));
+    fleetMsg('Đã tạo mã đội mới. Gửi mã này cho người cần xem/tham gia.');
+  });
   fOn.addEventListener('change', () => {
     if (fOn.checked && !isTeamCode(fTeam.value.trim())) {
       fOn.checked = false;
-      return fleetMsg('Mã đội cần ít nhất 8 ký tự (chữ, số, dấu gạch).');
+      return fleetMsg('Mã đội cần ít nhất 8 ký tự (chữ, số, dấu gạch). Nên bấm “Tạo mã đội” để có mã khó đoán.');
     }
     ctx.lsSet('lat.fleet.on', fOn.checked ? '1' : '0');
     fleetMsg(fOn.checked ? 'Đang chia sẻ vị trí khi lái.' : 'Đã tắt chia sẻ vị trí.');
+    if (!fOn.checked && isTeamCode(fTeam.value.trim())) {
+      void fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'content-type': 'application/json' },
+        body: JSON.stringify({ p_team: fTeam.value.trim(), p_device: ctx.deviceId() }),
+      }).catch(() => {});
+    }
   });
   $('btn-fleet').addEventListener('click', () => openDlg('fleet'));
   let lastPing = 0;
   async function pingFleet(f: GpsSample, v: ViewState): Promise<void> {
-    if (!fOn.checked || ctx.mode() !== 'gps' || !navigator.onLine) return;
+    if (!fOn.checked || ctx.mode() !== 'gps' || !navigator.onLine || !isTeamCode(fTeam.value.trim())) return;
     const moving = (v.kmh ?? 0) > 5;
     if (Date.now() - lastPing < (moving ? 15_000 : 60_000)) return;
     lastPing = Date.now();
@@ -377,9 +440,9 @@ export function setupFeatures(ctx: Ctx) {
     ctx.lsSet('lat.cam.auto', autoBox.checked ? '1' : '0');
     cam.autoLock = autoBox.checked;
   });
-  cam.onWarn = (m) => {
+  cam.onWarn = (m, severe) => {
     ctx.toast(m, undefined, undefined, 8000);
-    if (m.includes('va chạm')) ctx.speak('Đã khoá video va chạm.');
+    if (severe) ctx.speak(m.includes('va chạm') ? 'Đã khoá video va chạm.' : m.split('.')[0]);
   };
   const renderCamState = () => {
     $('rec').hidden = !cam.recording;
@@ -391,11 +454,11 @@ export function setupFeatures(ctx: Ctx) {
     renderCamState();
     if (($('clips') as HTMLDialogElement).open) renderClips();
   };
-  async function camToggle(on?: boolean): Promise<void> {
+  async function camToggle(on?: boolean, fromTouch = true): Promise<void> {
     const want = on ?? !cam.recording;
     try {
       if (want) {
-        await cam.start();
+        await cam.start({ fromTouch });
         ctx.speak('Bắt đầu quay video hành trình.');
       } else {
         cam.stop();
@@ -470,6 +533,13 @@ export function setupFeatures(ctx: Ctx) {
     renderClips();
     openDlg('clips');
   });
+  ($('clips') as HTMLDialogElement).addEventListener('close', () => {
+    const v = $('clip-player') as HTMLVideoElement;
+    v.pause();
+    if (v.src) URL.revokeObjectURL(v.src);
+    v.removeAttribute('src');
+    v.hidden = true;
+  });
   $('btn-clip-clear').addEventListener('click', () => void cam.removeUnlocked());
   if (!Dashcam.supported()) $('btn-cam').hidden = true;
 
@@ -492,6 +562,7 @@ export function setupFeatures(ctx: Ctx) {
         const p = findPlaceByName(places, c.name);
         if (!p) return ctx.speak(`Chưa có địa điểm ${c.name} trong danh sách đã lưu.`);
         try {
+          ctx.speak(`Dẫn đường tới ${p.name}.`);
           await ctx.goTo({ name: p.name, detail: 'Địa điểm đã lưu', lat: p.lat, lng: p.lng });
         } catch (e) {
           ctx.speak((e as Error).message);
@@ -501,7 +572,7 @@ export function setupFeatures(ctx: Ctx) {
       case 'voice':
         return ctx.toggleVoice(c.on);
       case 'dashcam':
-        return camToggle(c.on);
+        return camToggle(c.on, false);
       case 'dashcam_lock':
         if (!cam.recording) return ctx.speak('Chưa bật quay video.');
         cam.lockNow();
@@ -525,16 +596,22 @@ export function setupFeatures(ctx: Ctx) {
       r.maxAlternatives = 1;
       listening = true;
       $('btn-mic').classList.add('rec-on');
+      const done = () => {
+        listening = false;
+        $('btn-mic').classList.remove('rec-on');
+      };
+      const guard = setTimeout(done, 8000); // iOS đôi khi không gọi onend
       r.onresult = (e) => void runCommand(e.results[0][0].transcript);
       r.onerror = (e) => e.error !== 'no-speech' && ctx.toast(e.error === 'not-allowed' ? 'Chưa được cấp quyền micro.' : 'Không nghe rõ, anh thử lại.');
       r.onend = () => {
-        listening = false;
-        $('btn-mic').classList.remove('rec-on');
+        clearTimeout(guard);
+        done();
       };
       try {
         r.start();
       } catch {
-        listening = false;
+        clearTimeout(guard);
+        done();
       }
     });
   }
@@ -547,12 +624,27 @@ export function setupFeatures(ctx: Ctx) {
     onSample(f: GpsSample, v: ViewState): void {
       renderHud(v);
       if (ctx.mode() !== 'gps') return;
+      const now = Date.now();
+      if ((v.kmh ?? 0) > 5) {
+        if (trip && lastMovingT && f.t - lastMovingT > SPLIT_MS) endTrip(lastMovingT); // dừng > 15 phút: tách chuyến
+        lastMovingT = f.t;
+      }
       if (!trip) trip = new TripRecorder(f.t, f.lat, f.lng);
-      trip.push({ t: f.t, lat: f.lat, lng: f.lng, kmh: v.kmh, limit: v.limit, limitEstimated: v.limitEstimated });
-      const ev = rest.push(f.t, v.kmh);
+      trip.push({ t: f.t, lat: f.lat, lng: f.lng, kmh: v.kmh, limit: v.limit, limitEstimated: v.limitEstimated, ok: v.status === 'ok' });
+      if (now - tripSavedAt > 20_000) {
+        tripSavedAt = now;
+        ctx.lsSet(TRIP_LIVE, JSON.stringify(trip.snapshot()));
+      }
+      const ev = rest.push(f.t, v.status === 'ok' ? v.kmh : null);
+      if (now - restSavedAt > 30_000) {
+        restSavedAt = now;
+        ctx.lsSet(REST_STATE, JSON.stringify(rest.snapshot()));
+      }
       if (ev === 'remind') {
-        const h = Math.round(rest.drivingMs / 60_000);
-        ctx.speak(`Anh đã lái liên tục ${Math.floor(h / 60)} giờ ${h % 60} phút. Hãy dừng nghỉ ít nhất 15 phút.`);
+        const m = Math.round(rest.drivingMs / 60_000);
+        const h = Math.floor(m / 60);
+        const txt = h > 0 ? (m % 60 ? `${h} giờ ${m % 60} phút` : `${h} giờ`) : `${m} phút`;
+        ctx.speak(`Anh đã lái liên tục ${txt}. Hãy dừng nghỉ ít nhất 15 phút.`);
         ctx.toast(`Đã lái liên tục ${fmtDur(rest.drivingMs / 1000)} — nên dừng nghỉ ít nhất 15 phút.`, undefined, undefined, 15_000);
       } else if (ev === 'day_limit') {
         ctx.speak('Hôm nay anh đã lái đủ 10 giờ. Nên dừng lái.');
@@ -562,6 +654,7 @@ export function setupFeatures(ctx: Ctx) {
     },
     onStop(): void {
       endTrip();
+      ctx.lsSet(REST_STATE, JSON.stringify(rest.snapshot()));
       if (cam.recording) cam.stop();
     },
     renderPlaces,

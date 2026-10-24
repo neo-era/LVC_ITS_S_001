@@ -36,7 +36,7 @@ describe('RestTracker (nhắc nghỉ)', () => {
     expect(r.dayMs).toBeGreaterThan(4.9 * 60 * MIN);
   });
   it('vượt 10 giờ lái trong ngày → báo một lần', () => {
-    const r = new RestTracker(0);
+    const r = new RestTracker(999);
     const ev: string[] = [];
     for (let t = 0; t <= 10.2 * 60 * MIN; t += 30_000) {
       const e = r.push(t, 60);
@@ -94,9 +94,9 @@ describe('TripRecorder (nhật ký chuyến đi)', () => {
     let lat = 10.7;
     for (let i = 1; i <= 60; i++) {
       lat += 15 / M;
-      tr.push({ t: i * 1000, lat, lng: 106.6, kmh: 54, limit: 60, limitEstimated: false });
+      tr.push({ t: i * 1000, lat, lng: 106.6, kmh: 54, limit: 60, limitEstimated: false, ok: true });
     }
-    tr.push({ t: 61_000, lat: lat + 5000 / M, lng: 106.6, kmh: 54, limit: 60, limitEstimated: false }); // nhảy 5 km
+    tr.push({ t: 61_000, lat: lat + 5000 / M, lng: 106.6, kmh: 54, limit: 60, limitEstimated: false, ok: true }); // nhảy 5 km
     const s = tr.summary(62_000);
     expect(s.distM).toBeGreaterThan(880);
     expect(s.distM).toBeLessThan(920);
@@ -106,7 +106,7 @@ describe('TripRecorder (nhật ký chuyến đi)', () => {
   it('đếm số lần vượt tốc độ (biển thật) và phanh gấp; số ước tính không tính vượt', () => {
     const tr = new TripRecorder(0, 10.7, 106.6);
     const seq = [50, 70, 72, 69, 66, 58, 70, 67, 64, 34];
-    seq.forEach((kmh, i) => tr.push({ t: (i + 1) * 1000, lat: 10.7 + (i * 15) / 111195, lng: 106.6, kmh, limit: 60, limitEstimated: i >= 6 && i <= 8 }));
+    seq.forEach((kmh, i) => tr.push({ t: (i + 1) * 1000, lat: 10.7 + (i * 15) / 111195, lng: 106.6, kmh, limit: 60, limitEstimated: i >= 6 && i <= 8, ok: true }));
     const s = tr.summary(10_000);
     expect(s.overCount).toBe(1); // lần 2 là số ước tính
     expect(s.hardBrakes).toBe(1); // 64 → 34 km/h trong 1 giây
@@ -165,5 +165,91 @@ describe('fleet (đội xe)', () => {
   it('fleetFresh: cập nhật < 2 phút là đang hoạt động', () => {
     expect(fleetFresh('2026-10-24T10:00:00Z', Date.parse('2026-10-24T10:01:30Z'))).toBe('live');
     expect(fleetFresh('2026-10-24T10:00:00Z', Date.parse('2026-10-24T10:20:00Z'))).toBe('stale');
+  });
+});
+
+/* ===== Sau review ===== */
+import { ImpactDetector } from '../src/features/dashcam-plan';
+
+describe('parseCommand — sửa sau review', () => {
+  it.each([
+    ['dừng quay video', { type: 'dashcam', on: false }],
+    ['tắt quay video', { type: 'dashcam', on: false }],
+    ['tắt camera', { type: 'dashcam', on: false }],
+    ['chạy đến nhà', { type: 'go_place', name: 'nhà' }],
+    ['hủy đến chợ', { type: 'unknown' }],
+    ['đèn đỏ chạy', { type: 'unknown' }],
+    ['đèn cháy', { type: 'unknown' }],
+    ['tắt đèn', { type: 'unknown' }],
+    ['tới đâu rồi', { type: 'unknown' }],
+    ['đến cơ quan', { type: 'go_place', name: 'cơ quan' }],
+    ['đèn tắt', { type: 'report_light' }],
+    ['báo đèn hư', { type: 'report_light' }],
+  ])('%s', (text, want) => expect(parseCommand(text)).toEqual(want));
+});
+
+describe('findPlaceByName — chỉ khớp nguyên từ', () => {
+  const l = [{ name: 'Chợ Bàn Cờ', lat: 10.77, lng: 106.68 }, { name: 'Nhà', lat: 10.76, lng: 106.6 }];
+  it('"ba" không ra "Bàn Cờ"; "bàn cờ" ra', () => {
+    expect(findPlaceByName(l, 'ba')).toBeNull();
+    expect(findPlaceByName(l, 'bàn cờ')?.name).toBe('Chợ Bàn Cờ');
+    expect(findPlaceByName(l, 'nha')?.name).toBe('Nhà');
+  });
+});
+
+describe('RestTracker — nhiễu khi đỗ không xoá thời gian nghỉ', () => {
+  it('một mẫu 8 km/h giữa lúc đỗ không reset; chạy thật ≥ 30 giây mới reset', () => {
+    const r = new RestTracker(60);
+    let t = 0;
+    for (; t < 30 * MIN; t += 10_000) r.push(t, 40);
+    for (const end = t + 10 * MIN; t < end; t += 10_000) r.push(t, t % (3 * MIN) === 0 ? 8 : 0);
+    for (const end = t + 6 * MIN; t < end; t += 10_000) r.push(t, 0);
+    expect(r.drivingMs).toBe(0); // đã nghỉ > 15 phút dù có vài mẫu nhiễu
+  });
+  it('trạng thái lưu/khôi phục được', () => {
+    const r = new RestTracker(60);
+    for (let t = 0; t < 20 * MIN; t += 10_000) r.push(t, 40);
+    const r2 = RestTracker.restore(60, r.snapshot());
+    expect(r2.drivingMs).toBe(r.drivingMs);
+    expect(r2.push(20 * MIN + 10_000, 40)).toBeNull();
+  });
+});
+
+describe('TripRecorder — sửa sau review', () => {
+  const M = 111195;
+  it('mẫu GPS yếu (lệch sang bên 110 m) bị bỏ, không làm phình quãng đường', () => {
+    const tr = new TripRecorder(0, 10.7, 106.6);
+    for (let i = 1; i <= 10; i++) {
+      const ok = i % 2 === 0;
+      tr.push({ t: i * 1000, lat: 10.7 + (i * 15) / M, lng: ok ? 106.6 : 106.601, kmh: 54, limit: null, limitEstimated: false, ok });
+    }
+    expect(tr.summary(11_000).distM).toBeLessThan(170);
+  });
+  it('dao động 50–52 quanh biển 50 không tính vượt; vượt ≥ 4 km/h liên tục 3 giây mới tính', () => {
+    const tr = new TripRecorder(0, 10.7, 106.6);
+    const seq = [50, 52, 51, 53, 50, 56, 57, 58, 59, 50];
+    seq.forEach((kmh, i) => tr.push({ t: (i + 1) * 1000, lat: 10.7 + (i * 15) / M, lng: 106.6, kmh, limit: 50, limitEstimated: false, ok: true }));
+    expect(tr.summary(11_000).overCount).toBe(1);
+  });
+  it('lưu/khôi phục chuyến đang đi', () => {
+    const tr = new TripRecorder(0, 10.7, 106.6);
+    for (let i = 1; i <= 5; i++) tr.push({ t: i * 1000, lat: 10.7 + (i * 15) / M, lng: 106.6, kmh: 54, limit: null, limitEstimated: false, ok: true });
+    const tr2 = TripRecorder.restore(tr.snapshot())!;
+    expect(tr2.summary(6000).distM).toBe(tr.summary(6000).distM);
+    expect(tr2.lastT).toBe(5000);
+  });
+});
+
+describe('ImpactDetector — ổ gà một nhịp không khoá', () => {
+  it('cần ≥ 3 mẫu vượt ngưỡng trong 500 ms', () => {
+    const d = new ImpactDetector(2.5);
+    const big = { x: 0, y: 0, z: 30 };
+    const small = { x: 0, y: 0, z: 9.8 };
+    expect(d.push(big, 0)).toBe(false);
+    expect(d.push(small, 20)).toBe(false);
+    expect(d.push(big, 1000)).toBe(false);
+    expect(d.push(big, 1020)).toBe(false);
+    expect(d.push(big, 1040)).toBe(true);
+    expect(d.push(big, 1060)).toBe(false); // đã báo, chờ 10 giây
   });
 });

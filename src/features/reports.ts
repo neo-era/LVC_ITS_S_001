@@ -8,6 +8,8 @@ export interface Report {
   dir?: number;
   t: number;
   synced?: boolean;
+  /** Máy chủ từ chối (dữ liệu không hợp lệ) — không gửi lại, vẫn xuất CSV được. */
+  rejected?: boolean;
 }
 
 export const REPORT_LABEL: Record<ReportKind, string> = { den_tat: 'Đèn tắt', su_co: 'Sự cố chiếu sáng' };

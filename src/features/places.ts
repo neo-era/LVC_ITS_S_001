@@ -36,7 +36,9 @@ export function removePlace(list: SavedPlace[], name: string): SavedPlace[] {
   return list.filter((x) => foldName(x.name) !== f);
 }
 
+/** Khớp trọn tên, hoặc khớp nguyên từ ("bàn cờ" ra "Chợ Bàn Cờ"; "ba" thì không). */
 export function findPlaceByName(list: SavedPlace[], q: string): SavedPlace | null {
   const f = foldName(q);
-  return list.find((x) => foldName(x.name) === f) ?? list.find((x) => foldName(x.name).includes(f) && f.length >= 2) ?? null;
+  if (!f) return null;
+  return list.find((x) => foldName(x.name) === f) ?? list.find((x) => ` ${foldName(x.name)} `.includes(` ${f} `)) ?? null;
 }

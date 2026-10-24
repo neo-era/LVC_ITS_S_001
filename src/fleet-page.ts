@@ -19,7 +19,14 @@ const input = $('team') as HTMLInputElement;
 const msg = (t: string): void => {
   $('fleet-msg').textContent = t;
 };
-let team = decodeURIComponent(location.hash.slice(1)) || (() => {
+const safeHash = (): string => {
+  try {
+    return decodeURIComponent(location.hash.slice(1));
+  } catch {
+    return '';
+  }
+};
+let team = safeHash() || (() => {
   try {
     return localStorage.getItem('lat.fleet.team') ?? '';
   } catch {
@@ -42,8 +49,11 @@ async function ensureMap(): Promise<void> {
   map = new ml.Map({ container: 'fleet-map', style: dark ? STYLE_URLS.dark : STYLE_URLS.light, center: [106.7, 10.78], zoom: 11 });
 }
 
+let loading = false;
 async function load(): Promise<void> {
   if (!isTeamCode(team)) return msg('Mã đội cần ít nhất 8 ký tự (chữ, số, dấu gạch).');
+  if (loading || document.hidden) return;
+  loading = true;
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_list`, {
       method: 'POST',
@@ -57,8 +67,11 @@ async function load(): Promise<void> {
     msg(`${rows.length} xe · cập nhật lúc ${fmtVnTime(Date.now()).slice(11)}`);
   } catch (e) {
     msg(`Chưa tải được (${(e as Error).message}). Kiểm tra mạng hoặc đã chạy file SQL trên Supabase chưa.`);
+  } finally {
+    loading = false;
   }
 }
+document.addEventListener('visibilitychange', () => !document.hidden && team && void load());
 
 function render(rows: Row[]): void {
   if (!map || !ml) return;

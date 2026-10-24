@@ -8,17 +8,47 @@ export const DAY_LIMIT_MS = 10 * 3_600_000;
 
 const dayOf = (t: number) => new Date(t).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
 
+const MOVING_CONFIRM_MS = 30_000; // chạy liên tục 30 giây mới coi là đã đi tiếp (lọc nhiễu GPS khi đỗ)
+
+export interface RestSnapshot {
+  drivingMs: number;
+  dayMs: number;
+  lastT: number | null;
+  stoppedMs: number;
+  nextRemindMs: number | null;
+  dayWarned: boolean;
+  day: string;
+}
+
 export class RestTracker {
   drivingMs = 0;
   dayMs = 0;
   private lastT: number | null = null;
   private stoppedMs = 0;
+  private movingMs = 0;
   private nextRemindMs: number | null = null;
   private dayWarned = false;
   private day = '';
 
   /** thresholdMin: số phút lái liên tục thì nhắc (0 = tắt). */
   constructor(private thresholdMin: number) {}
+
+  snapshot(): RestSnapshot {
+    return { drivingMs: this.drivingMs, dayMs: this.dayMs, lastT: this.lastT, stoppedMs: this.stoppedMs, nextRemindMs: this.nextRemindMs, dayWarned: this.dayWarned, day: this.day };
+  }
+
+  static restore(thresholdMin: number, s: Partial<RestSnapshot> | null | undefined): RestTracker {
+    const r = new RestTracker(thresholdMin);
+    if (!s || typeof s !== 'object') return r;
+    r.drivingMs = Number(s.drivingMs) || 0;
+    r.dayMs = Number(s.dayMs) || 0;
+    r.lastT = typeof s.lastT === 'number' ? s.lastT : null;
+    r.stoppedMs = Number(s.stoppedMs) || 0;
+    r.nextRemindMs = typeof s.nextRemindMs === 'number' ? s.nextRemindMs : null;
+    r.dayWarned = !!s.dayWarned;
+    r.day = typeof s.day === 'string' ? s.day : '';
+    return r;
+  }
 
   setThreshold(min: number): void {
     this.thresholdMin = min;
@@ -47,12 +77,14 @@ export class RestTracker {
     if (kmh !== null && kmh > MOVING_KMH) {
       this.drivingMs += dt;
       this.dayMs += dt;
-      this.stoppedMs = 0;
+      this.movingMs += dt;
+      if (this.movingMs >= MOVING_CONFIRM_MS) this.stoppedMs = 0; // đi tiếp thật sự mới huỷ thời gian đã nghỉ
     } else {
+      this.movingMs = 0;
       this.stoppedMs += dt;
       if (this.stoppedMs >= REST_STOP_MS) this.reset();
     }
-    if (!this.dayWarned && this.dayMs >= DAY_LIMIT_MS) {
+    if (this.thresholdMin > 0 && !this.dayWarned && this.dayMs >= DAY_LIMIT_MS) {
       this.dayWarned = true;
       return 'day_limit';
     }

@@ -19,7 +19,7 @@ import { filterProvinces, formatMB, suggestProvince, type ProvinceInfo } from '.
 import { OfflineMaps } from './offline/store';
 import { Simulator, simData } from './sim';
 import { updateAction } from './update';
-import { setupFeatures } from './features/wire';
+import { freshFix, setupFeatures } from './features/wire';
 import { Voice } from './voice';
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
@@ -163,8 +163,10 @@ const saveMarks = () => lsSet(MARKS_KEY, JSON.stringify(marks));
 
 function deviceId(): string {
   let d = lsGet(DEVICE_KEY);
-  if (!d) {
-    d = Math.random().toString(36).slice(2, 8);
+  if (!d || d.length < 16) {
+    const a = new Uint8Array(12);
+    crypto.getRandomValues(a);
+    d = Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
     lsSet(DEVICE_KEY, d);
   }
   return d;
@@ -215,8 +217,9 @@ async function syncMarks(silent: boolean): Promise<void> {
 
 function markHere(): void {
   if (mode === 'sim') return toast('Không đánh dấu khi đang chạy thử mô phỏng.');
-  if (!lastFix) return toast('Chưa có vị trí GPS để đánh dấu.');
-  const m = createMark({ lat: lastFix.lat, lng: lastFix.lng }, engine.currentHeading(), 'camera', Date.now());
+  const fx = freshFix(lastFix);
+  if (!fx) return toast('Chưa có vị trí GPS đủ tốt để đánh dấu (cần tín hiệu mới, sai số ≤ 50 m).');
+  const m = createMark({ lat: fx.lat, lng: fx.lng }, engine.currentHeading(), 'camera', Date.now());
   const r = addMark(marks, m);
   if (!r.added) return toast('Đã có dấu camera ở gần đây rồi.');
   marks = r.marks;
