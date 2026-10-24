@@ -30,18 +30,24 @@ Ràng buộc: **0 đồng** vận hành (GitHub + Google Drive + dữ liệu m�
 **Thứ tự:** PWA + dữ liệu cảnh báo → Android → iOS.
 Lõi: TypeScript + Vite + MapLibre GL. Vỏ native bằng Capacitor chỉ bổ sung quay nền và ghi file.
 
-### Nhà cung cấp cắm được (provider abstraction)
-Mỗi dịch vụ ngoài đi qua một giao diện chung, đổi nguồn không phải sửa app:
-- **Nền bản đồ:** OpenStreetMap (ô vector miễn phí, không khoá — kiểm tra điều khoản ở Task 3). VietMap là tuỳ chọn nếu xin được khoá miễn phí.
-- **Tìm địa điểm:** Nominatim/Photon (OSM) — chỉ gọi khi người dùng gõ, có debounce và cache.
-- **Tính tuyến:** dịch vụ routing miễn phí trên nền OSM, có giới hạn lượt/ngày (chọn cụ thể ở Task 3).
-- Trạng thái đã xác minh: VietMap **chưa xác nhận được gói miễn phí** (trang chính thức chỉ công bố tính phí theo giao dịch, báo giá khi liên hệ).
+### Nguồn dịch vụ đã chọn (cập nhật 2026-10-24)
+- **Nền bản đồ trực tuyến:** OpenFreeMap (ô vector OpenMapTiles từ dữ liệu OSM, miễn phí, không khoá, cho dùng thương mại, bắt buộc ghi nguồn). Không dùng tile.openstreetmap.org (cấm dùng offline/tải hàng loạt).
+- **Bản đồ offline:** tự dựng — xem mục 4b.
+- **Tìm địa điểm / tra ngược:** Photon (photon.komoot.io, "mức hợp lý", không cam kết) — chỉ gọi khi gõ ≥3 ký tự, chờ 450 ms.
+- **Tìm đường:** Valhalla FOSSGIS (valhalla1.openstreetmap.de), chỉ dẫn `vi-VN`, gọi GET để tránh CORS; kiểu tìm đường theo loại xe (auto/motorcycle/truck/bus). Chưa đọc được điều khoản FOSSGIS → mức thử nghiệm cá nhân; dùng rộng cần máy chủ riêng hoặc VietMap.
+- VietMap: chưa xác nhận gói miễn phí → để ngỏ.
 
-## 4. Dữ liệu cảnh báo (cập nhật thường xuyên)
-- **GitHub Actions chạy hằng đêm:** gom camera, giới hạn tốc độ từ OSM (Overpass) + danh sách do anh nhập trên Google Sheet → xuất **JSON theo ô lưới** vào repo, kèm `version.json`.
-- App kiểm tra `version.json` khi có mạng, tải ô lưới mới, lưu máy (IndexedDB) → dùng offline.
-- Chỗ OSM thiếu `maxspeed` → ẩn biển; anh bổ sung dần qua Sheet.
-- Ô lưới: cạnh ~1 km, chỉ tải các ô quanh vị trí + dọc tuyến.
+## 4. Dữ liệu cảnh báo (toàn quốc, hằng đêm)
+- **Quy trình `data.yml` (02:30 hằng đêm, ~3 phút):** tải bản trích OSM Việt Nam của Geofabrik → `osmium tags-filter` (đường cho xe + camera) → `osmium export` GeoJSONSeq → `tools/build-data.ts` → `public/data/cells/<ô>.json` (định dạng v2) + `version.json` (có thống kê độ phủ). Lưu vào cache Actions; `pages.yml` chỉ khôi phục bản đã lưu nên đăng trang vài phút.
+- **Định dạng ô v2:** ô 0,01° (~1,2 km²); mỗi mục `[wayId, start, maxspeed|0, cờ, lat0, lng0, dlat, dlng…]` toạ độ ×1e5 hiệu số, hình học rút gọn 2 m. Cờ: bit0 tuyến có camera, bit1 đường đôi, bit2 không ước tính (cao tốc), bit3 đường nhỏ; `u:1` = khu đông dân cư (≥10 km đường/ô). Toàn quốc ~174 nghìn ô, ~158 MB.
+- **Độ phủ `maxspeed` OSM (lần chạy đầu):** tổng 3,6% chiều dài; cao tốc 96,6%, trunk 23%, primary 19%, residential 0,5%.
+- **Giới hạn ước tính theo luật** khi thiếu số (VBHN 74/2026/VBHN-BXD của TT 38/2024 + 09/2025): trong khu đông dân cư 60/50 mọi xe; ngoài khu đông dân cư ô tô con 90/80, mô tô 70/60, xe khách >28 chỗ/tải >3,5 t 80/70, buýt/đầu kéo 70/60. Biển nét đứt "Ước tính theo luật", **không đọc cảnh báo vượt tốc** với số ước tính.
+- **Camera:** OSM chỉ có ~45 camera cả nước. Thêm (a) nhắc "Tuyến này có camera phạt nguội" theo danh sách tên đường báo chí (~43 tuyến TP.HCM, cập nhật 01/2026, không có toạ độ); (b) nút **Đánh dấu camera** → lưu trên máy → Supabase (dự án `lai-an-toan`, bảng `lat_camera_marks`, RLS: khoá công khai chỉ gửi dấu mới và đọc dấu `duyet`) → dấu đã duyệt vào dữ liệu đêm. Không lấy dữ liệu WYN/Google Maps (bản quyền, điều khoản).
+
+## 4b. Bản đồ offline theo tỉnh
+- **Quy trình `map.yml` (ngày 1 hằng tháng, ~5 phút):** Planetiler v0.10.2 (`--area=vietnam`) → `vn.pmtiles` (~305 MB) → ranh giới tỉnh (osmium, admin_level=4, ISO VN-) → `pmtiles extract --region` từng tỉnh (34 tỉnh/thành, ~345 MB, TP.HCM ~24 MB) → `provinces.json` (kèm đa giác rút gọn 300 m để gợi ý tỉnh đang ở) + style sáng/tối (OpenFreeMap positron/dark) đổi nguồn sang `latmap://`, sprite và font đặt cùng trang. Khánh Hòa dùng khung đất liền (ranh giới có Trường Sa ngoài bản trích).
+- **App:** tải tỉnh vào Cache Storage (`lat-map-offline-v1`) kèm style/sprite/font; giao thức `latmap://z/x/y`: có mạng → ô OpenFreeMap (đủ vùng biên giới), lỗi/mất mạng → ô pmtiles trên máy; ô thiếu báo lỗi để tải lại khi có mạng. Nút Cập nhật khi có bản tháng mới.
+- Tổng dữ liệu + bản đồ ~500 MB < giới hạn 1 GB của GitHub Pages.
 
 ## 5. Camera hành trình
 - Quay theo đoạn 1–3 phút, độ phân giải chọn được; lưu vào thư mục riêng của app trên máy.
@@ -51,9 +57,9 @@ Mỗi dịch vụ ngoài đi qua một giao diện chung, đổi nguồn không 
 - Xem lại trong app kèm bản đồ lộ trình; chép ra qua chia sẻ/USB. **Không tải video lên Drive.**
 - PWA: quay được khi màn hình sáng; quay nền và ghi file lớn chỉ đảm bảo ở bản Android/iOS.
 
-## 6. Google Drive / Sheet (qua Apps Script, giống sổ An toàn – Duy tu)
-- Sheet: địa điểm đã lưu, danh sách clip khoá (giờ, toạ độ, tốc độ, ghi chú), cài đặt, danh sách camera/điểm đen do anh nhập.
-- Apps Script chậm (vài giây) và có hạn mức → chỉ đồng bộ nền, mọi thứ chạy từ bộ nhớ đệm trên máy.
+## 6. Lưu trữ dùng chung
+- Không dùng Google Apps Script (anh chốt). Dấu camera đồng bộ qua **Supabase** (mục 4). Cài đặt, dấu, bản đồ đã tải lưu trên máy.
+- Địa điểm đã lưu / danh sách clip khoá: làm sau, cùng Supabase.
 
 ## 7. Module
 - `core/gps` — lọc nhiễu tốc độ, phát hiện mất GPS
@@ -73,14 +79,8 @@ Mỗi dịch vụ ngoài đi qua một giao diện chung, đổi nguồn không 
 - An toàn: không thao tác khi xe chạy; chỉ bấm nút lớn và dùng giọng nói.
 - Pháp lý: dữ liệu camera/điểm đen chỉ mang tính tham khảo; hiển thị rõ khi dùng dữ liệu cũ (ngày cập nhật).
 
-## 9. Kế hoạch task (có kiểm chứng)
-1. Chốt UI (3 mẫu) → chọn. **[CHỐT DUYỆT]**
-2. Viết test: lọc nhiễu tốc độ, tra giới hạn, tìm cảnh báo theo bán kính/hướng, chống báo lặp, quản lý quay vòng dung lượng. **[TDD]**
-3. Chọn nguồn miễn phí cụ thể (ô bản đồ, tìm kiếm, routing) và kiểm tra điều khoản + hạn mức.
-4. Quy trình dữ liệu: GitHub Actions hằng đêm → JSON ô lưới + `version.json`.
-5. Code PWA: tốc độ + giới hạn + cảnh báo giọng nói + bản đồ/dẫn đường + lưu địa điểm.
-6. Review độc lập (subagent): ca xấu GPS, dữ liệu hỏng, dung lượng.
-7. Kiểm chứng: test + ca xấu + Lighthouse PWA + cài thử + chạy thử trên xe. **[CHỐT DUYỆT]**
-8. Giai đoạn Android: camera hành trình, GPS nền, APK bằng Actions.
-9. Giai đoạn iOS (sau khi anh quyết định tài khoản Apple).
-10. Giai đoạn 2: người dùng tự báo sự cố (cần xác thực + chống báo sai).
+## 9. Trạng thái (2026-10-24)
+- Xong (PWA, repo `neo-era/LVC_ITS_S_001`, GitHub Pages bằng Actions): màn hình lái xe mẫu A (sáng/tối), mô phỏng, giọng đọc tiếng Việt (chọn giọng + kiểu Dễ thương/Bình thường/Trầm ấm), bản đồ + toàn màn hình có thẻ tốc độ/cảnh báo, dẫn đường (tìm theo tên hoặc chọn trên bản đồ, nhắc 300/100 m, tìm lại khi lệch), loại xe, dữ liệu toàn quốc, giới hạn ước tính, nhắc tuyến camera, đánh dấu camera, bản đồ offline theo tỉnh. 222 test.
+- Chờ anh: dán `supabase/lat_camera_marks.sql` vào SQL Editor dự án `lai-an-toan`; chạy thử trên xe (GPS, giọng, offline trên iPhone).
+- Tiếp theo: camera hành trình (Android/Capacitor), lưu địa điểm, iOS (khi quyết định tài khoản Apple), báo sự cố giai đoạn 2.
+- Bài học: service worker phải `res.clone()` ngay (không trong promise); `pkill -f` trong cùng lệnh shell giết luôn shell; Playwright `setOffline` không mô phỏng đúng service worker → thử offline bằng cách tắt máy chủ.
