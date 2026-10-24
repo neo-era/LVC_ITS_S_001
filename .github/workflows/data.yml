@@ -25,7 +25,22 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: Lấy dữ liệu từ OpenStreetMap + dấu camera đã duyệt
+      - name: Cài osmium
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+      - name: Tải bản trích OpenStreetMap Việt Nam (Geofabrik, cập nhật hằng ngày)
+        run: curl -fsSL --retry 3 -o vn.osm.pbf https://download.geofabrik.de/asia/vietnam-latest.osm.pbf && ls -lh vn.osm.pbf
+      - name: Lọc đường và camera
+        run: |
+          osmium tags-filter vn.osm.pbf \
+            w/highway=motorway,trunk,primary,secondary,tertiary,unclassified,residential,living_street,motorway_link,trunk_link,primary_link,secondary_link,tertiary_link \
+            n/highway=speed_camera n/enforcement=maxspeed \
+            -o roads.osm.pbf --overwrite
+          osmium export roads.osm.pbf -f geojsonseq -a type,id --geometry-types=point,linestring,polygon -o roads.geojsonseq --overwrite
+          ls -lh roads.osm.pbf roads.geojsonseq
+      - name: Tạo ô dữ liệu toàn quốc + dấu camera đã duyệt
+        env:
+          GEOJSONSEQ: roads.geojsonseq
+          NODE_OPTIONS: --max-old-space-size=12288
         run: npm run data
       - name: Lưu dữ liệu cho các lần đăng trang
         uses: actions/cache/save@v4

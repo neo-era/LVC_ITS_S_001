@@ -1,122 +1,142 @@
 /**
- * Tạo dữ liệu cảnh báo từ OpenStreetMap (Overpass) → public/data/cells/*.json + version.json.
- * Chạy: npm run data   (đêm hằng ngày bởi GitHub Actions)
- * Biến môi trường: OVERPASS_URLS (phân tách dấu phẩy), BBOX="s,w,n,e", OUT_DIR.
+ * Tạo dữ liệu cảnh báo TOÀN QUỐC từ bản trích OpenStreetMap Việt Nam (Geofabrik) đã lọc bằng osmium:
+ *   osmium tags-filter … → osmium export -f geojsonseq -a type,id → tệp GEOJSONSEQ
+ * rồi ghi public/data/cells/<ô>.json (định dạng v2 gọn) + version.json.
+ * Chạy: GEOJSONSEQ=roads.geojsonseq npm run data   (GitHub Actions chạy hằng đêm — xem .github/workflows/data.yml)
  */
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { parseCell } from '../src/core/cells';
 import { parseRemoteMarks } from '../src/marks';
+import { matchCameraRoute } from '../src/pipeline/camera-routes';
+import { CellWriter, simplify } from '../src/pipeline/compact';
+import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
-import { bucketCells, convertElements, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 
-const URLS = (process.env.OVERPASS_URLS ?? 'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter').split(',');
-const [S, W, N, E] = (process.env.BBOX ?? '10.35,106.35,11.25,107.1').split(',').map(Number); // TP.HCM
+const IN = process.env.GEOJSONSEQ ?? 'roads.geojsonseq';
 const OUT = process.env.OUT_DIR ?? join(process.cwd(), 'public', 'data');
-const TILE = 0.1;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const SIMPLIFY_M = 2;
+const MAX_TOTAL_BYTES = 900 * 1024 * 1024; // GitHub Pages giới hạn 1 GB cho cả trang
 
-const HIGHWAYS = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
-
-function query(s: number, w: number, n: number, e: number): string {
-  const b = `${s},${w},${n},${e}`;
-  return `[out:json][timeout:180];(way["highway"~"^(${HIGHWAYS})$"](${b});node["highway"="speed_camera"](${b});node["enforcement"="maxspeed"](${b}););out geom tags;`;
+interface Feature {
+  geometry?: { type: string; coordinates: unknown };
+  properties?: Record<string, unknown>;
 }
 
-async function fetchTile(q: string): Promise<OverpassElement[]> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const url = URLS[attempt % URLS.length];
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          accept: 'application/json',
-          'user-agent': 'LaiAnToan-data-builder/0.1 (https://github.com/neo-era/LVC_ITS_S_001)',
-        },
-        body: 'data=' + encodeURIComponent(q),
-        signal: AbortSignal.timeout(240_000),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status} từ ${url}`);
-      const j = (await res.json()) as { elements?: OverpassElement[] };
-      if (!Array.isArray(j.elements)) throw new Error('phản hồi không có elements');
-      return j.elements;
-    } catch (err) {
-      lastErr = err;
-      await sleep(5000 * (attempt + 1));
-    }
+function lineOf(g: Feature['geometry']): { lat: number; lon: number }[] | null {
+  if (!g) return null;
+  let coords: unknown = null;
+  if (g.type === 'LineString') coords = g.coordinates;
+  else if (g.type === 'Polygon' && Array.isArray(g.coordinates)) coords = g.coordinates[0]; // way khép kín (vòng xoay)
+  else if (g.type === 'MultiPolygon' && Array.isArray(g.coordinates) && Array.isArray(g.coordinates[0])) coords = g.coordinates[0][0];
+  if (!Array.isArray(coords)) return null;
+  const out: { lat: number; lon: number }[] = [];
+  for (const c of coords) {
+    if (Array.isArray(c) && typeof c[0] === 'number' && typeof c[1] === 'number') out.push({ lon: c[0], lat: c[1] });
   }
-  throw new Error(`Không tải được ô sau 4 lần: ${String(lastErr)}`);
+  return out.length >= 2 ? out : null;
 }
 
 async function main(): Promise<void> {
-  const segments = new Map<string, ReturnType<typeof convertElements>['segments'][number]>();
-  const alerts = new Map<string, ReturnType<typeof convertElements>['alerts'][number]>();
-  const ways = new Map<number, WayInfo>(); // thống kê độ phủ, mỗi way tính một lần
-  let tiles = 0;
-  for (let s = S; s < N; s += TILE) {
-    for (let w = W; w < E; w += TILE) {
-      const els = await fetchTile(query(s, w, Math.min(s + TILE, N), Math.min(w + TILE, E)));
-      const r = convertElements(els);
-      for (const e of els) {
-        const wi = wayInfo(e);
-        if (wi) ways.set(e.id, wi);
-      }
-      for (const x of r.segments) segments.set(x.id, x); // way cắt qua nhiều ô chỉ giữ một bản
-      for (const a of r.alerts) alerts.set(a.id, a);
-      tiles++;
-      console.log(`ô ${tiles}: ${els.length} phần tử`);
-      await sleep(1000);
+  const writer = new CellWriter();
+  const ways: WayInfo[] = [];
+  const seenWays = new Set<number>();
+  let nWays = 0;
+  let nCams = 0;
+  let lines = 0;
+
+  const rl = createInterface({ input: createReadStream(IN), crlfDelay: Infinity });
+  for await (const raw of rl) {
+    const line = raw.replace(/^\x1e/, '').trim();
+    if (!line) continue;
+    lines++;
+    let f: Feature;
+    try {
+      f = JSON.parse(line) as Feature;
+    } catch {
+      continue;
     }
+    const p = f.properties ?? {};
+    const id = Number(p['@id']);
+    const tags: Record<string, string> = {};
+    for (const [k, v] of Object.entries(p)) if (!k.startsWith('@') && typeof v === 'string') tags[k] = v;
+
+    if (p['@type'] === 'way') {
+      if (!DRIVABLE.has(tags.highway) || seenWays.has(id)) continue;
+      const geom = lineOf(f.geometry);
+      if (!geom) continue;
+      seenWays.add(id);
+      const el: OverpassElement = { type: 'way', id, tags, geometry: geom };
+      const info = wayInfo(el);
+      if (info) ways.push(info);
+      const pts = simplify(geom.map((g) => ({ lat: g.lat, lng: g.lon })), SIMPLIFY_M);
+      const mid = geom[Math.floor(geom.length / 2)];
+      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), matchCameraRoute(tags.name, mid.lat, mid.lon));
+      nWays++;
+    } else if (p['@type'] === 'node' && f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
+      const [lon, lat] = f.geometry.coordinates as number[];
+      const r = convertElements([{ type: 'node', id, lat, lon, tags }]);
+      for (const a of r.alerts) {
+        writer.addAlert(a);
+        nCams++;
+      }
+    }
+    if (lines % 500_000 === 0) console.log(`… đã đọc ${lines} dòng, ${nWays} đường, ${nCams} camera`);
   }
+
   // Dấu camera đã duyệt trong Supabase (đọc bằng khoá công khai; chỉ trả các dấu có trạng thái "duyệt").
+  let nMarks = 0;
   try {
-    const extra: ReturnType<typeof parseRemoteMarks> = [];
     for (let offset = 0; offset < 20_000; offset += 1000) {
       const res = await fetch(approvedUrl(offset, 1000), { headers: authHeaders(), signal: AbortSignal.timeout(60_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const rows = (await res.json()) as unknown[];
-      extra.push(...parseRemoteMarks({ marks: rows }));
+      for (const a of parseRemoteMarks({ marks: rows })) {
+        writer.addAlert(a);
+        nMarks++;
+      }
       if (rows.length < 1000) break;
     }
-    for (const a of extra) alerts.set(a.id, a);
-    console.log(`Dấu camera đã duyệt: ${extra.length}`);
+    console.log(`Dấu camera đã duyệt: ${nMarks}`);
   } catch (e) {
     console.warn('Không lấy được dấu camera đã duyệt, bỏ qua:', String(e));
   }
-  const cells = bucketCells({ segments: [...segments.values()], alerts: [...alerts.values()] });
-  if (cells.size === 0) throw new Error('Không có ô dữ liệu nào — dừng để không ghi đè bản cũ.');
+
+  const files = writer.files();
+  if (files.size === 0) throw new Error('Không có ô dữ liệu nào — dừng để không ghi đè bản cũ.');
 
   await rm(OUT, { recursive: true, force: true });
   await mkdir(join(OUT, 'cells'), { recursive: true });
-  for (const [key, cell] of cells) {
-    if (!parseCell(cell)) throw new Error(`Ô ${key} không hợp lệ`);
-    await writeFile(join(OUT, 'cells', `${key}.json`), JSON.stringify(cell));
+  let bytes = 0;
+  let checked = 0;
+  for (const [key, cell] of files) {
+    const text = JSON.stringify(cell);
+    if (checked++ % 997 === 0 && !parseCell(JSON.parse(text))) throw new Error(`Ô ${key} không đọc lại được`);
+    bytes += Buffer.byteLength(text);
+    await writeFile(join(OUT, 'cells', `${key}.json`), text);
   }
-  const coverage = summarizeWays([...ways.values()]);
+  if (bytes > MAX_TOTAL_BYTES) throw new Error(`Dữ liệu ${(bytes / 1048576).toFixed(0)} MB vượt giới hạn — dừng để không làm hỏng trang.`);
+
+  const coverage = summarizeWays(ways);
   const updated = new Date().toISOString().slice(0, 10);
+  const inMB = ((await stat(IN)).size / 1048576).toFixed(0);
   await writeFile(
     join(OUT, 'version.json'),
-    JSON.stringify({ v: 1, updated, cells: cells.size, segments: segments.size, alerts: alerts.size, coverage }),
+    JSON.stringify({ v: 2, scope: 'VN', updated, cells: files.size, ways: nWays, cameras: nCams, marks: nMarks, bytes, coverage }),
   );
-  const lines = Object.entries(coverage.byClass)
+
+  const byClass = Object.entries(coverage.byClass)
     .sort((a, b) => b[1].km - a[1].km)
     .map(([k, c]) => `${k}: ${c.pct}% (${c.kmWithLimit}/${c.km} km)`);
-  console.log(`Độ phủ giới hạn tốc độ: tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km)\n  ${lines.join('\n  ')}`);
-  // Hiện thống kê trong phần ghi chú của lần chạy trên GitHub (đọc được mà không cần tải nhật ký).
-  console.log(`::notice title=Độ phủ giới hạn tốc độ::tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km). ${lines.slice(0, 6).join('; ')}`);
-  console.log(`Xong: ${cells.size} ô, ${segments.size} đoạn đường, ${alerts.size} camera.`);
+  console.log(`Độ phủ giới hạn tốc độ: tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km)\n  ${byClass.join('\n  ')}`);
+  console.log(`::notice title=Độ phủ giới hạn tốc độ (toàn quốc)::tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km). ${byClass.join('; ')}`);
+  console.log(`::notice title=Kích thước dữ liệu::${files.size} ô, ${(bytes / 1048576).toFixed(1)} MB (đầu vào ${inMB} MB), ${nWays} đường, ${nCams} camera OSM, ${nMarks} dấu đã duyệt`);
 }
 
 main().catch(async (e) => {
   console.error(e);
-  // Ghi lý do lỗi ra tệp để đọc được từ trang đã triển khai (không ảnh hưởng dữ liệu cũ khi chạy ban đêm).
-  try {
-    await mkdir(OUT, { recursive: true });
-    await writeFile(join(OUT, 'build-error.txt'), String(e));
-  } catch {
-    /* bỏ qua */
-  }
+  console.log(`::error title=Lấy dữ liệu thất bại::${String(e).slice(0, 300)}`);
   process.exit(1);
 });

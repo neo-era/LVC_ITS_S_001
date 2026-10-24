@@ -31,7 +31,7 @@ export function parseMaxspeed(tag: string | undefined): number | null {
 
 const r6 = (x: number) => Math.round(x * 1e6) / 1e6;
 
-const DRIVABLE = new Set([
+export const DRIVABLE = new Set([
   'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential',
   'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link', 'living_street',
 ]);

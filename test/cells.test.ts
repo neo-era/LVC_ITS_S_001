@@ -29,7 +29,7 @@ describe('parseCell', () => {
   });
 
   it('sai phiên bản định dạng → null', () => {
-    expect(parseCell({ ...valid, v: 2 })).toBeNull();
+    expect(parseCell({ ...valid, v: 99 })).toBeNull();
     expect(parseCell({ segments: [], alerts: [] })).toBeNull();
   });
 
