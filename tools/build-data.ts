@@ -28,7 +28,11 @@ async function fetchTile(q: string): Promise<OverpassElement[]> {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          accept: 'application/json',
+          'user-agent': 'LaiAnToan-data-builder/0.1 (https://github.com/neo-era/LVC_ITS_S_001)',
+        },
         body: 'data=' + encodeURIComponent(q),
         signal: AbortSignal.timeout(240_000),
       });
@@ -76,7 +80,14 @@ async function main(): Promise<void> {
   console.log(`Xong: ${cells.size} ô, ${segments.size} đoạn đường, ${alerts.size} camera.`);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   console.error(e);
+  // Ghi lý do lỗi ra tệp để đọc được từ trang đã triển khai (không ảnh hưởng dữ liệu cũ khi chạy ban đêm).
+  try {
+    await mkdir(OUT, { recursive: true });
+    await writeFile(join(OUT, 'build-error.txt'), String(e));
+  } catch {
+    /* bỏ qua */
+  }
   process.exit(1);
 });
