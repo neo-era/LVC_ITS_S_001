@@ -15,6 +15,7 @@ import { MapView } from './map';
 import { filterProvinces, formatMB, suggestProvince, type ProvinceInfo } from './offline/core';
 import { OfflineMaps } from './offline/store';
 import { Simulator, simData } from './sim';
+import { updateAction } from './update';
 import { Voice } from './voice';
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
@@ -167,13 +168,14 @@ function deviceId(): string {
 
 let toastTimer: number | null = null;
 let undoFn: (() => void) | null = null;
-function toast(text: string, undo?: () => void): void {
+function toast(text: string, undo?: () => void, actionLabel = 'Hoàn tác', ms = 6000): void {
   $('toast-text').textContent = text;
   undoFn = undo ?? null;
   $('toast-undo').hidden = !undo;
+  $('toast-undo').textContent = actionLabel;
   $('toast').hidden = false;
   if (toastTimer !== null) window.clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => ($('toast').hidden = true), 6000);
+  toastTimer = window.setTimeout(() => ($('toast').hidden = true), ms);
 }
 
 function refreshMarksInfo(): void {
@@ -549,6 +551,7 @@ function stopAll(): void {
   if (tickTimer !== null) window.clearInterval(tickTimer);
   tickTimer = null;
   mode = 'idle';
+  window.setTimeout(applyUpdateIfSafe, 300);
   stopNav();
   lastFix = null;
   render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false, limitEstimated: false });
@@ -959,8 +962,34 @@ if (/iphone|ipad/i.test(navigator.userAgent) && !matchMedia('(display-mode: stan
   $('ios-hint').hidden = false;
 }
 
+/* ---------- Tự cập nhật ---------- */
+let updatePending = false;
+function applyUpdateIfSafe(): void {
+  const a = updateAction(updatePending, mode);
+  if (a === 'reload') location.reload();
+  else if (a === 'prompt') toast('Đã có bản mới của app.', () => location.reload(), 'Cập nhật', 20_000);
+}
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  let controlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!controlled) {
+      controlled = true; // lần cài đầu tiên: trang đang chạy đã là bản mới
+      return;
+    }
+    updatePending = true;
+    applyUpdateIfSafe();
+  });
+  navigator.serviceWorker
+    .register('./sw.js')
+    .then((reg) => {
+      const check = () => void reg.update().catch(() => {});
+      window.setInterval(check, 15 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
+      });
+      window.addEventListener('online', check);
+    })
+    .catch(() => {});
 }
 
 applyTheme();
