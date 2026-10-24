@@ -121,4 +121,11 @@ describe('Engine', () => {
     run(e, 12, 490, 456, 38);
     expect(spoken.filter((t) => t.includes('camera'))).toHaveLength(1);
   });
+
+  it('alertsNear: trả điểm cảnh báo trong bán kính, bỏ điểm xa', () => {
+    const e = new Engine({ radiusM: 500, speak: () => {} });
+    e.loadData(data());
+    expect(e.alertsNear({ lat: at(700), lng: START.lng }, 300).map((a) => a.id)).toEqual(['CAM']);
+    expect(e.alertsNear({ lat: at(0), lng: START.lng }, 300)).toEqual([]);
+  });
 });

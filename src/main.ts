@@ -4,6 +4,7 @@ import { alertLabel, formatDistance } from './core/format';
 import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
 import { Engine, type ViewState } from './engine';
+import { MapView } from './map';
 import { Simulator, simData } from './sim';
 import { Voice } from './voice';
 
@@ -68,6 +69,40 @@ voice.enabled = settings.voice;
 const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(t) });
 const sim = new Simulator();
 
+const mapbox = $('mapbox');
+let mapView: MapView | null = null;
+let mapStarting = false;
+let lastMapAlertsAt = 0;
+
+const isDark = (): boolean =>
+  settings.theme === 'dark' || (settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+
+async function ensureMap(lat: number, lng: number): Promise<void> {
+  if (mapView || mapStarting) return;
+  mapStarting = true;
+  try {
+    const mv = new MapView($('map'), isDark());
+    mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
+    await mv.init({ lat, lng });
+    mapView = mv;
+    mapbox.classList.add('live');
+  } catch {
+    $('map-empty').textContent = 'Không tải được bản đồ. Tốc độ và cảnh báo vẫn hoạt động.';
+  } finally {
+    mapStarting = false;
+  }
+}
+
+function updateMap(g: GpsSample, heading: number | null, v: ViewState): void {
+  void ensureMap(g.lat, g.lng);
+  if (!mapView) return;
+  mapView.update(g.lat, g.lng, heading, v.kmh);
+  if (g.t - lastMapAlertsAt > 2000) {
+    lastMapAlertsAt = g.t;
+    mapView.setAlerts(engine.alertsNear({ lat: g.lat, lng: g.lng }, 2000));
+  }
+}
+
 let mode: 'idle' | 'gps' | 'sim' = 'idle';
 let watchId: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;
@@ -127,8 +162,8 @@ function applyTheme(): void {
   const root = document.documentElement;
   if (settings.theme === 'auto') root.removeAttribute('data-theme');
   else root.dataset.theme = settings.theme;
-  const dark =
-    settings.theme === 'dark' || (settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark = isDark();
+  mapView?.setDark(dark);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0B0F14' : '#FFFFFF');
 }
 
@@ -199,7 +234,9 @@ function onGeo(p: GeolocationPosition): void {
     accuracy: p.coords.accuracy,
   };
   void ensureCells(g.lat, g.lng);
-  render(engine.push(g, p.coords.heading));
+  const v = engine.push(g, p.coords.heading);
+  render(v);
+  updateMap(g, p.coords.heading, v);
 }
 
 async function holdScreen(): Promise<void> {
@@ -257,7 +294,11 @@ function startSim(): void {
   mode = 'sim';
   startBox.hidden = true;
   simEngine().loadData(simData());
-  sim.start((g) => render(engine.push(g, null)));
+  sim.start((g) => {
+    const v = engine.push(g, null);
+    render(v);
+    updateMap(g, 0, v); // mô phỏng luôn đi về phía bắc
+  });
   startTicker();
   void holdScreen();
   refreshNotes();
@@ -277,6 +318,20 @@ function stopAll(): void {
 }
 
 /* ---------- Sự kiện ---------- */
+function setMapFull(full: boolean): void {
+  mapbox.classList.toggle('full', full);
+  $('btn-map-expand').setAttribute('aria-pressed', String(full));
+  $('btn-map-expand').setAttribute('aria-label', full ? 'Thu nhỏ bản đồ' : 'Mở rộng bản đồ');
+  mapView?.setInteractive(full);
+  mapView?.resize();
+  if (!full) mapView?.recenter();
+}
+$('btn-map-expand').addEventListener('click', () => setMapFull(!mapbox.classList.contains('full')));
+$('btn-map-follow').addEventListener('click', () => mapView?.recenter());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && mapbox.classList.contains('full')) setMapFull(false);
+});
+
 $('btn-start').addEventListener('click', startGps);
 $('btn-start-sim').addEventListener('click', startSim);
 $('btn-sim').addEventListener('click', () => {

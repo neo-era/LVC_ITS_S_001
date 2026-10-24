@@ -83,6 +83,15 @@ export class Engine {
     for (const a of data.alerts) add(cellKey(a.lat, a.lng), { alerts: [a] });
   }
 
+  /** Các điểm cảnh báo đã nạp trong bán kính (m) quanh vị trí — để vẽ trên bản đồ. */
+  alertsNear(pos: LatLng, radiusM: number): AlertPoint[] {
+    const out = new Map<string, AlertPoint>();
+    for (const key of cellsAround(pos.lat, pos.lng, radiusM)) {
+      for (const a of this.cells.get(key)?.alerts ?? []) if (haversine(pos, a) <= radiusM) out.set(a.id, a);
+    }
+    return [...out.values()];
+  }
+
   view(): ViewState {
     return this.v;
   }

@@ -52,6 +52,15 @@
       <span class="alert-dist" id="alert-dist"></span>
     </section>
 
+    <section class="mapbox" id="mapbox" aria-label="Bản đồ">
+      <div class="map" id="map"></div>
+      <p class="map-empty muted" id="map-empty">Bản đồ hiện khi bắt đầu lái xe.</p>
+      <button class="map-btn map-expand" id="btn-map-expand" type="button" aria-label="Mở rộng bản đồ" aria-pressed="false">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+      <button class="map-btn map-follow" id="btn-map-follow" type="button" hidden>Theo xe</button>
+    </section>
+
     <section class="panel" aria-label="Sắp tới">
       <h2 class="panel-title">Sắp tới</h2>
       <ul class="upcoming" id="upcoming"></ul>
