@@ -43,6 +43,18 @@
       <span id="over-text"></span>
     </div>
 
+    <section class="nav" id="nav" aria-label="Dẫn đường" hidden>
+      <div class="nav-main">
+        <svg class="nav-icon" aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 20 21 12 17 4 21z"/></svg>
+        <div class="nav-text">
+          <span class="nav-dist" id="nav-dist">--</span>
+          <span class="nav-instr" id="nav-instr" role="status" aria-live="polite"></span>
+        </div>
+        <button class="nav-stop" id="btn-nav-stop" type="button">Dừng</button>
+      </div>
+      <div class="nav-foot" id="nav-foot"></div>
+    </section>
+
     <section class="alert" id="alert" role="status" aria-live="polite" hidden>
       <svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <div class="alert-text">
@@ -71,9 +83,9 @@
   </main>
 
   <nav class="bar" aria-label="Điều khiển">
-    <button class="bar-btn" id="btn-sim" type="button">
-      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-      <span id="btn-sim-text">Chạy thử</span>
+    <button class="bar-btn" id="btn-nav" type="button">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      <span>Dẫn đường</span>
     </button>
     <button class="bar-btn" id="btn-voice" type="button" aria-pressed="true">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
@@ -96,6 +108,23 @@
     </div>
   </div>
 </div>
+
+<dialog id="dest" class="settings" aria-labelledby="dest-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="dest-title">Đi đến đâu?</h2>
+      <button class="icon-btn" id="btn-dest-close" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <label class="field stack" for="dest-q">
+      <span>Tên nơi hoặc địa chỉ</span>
+      <input id="dest-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Ví dụ: Chợ Bến Thành">
+    </label>
+    <ul class="results" id="dest-results"></ul>
+    <p class="muted note" id="dest-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
 
 <dialog id="settings" class="settings" aria-labelledby="settings-title">
   <form method="dialog" class="settings-form">
@@ -130,6 +159,7 @@
       <input id="set-voice" type="checkbox">
     </label>
 
+    <button class="secondary" id="btn-sim" type="button"><span id="btn-sim-text">Chạy thử mô phỏng</span></button>
     <button class="secondary" id="btn-test-voice" type="button">Thử giọng đọc</button>
     <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
     <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>

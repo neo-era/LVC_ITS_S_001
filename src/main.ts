@@ -1,9 +1,12 @@
 import './styles.css';
 import { parseCell } from './core/cells';
-import { alertLabel, formatDistance } from './core/format';
+import { alertLabel, formatDistance, speakDistance } from './core/format';
 import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
 import { Engine, type ViewState } from './engine';
+import { Guidance, type NavState } from './nav/guidance';
+import { searchPlaces, type Place } from './nav/geocode';
+import { fetchRoute, type Route } from './nav/route';
 import { MapView } from './map';
 import { Simulator, simData } from './sim';
 import { Voice } from './voice';
@@ -107,6 +110,63 @@ let mode: 'idle' | 'gps' | 'sim' = 'idle';
 let watchId: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;
 let tickTimer: number | null = null;
+
+/* ---------- Dẫn đường ---------- */
+const navBox = $('nav');
+let lastFix: GpsSample | null = null;
+let guidance: Guidance | null = null;
+let navRoute: Route | null = null;
+let navDest: Place | null = null;
+let rerouting = false;
+let lastRerouteAt = 0;
+
+function renderNav(s: NavState | null): void {
+  navBox.hidden = s === null;
+  $('btn-nav').classList.toggle('active', s !== null);
+  if (!s || !navRoute) return;
+  $('nav-dist').textContent = s.arrived ? 'Đã đến nơi' : s.next ? formatDistance(s.distToNextM) : formatDistance(s.remainingM);
+  $('nav-instr').textContent = s.offRoute ? 'Bạn đang đi lệch tuyến — đang tìm đường mới…' : s.next?.text ?? '';
+  const mins = Math.max(1, Math.round(((navRoute.durS * s.remainingM) / Math.max(1, navRoute.distM)) / 60));
+  $('nav-foot').textContent = `${navDest?.name ?? ''} · còn ${formatDistance(s.remainingM)} · khoảng ${mins} phút`;
+}
+
+async function beginRoute(dest: Place, announce: boolean): Promise<void> {
+  if (!lastFix) throw new Error('Chưa có vị trí GPS. Hãy bấm “Bắt đầu lái xe” và chờ có tín hiệu.');
+  const route = await fetchRoute({ lat: lastFix.lat, lng: lastFix.lng }, { lat: dest.lat, lng: dest.lng });
+  navRoute = route;
+  navDest = dest;
+  guidance = new Guidance(route, (t) => voice.speak(t), () => void reroute());
+  mapView?.setRoute(route.points);
+  renderNav(guidance.update({ lat: lastFix.lat, lng: lastFix.lng, t: lastFix.t }));
+  if (announce) voice.speak(`Bắt đầu dẫn đường. Quãng đường ${speakDistance(route.distM)}.`);
+}
+
+async function reroute(): Promise<void> {
+  if (!navDest || rerouting || Date.now() - lastRerouteAt < 10_000) return;
+  rerouting = true;
+  lastRerouteAt = Date.now();
+  voice.speak('Đang tìm đường mới.');
+  try {
+    await beginRoute(navDest, false);
+  } catch {
+    /* giữ tuyến cũ; lần lệch kế tiếp sẽ thử lại */
+  } finally {
+    rerouting = false;
+  }
+}
+
+function stopNav(): void {
+  guidance = null;
+  navRoute = null;
+  navDest = null;
+  mapView?.setRoute([]);
+  renderNav(null);
+}
+
+function feedNav(g: GpsSample): void {
+  lastFix = g;
+  if (guidance) renderNav(guidance.update({ lat: g.lat, lng: g.lng, t: g.t }));
+}
 
 /* ---------- Giao diện ---------- */
 const GPS_LABEL: Record<string, string> = {
@@ -234,6 +294,7 @@ function onGeo(p: GeolocationPosition): void {
     accuracy: p.coords.accuracy,
   };
   void ensureCells(g.lat, g.lng);
+  feedNav(g);
   const v = engine.push(g, p.coords.heading);
   render(v);
   updateMap(g, p.coords.heading, v);
@@ -295,6 +356,7 @@ function startSim(): void {
   startBox.hidden = true;
   simEngine().loadData(simData());
   sim.start((g) => {
+    feedNav(g);
     const v = engine.push(g, null);
     render(v);
     updateMap(g, 0, v); // mô phỏng luôn đi về phía bắc
@@ -313,6 +375,8 @@ function stopAll(): void {
   if (tickTimer !== null) window.clearInterval(tickTimer);
   tickTimer = null;
   mode = 'idle';
+  stopNav();
+  lastFix = null;
   render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [] });
   refreshNotes();
 }
@@ -337,11 +401,12 @@ $('btn-start-sim').addEventListener('click', startSim);
 $('btn-sim').addEventListener('click', () => {
   if (mode === 'sim') stopAll();
   else startSim();
-  $('btn-sim-text').textContent = mode === 'sim' ? 'Tắt chạy thử' : 'Chạy thử';
+  $('btn-sim-text').textContent = mode === 'sim' ? 'Tắt chạy thử' : 'Chạy thử mô phỏng';
+  settingsDlg.close();
 });
 $('btn-stop').addEventListener('click', () => {
   stopAll();
-  $('btn-sim-text').textContent = 'Chạy thử';
+  $('btn-sim-text').textContent = 'Chạy thử mô phỏng';
   startBox.hidden = false;
 });
 $('btn-voice').addEventListener('click', () => {
@@ -379,6 +444,77 @@ $('btn-test-voice').addEventListener('click', () => {
   voice.speak('Phía trước 400 mét có camera phạt nguội. Chú ý tốc độ.');
   voice.enabled = was;
 });
+
+/* ---------- Tìm đích ---------- */
+const destDlg = $('dest') as HTMLDialogElement;
+const destQ = $('dest-q') as HTMLInputElement;
+const destList = $('dest-results');
+const destStatus = $('dest-status');
+let searchTimer: number | null = null;
+let searchCtl: AbortController | null = null;
+
+function destMsg(t: string): void {
+  destStatus.textContent = t;
+}
+
+async function doSearch(q: string): Promise<void> {
+  searchCtl?.abort();
+  searchCtl = new AbortController();
+  destMsg('Đang tìm…');
+  try {
+    const places = await searchPlaces(q, lastFix ? { lat: lastFix.lat, lng: lastFix.lng } : null, searchCtl.signal);
+    destList.replaceChildren(
+      ...places.map((p) => {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = p.name;
+        if (p.detail) {
+          const sm = document.createElement('small');
+          sm.textContent = p.detail;
+          b.append(sm);
+        }
+        b.addEventListener('click', () => void choose(p));
+        li.append(b);
+        return li;
+      }),
+    );
+    destMsg(places.length ? '' : 'Không tìm thấy nơi nào khớp.');
+  } catch (e) {
+    if ((e as Error).name !== 'AbortError') destMsg('Không tìm được lúc này (có thể mất mạng). Thử lại sau.');
+  }
+}
+
+async function choose(p: Place): Promise<void> {
+  destMsg('Đang tìm đường…');
+  try {
+    await beginRoute(p, true);
+    destDlg.close();
+  } catch (e) {
+    destMsg((e as Error).message || 'Không tìm được đường đi.');
+  }
+}
+
+$('btn-nav').addEventListener('click', () => {
+  if (guidance) return; // đang dẫn đường: dùng nút Dừng trên thẻ
+  destList.replaceChildren();
+  destMsg(lastFix ? '' : 'Hãy bấm “Bắt đầu lái xe” trước để có vị trí xuất phát.');
+  destDlg.showModal();
+  destQ.focus();
+});
+$('btn-dest-close').addEventListener('click', () => destDlg.close());
+$('btn-nav-stop').addEventListener('click', stopNav);
+destQ.addEventListener('input', () => {
+  if (searchTimer !== null) window.clearTimeout(searchTimer);
+  const q = destQ.value.trim();
+  if (q.length < 3) {
+    destList.replaceChildren();
+    destMsg('');
+    return;
+  }
+  searchTimer = window.setTimeout(() => void doSearch(q), 450);
+});
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && mode !== 'idle') void holdScreen();
 });

@@ -6,6 +6,7 @@ type MLMap = import('maplibre-gl').Map;
 type MLMarker = import('maplibre-gl').Marker;
 
 const SRC = 'alerts';
+const ROUTE = 'route';
 
 /** Bản đồ nền OpenStreetMap (OpenFreeMap) + vị trí xe + camera/điểm đen. Nạp trễ để màn hình lái xe mở nhanh. */
 export class MapView {
@@ -17,6 +18,7 @@ export class MapView {
   private follow = true;
   private triedFallback = false;
   private alerts: AlertPoint[] = [];
+  private routePts: { lat: number; lng: number }[] = [];
   private last: { lat: number; lng: number; heading: number | null; kmh: number | null } | null = null;
   onFollowChange: (follow: boolean) => void = () => {};
 
@@ -61,6 +63,21 @@ export class MapView {
   private ensureLayers(): void {
     const map = this.map;
     if (!map || map.getSource(SRC)) return;
+    map.addSource(ROUTE, { type: 'geojson', data: this.routeGeoJSON() });
+    map.addLayer({
+      id: 'route-casing',
+      type: 'line',
+      source: ROUTE,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 10 },
+    });
+    map.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: ROUTE,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#2563EB', 'line-width': 6 },
+    });
     map.addSource(SRC, { type: 'geojson', data: alertsToGeoJSON(this.alerts) });
     map.addLayer({
       id: 'alerts-halo',
@@ -79,6 +96,20 @@ export class MapView {
         'circle-stroke-color': '#1a1200',
       },
     });
+  }
+
+  private routeGeoJSON() {
+    return {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: { type: 'LineString' as const, coordinates: this.routePts.map((p) => [p.lng, p.lat]) },
+    };
+  }
+
+  /** Vẽ tuyến đường dẫn (rỗng = xoá). */
+  setRoute(points: { lat: number; lng: number }[]): void {
+    this.routePts = points;
+    (this.map?.getSource(ROUTE) as import('maplibre-gl').GeoJSONSource | undefined)?.setData(this.routeGeoJSON());
   }
 
   private setFollow(v: boolean): void {

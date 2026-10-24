@@ -26,7 +26,7 @@ export class Voice {
     u.lang = 'vi-VN';
     if (this.voice) u.voice = this.voice;
     u.rate = 1;
-    speechSynthesis.cancel();
+    if (speechSynthesis.pending) speechSynthesis.cancel(); // hàng đợi đã đầy: bỏ câu cũ, giữ câu mới
     speechSynthesis.speak(u);
   }
 }
