@@ -166,6 +166,11 @@ export class MapView {
     this.onFollowChange(v);
   }
 
+  /** Chừa chỗ cho các thẻ nổi phía trên/dưới để xe nằm ở vùng bản đồ còn trống. */
+  setPadding(p: { top: number; bottom: number; left?: number; right?: number }): void {
+    this.map?.setPadding({ top: p.top, bottom: p.bottom, left: p.left ?? 0, right: p.right ?? 0 });
+  }
+
   /** Tải lại các ô bản đồ (vd khi có mạng trở lại sau đoạn mất sóng). */
   reloadTiles(): void {
     const m = this.map;

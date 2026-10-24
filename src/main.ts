@@ -104,6 +104,7 @@ async function ensureMap(lat: number, lng: number): Promise<void> {
     mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
     await mv.init({ lat, lng });
     mapView = mv;
+    applyMapPadding();
     mapbox.classList.add('live');
   } catch {
     $('map-empty').textContent = 'Không tải được bản đồ. Tốc độ và cảnh báo vẫn hoạt động.';
@@ -335,8 +336,13 @@ function renderMapHud(v: ViewState): void {
   }
 }
 
+let lastPadAt = 0;
 function render(v: ViewState): void {
   renderMapHud(v);
+  if (Date.now() - lastPadAt > 1500) {
+    lastPadAt = Date.now();
+    requestAnimationFrame(applyMapPadding);
+  }
   const gps = mode === 'sim' && v.status !== 'idle' ? 'sim' : v.status;
   app.dataset.gps = gps;
   app.dataset.state = v.state;
@@ -550,6 +556,21 @@ function stopAll(): void {
 }
 
 /* ---------- Sự kiện ---------- */
+/** Chừa chỗ cho thẻ nổi: xe hiện ở phần bản đồ còn trống giữa thẻ trên và thanh nút dưới. */
+function applyMapPadding(): void {
+  if (!mapView) return;
+  if (mapbox.classList.contains('full')) return mapView.setPadding({ top: 0, bottom: 0 });
+  const bar = document.querySelector('.bar') as HTMLElement;
+  let top = 0;
+  for (const el of document.querySelectorAll<HTMLElement>('.main > :not(.mapbox)')) {
+    const r = el.getBoundingClientRect();
+    if (r.height > 0) top = Math.max(top, r.bottom);
+  }
+  void bar;
+  mapView.setPadding({ top: Math.min(top, window.innerHeight * 0.55), bottom: 40, right: 60 });
+}
+window.addEventListener('resize', applyMapPadding);
+
 function setMapFull(full: boolean): void {
   if (!full) endPick();
   mapbox.classList.toggle('full', full);
@@ -557,6 +578,7 @@ function setMapFull(full: boolean): void {
   $('btn-map-expand').setAttribute('aria-label', full ? 'Thu nhỏ bản đồ' : 'Mở rộng bản đồ');
   mapView?.setInteractive(full);
   mapView?.resize();
+  applyMapPadding();
   if (!full) mapView?.recenter();
 }
 $('btn-map-expand').addEventListener('click', () => setMapFull(!mapbox.classList.contains('full')));
