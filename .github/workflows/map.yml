@@ -1,0 +1,68 @@
+name: Dựng bản đồ offline
+on:
+  schedule:
+    - cron: '0 20 1 * *' # ngày 1 hằng tháng, 03:00 giờ Việt Nam
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/map/**
+      - src/pipeline/provinces.ts
+      - src/pipeline/style.ts
+      - .github/workflows/map.yml
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: map
+  cancel-in-progress: true
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Cài osmium và pmtiles
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+          gh release download --repo protomaps/go-pmtiles --pattern '*Linux_x86_64.tar.gz' --output pmtiles.tgz
+          tar xzf pmtiles.tgz pmtiles && ./pmtiles version
+      - name: Dựng ô bản đồ Việt Nam (Planetiler, lược đồ OpenMapTiles)
+        run: |
+          curl -fsSL -o planetiler.jar https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
+          set -o pipefail
+          java -Xmx12g -jar planetiler.jar --download --area=vietnam --output=vn.pmtiles --force 2>&1 | tee planetiler.log | tail -40 \
+            || { echo "::error title=Planetiler lỗi::$(tail -c 1500 planetiler.log | tr '\n' ' ')"; exit 1; }
+          ls -lh vn.pmtiles
+          echo "::notice title=Bản đồ cả nước::$(du -h vn.pmtiles | cut -f1)"
+      - name: Ranh giới tỉnh/thành
+        run: |
+          PBF=$(ls data/sources/*.osm.pbf | head -1)
+          osmium tags-filter "$PBF" r/boundary=administrative -o adm.pbf --overwrite
+          osmium export adm.pbf -f geojson --geometry-types=polygon -o adm.geojson --overwrite
+          npx tsx tools/map/build-map.ts prepare
+      - name: Cắt bản đồ theo tỉnh
+        run: |
+          mkdir -p public/map/tiles
+          for f in regions/*.geojson; do
+            s=$(basename "$f" .geojson); [ "$s" = index ] && continue
+            ./pmtiles extract vn.pmtiles "public/map/tiles/$s.pmtiles" --region="$f" > /dev/null 2>extract.err \
+              || echo "::warning title=Không cắt được $s::$(tail -c 300 extract.err | tr '\n' ' ')"
+          done
+          du -sh public/map/tiles
+      - name: Style, sprite, font
+        run: npx tsx tools/map/build-map.ts finish
+      - name: Lưu bản đồ cho các lần đăng trang
+        uses: actions/cache/save@v4
+        with:
+          path: public/map
+          key: map-${{ github.run_id }}
+      - name: Đăng lại trang
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh workflow run pages.yml --ref main

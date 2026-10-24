@@ -30,6 +30,12 @@ jobs:
           path: public/data
           key: osm-data-none
           restore-keys: osm-data-
+      - name: Khôi phục bản đồ offline đã dựng
+        uses: actions/cache/restore@v4
+        with:
+          path: public/map
+          key: map-none
+          restore-keys: map-
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
