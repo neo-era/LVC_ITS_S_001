@@ -76,6 +76,18 @@
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
       </button>
       <button class="map-btn map-follow" id="btn-map-follow" type="button" hidden>Theo xe</button>
+      <div class="map-hud" id="map-hud" aria-hidden="true">
+        <div class="map-speed"><b id="mh-speed">--</b><small>km/h</small></div>
+        <div class="map-limit" id="mh-limit-box" hidden>
+          <div class="sign map-sign" id="mh-limit"></div>
+          <small id="mh-limit-label">Giới hạn</small>
+        </div>
+      </div>
+      <div class="map-alert" id="mh-alert" hidden>
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <div class="map-alert-text"><strong id="mh-alert-title"></strong><span id="mh-alert-sub"></span></div>
+        <em id="mh-alert-dist"></em>
+      </div>
     </section>
 
     <section class="panel" aria-label="Sắp tới">

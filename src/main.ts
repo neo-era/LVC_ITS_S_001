@@ -9,6 +9,7 @@ import { pushMarks } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
 import { searchPlaces, type Place } from './nav/geocode';
 import { fetchRoute, type Route } from './nav/route';
+import { mapHud } from './hud';
 import { MapView } from './map';
 import { Simulator, simData } from './sim';
 import { Voice } from './voice';
@@ -311,7 +312,24 @@ const GPS_LABEL: Record<string, string> = {
   lost: 'Mất tín hiệu GPS',
 };
 
+function renderMapHud(v: ViewState): void {
+  const h = mapHud(v);
+  $('map-hud').dataset.state = h.state;
+  $('mh-speed').textContent = h.speed;
+  $('mh-limit-box').hidden = h.limit === null;
+  $('mh-limit-box').classList.toggle('est', h.estimated);
+  $('mh-limit').textContent = h.limit ?? '';
+  $('mh-limit-label').textContent = h.estimated ? 'Ước tính' : 'Giới hạn';
+  $('mh-alert').hidden = h.alert === null;
+  if (h.alert) {
+    $('mh-alert-title').textContent = h.alert.title;
+    $('mh-alert-sub').textContent = h.alert.sub;
+    $('mh-alert-dist').textContent = h.alert.dist;
+  }
+}
+
 function render(v: ViewState): void {
+  renderMapHud(v);
   const gps = mode === 'sim' && v.status !== 'idle' ? 'sim' : v.status;
   app.dataset.gps = gps;
   app.dataset.state = v.state;

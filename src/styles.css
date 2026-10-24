@@ -686,3 +686,101 @@ select {
   text-align: center;
   max-width: 120px;
 }
+
+/* Lớp tốc độ + cảnh báo nổi trên bản đồ — chỉ hiện khi bản đồ toàn màn hình (phương án A) */
+.map-hud,
+.map-alert {
+  display: none;
+}
+.mapbox.full .map-hud {
+  position: absolute;
+  z-index: 3;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-m);
+  background: rgb(11 15 20 / 0.9);
+  color: #f2f5f8;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+.map-speed {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.map-speed b {
+  font-size: 52px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.map-speed small,
+.map-limit small {
+  color: #9fb0c3;
+  font-size: 12px;
+  font-weight: 600;
+}
+.map-hud[data-state='over'] .map-speed b {
+  color: #ff6b61;
+}
+.map-hud[data-state='near'] .map-speed b {
+  color: #ffb020;
+}
+.map-limit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.map-sign {
+  width: 64px;
+  border-width: 7px;
+  font-size: 26px;
+}
+.map-limit.est .map-sign {
+  border-style: dashed;
+  border-color: #9fb0c3;
+  color: #3b4754;
+}
+.mapbox.full .map-alert:not([hidden]) {
+  position: absolute;
+  z-index: 3;
+  left: calc(12px + env(safe-area-inset-left));
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(36px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-m);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+.map-alert-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.map-alert-text strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+.map-alert-text span {
+  font-size: 14px;
+  font-weight: 600;
+}
+.map-alert em {
+  font-style: normal;
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Khi bản đồ toàn màn hình, nút "Theo xe" nhường chỗ cho thẻ cảnh báo */
+.mapbox.full .map-follow {
+  bottom: calc(120px + env(safe-area-inset-bottom));
+}
