@@ -9,6 +9,9 @@ import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } f
 import { pushMarks } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
 import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geocode';
+import { parseNameShard, searchLocal, type NameEntry } from './nav/localsearch';
+import { foldName, shardsAround } from './pipeline/names';
+import { haversine } from './core/geo';
 import { fetchRoute, type Route } from './nav/route';
 import { mapHud } from './hud';
 import { MapView } from './map';
@@ -838,31 +841,73 @@ function destMsg(t: string): void {
   destStatus.textContent = t;
 }
 
+/* Danh bạ tên trên máy (tải theo mảnh quanh vị trí, service worker giữ lại để dùng khi mất mạng) */
+const nameShards = new Map<string, NameEntry[]>();
+async function localEntries(): Promise<NameEntry[]> {
+  if (!lastFix) return [];
+  const keys = shardsAround(lastFix.lat, lastFix.lng);
+  await Promise.all(
+    keys
+      .filter((k) => !nameShards.has(k))
+      .map(async (k) => {
+        try {
+          const r = await fetch(`./data/names/${k}.json`);
+          nameShards.set(k, r.ok ? parseNameShard(await r.json()) : []);
+        } catch {
+          /* mất mạng & chưa lưu: bỏ qua mảnh này */
+        }
+      }),
+  );
+  return keys.flatMap((k) => nameShards.get(k) ?? []);
+}
+
+function renderResults(places: Place[]): void {
+  destList.replaceChildren(
+    ...places.map((p) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = p.name;
+      if (p.detail) {
+        const sm = document.createElement('small');
+        sm.textContent = p.detail;
+        b.append(sm);
+      }
+      b.addEventListener('click', () => void choose(p));
+      li.append(b);
+      return li;
+    }),
+  );
+}
+
+/** Gộp kết quả: trên máy trước; bỏ kết quả trực tuyến trùng tên ở gần (≤ 1 km). */
+function mergePlaces(local: Place[], online: Place[]): Place[] {
+  const out = [...local];
+  for (const p of online) {
+    if (out.some((x) => foldName(x.name) === foldName(p.name) && haversine(x, p) < 1000)) continue;
+    out.push(p);
+  }
+  return out.slice(0, 8);
+}
+
 async function doSearch(q: string): Promise<void> {
   searchCtl?.abort();
-  searchCtl = new AbortController();
+  const ctl = (searchCtl = new AbortController());
   destMsg('Đang tìm…');
+  const near = lastFix ? { lat: lastFix.lat, lng: lastFix.lng } : null;
+  const local = searchLocal(await localEntries(), q, near, 5);
+  if (ctl.signal.aborted) return;
+  if (local.length) renderResults(local);
   try {
-    const places = await searchPlaces(q, lastFix ? { lat: lastFix.lat, lng: lastFix.lng } : null, searchCtl.signal);
-    destList.replaceChildren(
-      ...places.map((p) => {
-        const li = document.createElement('li');
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = p.name;
-        if (p.detail) {
-          const sm = document.createElement('small');
-          sm.textContent = p.detail;
-          b.append(sm);
-        }
-        b.addEventListener('click', () => void choose(p));
-        li.append(b);
-        return li;
-      }),
-    );
-    destMsg(places.length ? '' : 'Không tìm thấy nơi nào khớp.');
+    const online = navigator.onLine ? await searchPlaces(q, near, ctl.signal) : [];
+    if (ctl.signal.aborted) return;
+    const all = mergePlaces(local, online);
+    renderResults(all);
+    destMsg(all.length ? '' : 'Không tìm thấy nơi nào khớp.');
   } catch (e) {
-    if ((e as Error).name !== 'AbortError') destMsg('Không tìm được lúc này (có thể mất mạng). Thử lại sau.');
+    if ((e as Error).name === 'AbortError') return;
+    renderResults(local);
+    destMsg(local.length ? '' : 'Không tìm được lúc này (có thể mất mạng). Thử lại sau.');
   }
 }
 

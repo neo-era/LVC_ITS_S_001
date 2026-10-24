@@ -12,6 +12,7 @@ import { parseCell } from '../src/core/cells';
 import { parseRemoteMarks } from '../src/marks';
 import { matchCameraRoute } from '../src/pipeline/camera-routes';
 import { CellWriter, FLAG, simplify, wayFlags } from '../src/pipeline/compact';
+import { NameIndex } from '../src/pipeline/names';
 import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
 
@@ -41,6 +42,7 @@ function lineOf(g: Feature['geometry']): { lat: number; lon: number }[] | null {
 
 async function main(): Promise<void> {
   const writer = new CellWriter();
+  const names = new NameIndex();
   const ways: WayInfo[] = [];
   const seenWays = new Set<number>();
   let nWays = 0;
@@ -73,11 +75,13 @@ async function main(): Promise<void> {
       if (info) ways.push(info);
       const pts = simplify(geom.map((g) => ({ lat: g.lat, lng: g.lon })), SIMPLIFY_M);
       const mid = geom[Math.floor(geom.length / 2)];
+      names.add(tags['name:vi'] ?? tags.name, mid.lat, mid.lon, 's');
       const flags = wayFlags(tags) | (matchCameraRoute(tags.name, mid.lat, mid.lon) ? FLAG.cam : 0);
       writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), flags);
       nWays++;
     } else if (p['@type'] === 'node' && f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const [lon, lat] = f.geometry.coordinates as number[];
+      if (tags.place) names.add(tags['name:vi'] ?? tags.name, lat, lon, 'p');
       const r = convertElements([{ type: 'node', id, lat, lon, tags }]);
       for (const a of r.alerts) {
         writer.addAlert(a);
@@ -118,6 +122,16 @@ async function main(): Promise<void> {
     bytes += Buffer.byteLength(text);
     await writeFile(join(OUT, 'cells', `${key}.json`), text);
   }
+  // Danh bạ tên đường/địa danh theo mảnh ~55 km để tìm địa điểm trên máy
+  await mkdir(join(OUT, 'names'), { recursive: true });
+  let nameBytes = 0;
+  for (const [key, rows] of names.files()) {
+    const text = JSON.stringify(rows);
+    nameBytes += Buffer.byteLength(text);
+    await writeFile(join(OUT, 'names', `${key}.json`), text);
+  }
+  bytes += nameBytes;
+  console.log(`::notice title=Danh bạ tên::${names.size} tên, ${(nameBytes / 1048576).toFixed(1)} MB`);
   if (bytes > MAX_TOTAL_BYTES) throw new Error(`Dữ liệu ${(bytes / 1048576).toFixed(0)} MB vượt giới hạn — dừng để không làm hỏng trang.`);
 
   const coverage = summarizeWays(ways);
