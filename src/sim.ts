@@ -13,7 +13,8 @@ export function simData(): CellData {
       id: `SIM${s}`,
       a: { lat: at(s), lng: SIM_START.lng },
       b: { lat: at(s + 400), lng: SIM_START.lng },
-      maxspeed: s < 1200 ? 50 : 60,
+      maxspeed: s < 1200 ? 50 : s < 2400 ? 60 : null,
+      ...(s >= 2400 ? { est: 50 } : {}),
       ...(s >= 800 ? { cam: true } : {}),
     });
   }

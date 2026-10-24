@@ -1,5 +1,5 @@
 import type { AlertPoint } from '../core/alerts';
-import { cellKey, type LatLng } from '../core/geo';
+import { cellKey, haversine, type LatLng } from '../core/geo';
 
 /**
  * Định dạng ô lưới v2 (gọn cho dữ liệu toàn quốc):
@@ -9,9 +9,32 @@ import { cellKey, type LatLng } from '../core/geo';
  */
 export const E5 = 1e5;
 
+/** Cờ của mỗi mục (ô thứ 4): bit0 tuyến có camera, bit1 đường đôi, bit2 không ước tính (cao tốc), bit3 đường nhỏ. */
+export const FLAG = { cam: 1, divided: 2, noEstimate: 4, minor: 8 } as const;
+
+/** Tổng chiều dài đường (km) trong một ô ~1,2 km² từ mức này trở lên thì coi là khu đông dân cư. */
+export const URBAN_KM = 10;
+
+const MAJOR = new Set(['motorway', 'trunk', 'primary', 'secondary']);
+const MINOR = new Set(['residential', 'unclassified', 'living_street']);
+
+/** Cờ suy từ thẻ OSM (chưa gồm cờ camera). */
+export function wayFlags(tags: Record<string, string | undefined>): number {
+  const hw = tags.highway ?? '';
+  let f = 0;
+  const oneway = ['yes', '1', 'true', '-1'].includes(tags.oneway ?? '');
+  const lanes = Number.parseInt(tags.lanes ?? '', 10);
+  if (oneway && (lanes >= 2 || (!Number.isFinite(lanes) && MAJOR.has(hw)))) f |= FLAG.divided;
+  if (hw === 'motorway' || hw === 'motorway_link') f |= FLAG.noEstimate;
+  if (MINOR.has(hw)) f |= FLAG.minor;
+  return f;
+}
+
 export interface CellFileV2 {
   v: 2;
   cell: string;
+  /** 1 = khu đông dân cư (ước lượng theo mật độ đường). */
+  u?: 1;
   w: number[][];
   alerts: AlertPoint[];
 }
@@ -84,8 +107,8 @@ export function splitWay(pts: LatLng[]): Map<string, { start: number; end: numbe
   return out;
 }
 
-export function encodeRun(wayId: number, start: number, pts: LatLng[], maxspeed: number | null, cam: boolean): number[] {
-  const out = [wayId, start, maxspeed ?? 0, cam ? 1 : 0];
+export function encodeRun(wayId: number, start: number, pts: LatLng[], maxspeed: number | null, flags: number): number[] {
+  const out = [wayId, start, maxspeed ?? 0, flags];
   let pLat = 0;
   let pLng = 0;
   pts.forEach((p, i) => {
@@ -104,13 +127,22 @@ export class CellWriter {
   private readonly ways = new Map<string, number[][]>();
   private readonly alerts = new Map<string, AlertPoint[]>();
   private readonly alertIds = new Set<string>();
+  private readonly km = new Map<string, number>();
 
-  addWay(wayId: number, pts: LatLng[], maxspeed: number | null, cam: boolean): void {
+  /** flags: số cờ FLAG, hoặc true/false = chỉ cờ camera. */
+  addWay(wayId: number, pts: LatLng[], maxspeed: number | null, flags: number | boolean): void {
     if (pts.length < 2) return;
+    const f = typeof flags === 'boolean' ? (flags ? FLAG.cam : 0) : flags;
     for (const [key, runs] of splitWay(pts)) {
       const list = this.ways.get(key) ?? [];
-      for (const r of runs) list.push(encodeRun(wayId, r.start, pts.slice(r.start, r.end + 1), maxspeed, cam));
+      let m = 0;
+      for (const r of runs) {
+        const part = pts.slice(r.start, r.end + 1);
+        list.push(encodeRun(wayId, r.start, part, maxspeed, f));
+        for (let i = 0; i + 1 < part.length; i++) m += haversine(part[i], part[i + 1]);
+      }
       this.ways.set(key, list);
+      this.km.set(key, (this.km.get(key) ?? 0) + m / 1000);
     }
   }
 
@@ -126,7 +158,11 @@ export class CellWriter {
   files(): Map<string, CellFileV2> {
     const out = new Map<string, CellFileV2>();
     const keys = new Set([...this.ways.keys(), ...this.alerts.keys()]);
-    for (const k of keys) out.set(k, { v: 2, cell: k, w: this.ways.get(k) ?? [], alerts: this.alerts.get(k) ?? [] });
+    for (const k of keys) {
+      const f: CellFileV2 = { v: 2, cell: k, w: this.ways.get(k) ?? [], alerts: this.alerts.get(k) ?? [] };
+      if ((this.km.get(k) ?? 0) >= URBAN_KM) f.u = 1;
+      out.set(k, f);
+    }
     return out;
   }
 }

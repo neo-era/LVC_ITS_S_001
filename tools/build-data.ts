@@ -11,7 +11,7 @@ import { createInterface } from 'node:readline';
 import { parseCell } from '../src/core/cells';
 import { parseRemoteMarks } from '../src/marks';
 import { matchCameraRoute } from '../src/pipeline/camera-routes';
-import { CellWriter, simplify } from '../src/pipeline/compact';
+import { CellWriter, FLAG, simplify, wayFlags } from '../src/pipeline/compact';
 import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
 
@@ -73,7 +73,8 @@ async function main(): Promise<void> {
       if (info) ways.push(info);
       const pts = simplify(geom.map((g) => ({ lat: g.lat, lng: g.lon })), SIMPLIFY_M);
       const mid = geom[Math.floor(geom.length / 2)];
-      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), matchCameraRoute(tags.name, mid.lat, mid.lon));
+      const flags = wayFlags(tags) | (matchCameraRoute(tags.name, mid.lat, mid.lon) ? FLAG.cam : 0);
+      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), flags);
       nWays++;
     } else if (p['@type'] === 'node' && f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const [lon, lat] = f.geometry.coordinates as number[];

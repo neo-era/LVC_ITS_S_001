@@ -674,3 +674,15 @@ select {
   padding: 0 14px;
   cursor: pointer;
 }
+
+/* Giới hạn ước tính theo luật: vòng nét đứt, nhạt hơn biển thật */
+.limit.est .sign {
+  border-style: dashed;
+  border-color: var(--muted);
+  color: #3b4754;
+}
+.limit.est .limit-label {
+  font-weight: 700;
+  text-align: center;
+  max-width: 120px;
+}

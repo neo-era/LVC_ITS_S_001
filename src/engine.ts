@@ -9,6 +9,8 @@ export interface ViewState {
   status: GpsStatus | 'idle';
   kmh: number | null;
   limit: number | null;
+  /** Giới hạn đang hiện là ước tính theo luật (không phải biển thật). */
+  limitEstimated: boolean;
   state: SpeedState;
   /** Cảnh báo gần nhất phía trước; null nếu không có. */
   alert: AlertHit | null;
@@ -30,6 +32,7 @@ const idleView = (): ViewState => ({
   status: 'idle',
   kmh: null,
   limit: null,
+  limitEstimated: false,
   state: 'unknown',
   alert: null,
   upcoming: [],
@@ -163,7 +166,9 @@ export class Engine {
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);
 
-    if (state === 'over' && this.prevState !== 'over' && t - this.lastOverAt > OVERSPEED_REPEAT_MS && limit !== null) {
+    const estimated = lim?.estimated ?? false;
+    // Chỉ đọc cảnh báo vượt tốc độ với biển thật; số ước tính chỉ đổi màu trên màn hình.
+    if (!estimated && state === 'over' && this.prevState !== 'over' && t - this.lastOverAt > OVERSPEED_REPEAT_MS && limit !== null) {
       this.lastOverAt = t;
       this.speak(overspeedVoiceText(limit));
     }
@@ -182,6 +187,7 @@ export class Engine {
       status,
       kmh,
       limit,
+      limitEstimated: estimated,
       state,
       alert: hits[0] ?? null,
       upcoming: hits.slice(1, 4),

@@ -320,8 +320,15 @@ function render(v: ViewState): void {
 
   if (v.limit !== null) {
     limitBox.hidden = false;
+    limitBox.classList.toggle('est', v.limitEstimated);
     limitSign.textContent = String(v.limit);
-    limitSign.setAttribute('aria-label', `Giới hạn tốc độ ${v.limit} ki lô mét trên giờ`);
+    $('limit-label').textContent = v.limitEstimated ? 'Ước tính theo luật' : 'Giới hạn';
+    limitSign.setAttribute(
+      'aria-label',
+      v.limitEstimated
+        ? `Giới hạn ước tính theo luật ${v.limit} ki lô mét trên giờ`
+        : `Giới hạn tốc độ ${v.limit} ki lô mét trên giờ`,
+    );
   } else {
     limitBox.hidden = true;
   }
@@ -329,7 +336,7 @@ function render(v: ViewState): void {
   $('route-chip').hidden = !v.camRoute;
   const over = v.state === 'over' && v.limit !== null;
   overBanner.hidden = !over;
-  if (over) overText.textContent = `Vượt tốc độ — giới hạn ${v.limit}`;
+  if (over) overText.textContent = v.limitEstimated ? `Vượt mức ước tính theo luật (${v.limit})` : `Vượt tốc độ — giới hạn ${v.limit}`;
 
   if (v.alert) {
     alertBox.hidden = false;
@@ -513,7 +520,7 @@ function stopAll(): void {
   mode = 'idle';
   stopNav();
   lastFix = null;
-  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false });
+  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false, limitEstimated: false });
   refreshNotes();
 }
 

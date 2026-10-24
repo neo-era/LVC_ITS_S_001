@@ -8,12 +8,16 @@ export interface RoadSegment {
   maxspeed: number | null;
   /** Tuyến đường này nằm trong danh sách có camera phạt nguội (theo báo chí). */
   cam?: boolean;
+  /** Giới hạn ước tính theo luật khi chưa có số thật. */
+  est?: number;
 }
 
 export interface LimitResult {
   kmh: number;
   segmentId: string;
   distM: number;
+  /** true = số ước tính theo luật, không phải biển thật. */
+  estimated: boolean;
 }
 
 const MAX_MATCH_DIST_M = 25;
@@ -68,6 +72,9 @@ export function findLimit(
   heading: number | null,
 ): LimitResult | null {
   const seg = matchSegment(segments, pos, heading);
-  if (!seg || !validSpeed(seg.maxspeed)) return null;
-  return { kmh: seg.maxspeed, segmentId: seg.id, distM: distToSegment(pos, seg.a, seg.b) };
+  if (!seg) return null;
+  const distM = distToSegment(pos, seg.a, seg.b);
+  if (validSpeed(seg.maxspeed)) return { kmh: seg.maxspeed, segmentId: seg.id, distM, estimated: false };
+  if (seg.est !== undefined && validSpeed(seg.est)) return { kmh: seg.est, segmentId: seg.id, distM, estimated: true };
+  return null;
 }
