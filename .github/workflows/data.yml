@@ -15,7 +15,7 @@ permissions:
   actions: write # để gọi lại quy trình đăng trang sau khi có dữ liệu mới
 concurrency:
   group: data
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   data:
     runs-on: ubuntu-latest

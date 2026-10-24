@@ -84,3 +84,30 @@ describe('cờ tuyến có camera trong dữ liệu', () => {
     expect(all.find((s) => s.id === 'w2_0')?.cam).toBeUndefined();
   });
 });
+
+import { summarizeWays, wayInfo } from '../src/pipeline/osm';
+
+describe('thống kê độ phủ giới hạn tốc độ', () => {
+  it('wayInfo: lớp đường, chiều dài km, có maxspeed hợp lệ không; không phải đường cho xe → null', () => {
+    const a = wayInfo(way(1, { highway: 'primary', maxspeed: '50' }, [[10.77, 106.7], [10.78, 106.7]]))!;
+    expect(a.hw).toBe('primary');
+    expect(a.km).toBeGreaterThan(1.0);
+    expect(a.km).toBeLessThan(1.2);
+    expect(a.has).toBe(true);
+    expect(wayInfo(way(2, { highway: 'primary', maxspeed: 'signals' }, [[10.77, 106.7], [10.78, 106.7]]))!.has).toBe(false);
+    expect(wayInfo(way(3, { highway: 'footway' }, [[10.77, 106.7], [10.78, 106.7]]))).toBeNull();
+  });
+  it('summarizeWays: gom theo lớp đường và tổng, tính % theo chiều dài', () => {
+    const s = summarizeWays([
+      { hw: 'primary', km: 3, has: true },
+      { hw: 'primary', km: 1, has: false },
+      { hw: 'residential', km: 6, has: false },
+    ]);
+    expect(s.total).toEqual({ km: 10, kmWithLimit: 3, pct: 30 });
+    expect(s.byClass.primary).toEqual({ km: 4, kmWithLimit: 3, pct: 75 });
+    expect(s.byClass.residential.pct).toBe(0);
+  });
+  it('danh sách rỗng → 0%, không chia cho 0', () => {
+    expect(summarizeWays([]).total).toEqual({ km: 0, kmWithLimit: 0, pct: 0 });
+  });
+});

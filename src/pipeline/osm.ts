@@ -1,5 +1,5 @@
 import type { AlertPoint } from '../core/alerts';
-import { cellKey } from '../core/geo';
+import { cellKey, haversine } from '../core/geo';
 import { matchCameraRoute } from './camera-routes';
 import type { RoadSegment } from '../core/speedlimit';
 
@@ -110,4 +110,50 @@ export function bucketCells(data: { segments: RoadSegment[]; alerts: AlertPoint[
     get(cellKey(a.lat, a.lng)).alerts.push(item);
   }
   return cells;
+}
+
+export interface WayInfo {
+  hw: string;
+  km: number;
+  has: boolean;
+}
+
+/** Thông tin một con đường dành cho xe: lớp đường, chiều dài (km), có giới hạn tốc độ hợp lệ không. */
+export function wayInfo(e: OverpassElement): WayInfo | null {
+  const tags = e.tags ?? {};
+  if (e.type !== 'way' || !tags.highway || !DRIVABLE.has(tags.highway) || !e.geometry || e.geometry.length < 2) return null;
+  let m = 0;
+  for (let i = 0; i + 1 < e.geometry.length; i++) {
+    m += haversine({ lat: e.geometry[i].lat, lng: e.geometry[i].lon }, { lat: e.geometry[i + 1].lat, lng: e.geometry[i + 1].lon });
+  }
+  return { hw: tags.highway, km: m / 1000, has: parseMaxspeed(tags.maxspeed) !== null };
+}
+
+export interface Coverage {
+  km: number;
+  kmWithLimit: number;
+  pct: number;
+}
+
+const cov = (km: number, kmWithLimit: number): Coverage => ({
+  km: Math.round(km * 10) / 10,
+  kmWithLimit: Math.round(kmWithLimit * 10) / 10,
+  pct: km > 0 ? Math.round((kmWithLimit / km) * 1000) / 10 : 0,
+});
+
+export function summarizeWays(ways: WayInfo[]): { total: Coverage; byClass: Record<string, Coverage> } {
+  const acc = new Map<string, { km: number; w: number }>();
+  let tk = 0;
+  let tw = 0;
+  for (const w of ways) {
+    const c = acc.get(w.hw) ?? { km: 0, w: 0 };
+    c.km += w.km;
+    if (w.has) c.w += w.km;
+    acc.set(w.hw, c);
+    tk += w.km;
+    if (w.has) tw += w.km;
+  }
+  const byClass: Record<string, Coverage> = {};
+  for (const [k, c] of acc) byClass[k] = cov(c.km, c.w);
+  return { total: cov(tk, tw), byClass };
 }
