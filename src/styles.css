@@ -836,3 +836,99 @@ select {
 .field.stack select {
   width: 100%;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.off-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.off-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+}
+.off-row.suggest {
+  outline: 2px solid var(--accent);
+}
+.off-row .off-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.off-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.off-row small.ok {
+  color: var(--ok);
+}
+.off-row button {
+  min-height: 44px;
+  min-width: 64px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 12px;
+}
+.off-row .dl {
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.off-row .del {
+  border: 2px solid var(--line);
+  background: transparent;
+  color: var(--text);
+}
+.off-bar {
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+.off-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.2s;
+}
+.off-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 34vh;
+  overflow: auto;
+}
+.off-chips button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.off-chips button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -1,4 +1,4 @@
-const VERSION = 'lat-v2';
+const VERSION = 'lat-v4';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 
@@ -19,7 +19,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     (async () => {
-      for (const k of await caches.keys()) if (!k.startsWith(VERSION)) await caches.delete(k);
+      for (const k of await caches.keys()) if (k.startsWith('lat-v') && !k.startsWith(VERSION)) await caches.delete(k); // không đụng bản đồ offline (lat-map-…)
       await self.clients.claim();
     })(),
   );
@@ -30,13 +30,18 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  // Tệp bản đồ theo tỉnh rất lớn: app tự lưu khi người dùng bấm Tải, service worker không giữ thêm bản sao.
+  if (url.pathname.includes('/map/tiles/')) return;
 
   if (url.pathname.includes('/data/')) {
     // Dữ liệu: ưu tiên bản mới nhất, mất mạng thì dùng bản đã lưu.
     e.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) caches.open(DATA).then((c) => c.put(req, res.clone()));
+          if (res.ok) {
+            const copy = res.clone(); // phải sao chép ngay, trước khi trang đọc hết nội dung
+            e.waitUntil(caches.open(DATA).then((c) => c.put(req, copy)));
+          }
           return res;
         })
         .catch(() => caches.match(req).then((r) => r || new Response('', { status: 503 }))),
@@ -48,7 +53,10 @@ self.addEventListener('fetch', (e) => {
     caches.match(req, { ignoreSearch: true }).then((hit) => {
       const net = fetch(req)
         .then((res) => {
-          if (res.ok) caches.open(SHELL).then((c) => c.put(req, res.clone()));
+          if (res.ok) {
+            const copy = res.clone();
+            e.waitUntil(caches.open(SHELL).then((c) => c.put(req, copy)));
+          }
           return res;
         })
         .catch(() => hit);

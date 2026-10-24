@@ -1,5 +1,7 @@
 import type { AlertPoint } from './core/alerts';
 import { alertsToGeoJSON, STYLE_URLS } from './map-data';
+import { registerLatmap } from './offline/protocol';
+import type { OfflineMaps } from './offline/store';
 
 type MapLibre = typeof import('maplibre-gl');
 type MLMap = import('maplibre-gl').Map;
@@ -22,17 +24,55 @@ export class MapView {
   private last: { lat: number; lng: number; heading: number | null; kmh: number | null } | null = null;
   onFollowChange: (follow: boolean) => void = () => {};
 
-  constructor(private readonly container: HTMLElement, dark: boolean) {
+  private static registered = false;
+  private readonly styles = new Map<string, unknown>();
+
+  constructor(
+    private readonly container: HTMLElement,
+    dark: boolean,
+    private readonly offline: OfflineMaps | null = null,
+  ) {
     this.dark = dark;
+  }
+
+  /**
+   * Style tự dựng (map/style-*.json, nguồn latmap:// đọc bản đồ offline hoặc trực tuyến).
+   * Chưa có (quy trình dựng bản đồ chưa chạy) → dùng style trực tuyến OpenFreeMap như trước.
+   */
+  private async styleFor(dark: boolean): Promise<unknown> {
+    const key = dark ? 'dark' : 'light';
+    if (this.styles.has(key)) return this.styles.get(key);
+    let st: unknown = dark ? STYLE_URLS.dark : STYLE_URLS.light;
+    if (this.offline) {
+      try {
+        const r = await fetch(`./map/style-${key}.json`);
+        if (r.ok) {
+          const j = await r.json();
+          const base = new URL('./', location.href).href;
+          if (typeof j.glyphs === 'string' && !/^https?:/.test(j.glyphs)) j.glyphs = base + j.glyphs;
+          if (typeof j.sprite === 'string' && !/^https?:/.test(j.sprite)) j.sprite = base + j.sprite;
+          st = j;
+        }
+      } catch {
+        /* giữ style trực tuyến */
+      }
+    }
+    this.styles.set(key, st);
+    return st;
   }
 
   async init(center: { lat: number; lng: number }): Promise<void> {
     const ml = (await import('maplibre-gl')).default as unknown as MapLibre;
     await import('maplibre-gl/dist/maplibre-gl.css');
     this.ml = ml;
+    if (this.offline && !MapView.registered) {
+      registerLatmap(ml, this.offline);
+      MapView.registered = true;
+    }
     const map = new ml.Map({
       container: this.container,
-      style: this.dark ? STYLE_URLS.dark : STYLE_URLS.light,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      style: (await this.styleFor(this.dark)) as any,
       center: [center.lng, center.lat],
       zoom: 16,
       attributionControl: { compact: true },
@@ -149,7 +189,7 @@ export class MapView {
     if (this.dark === dark) return;
     this.dark = dark;
     this.triedFallback = false;
-    this.map?.setStyle(dark ? STYLE_URLS.dark : STYLE_URLS.light);
+    void this.styleFor(dark).then((st) => this.map?.setStyle(st as never));
   }
 
   setAlerts(alerts: AlertPoint[]): void {

@@ -12,6 +12,8 @@ import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geoco
 import { fetchRoute, type Route } from './nav/route';
 import { mapHud } from './hud';
 import { MapView } from './map';
+import { filterProvinces, formatMB, suggestProvince, type ProvinceInfo } from './offline/core';
+import { OfflineMaps } from './offline/store';
 import { Simulator, simData } from './sim';
 import { Voice } from './voice';
 
@@ -84,6 +86,8 @@ voice.style = settings.voiceStyle;
 const engine = new Engine({ radiusM: settings.radius, speak: (t) => voice.speak(t), vehicle: settings.vehicle });
 const sim = new Simulator();
 
+const offline = new OfflineMaps();
+const offlineReady = offline.init().catch(() => {});
 const mapbox = $('mapbox');
 let mapView: MapView | null = null;
 let mapStarting = false;
@@ -96,7 +100,8 @@ async function ensureMap(lat: number, lng: number): Promise<void> {
   if (mapView || mapStarting) return;
   mapStarting = true;
   try {
-    const mv = new MapView($('map'), isDark());
+    await offlineReady;
+    const mv = new MapView($('map'), isDark(), offline);
     mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
     await mv.init({ lat, lng });
     mapView = mv;
@@ -644,6 +649,147 @@ $('set-voice-style').addEventListener('change', (e) => {
   saveSettings();
   voice.speak('Xin chào, em sẽ đọc cảnh báo bằng giọng này.', true);
 });
+
+
+/* ---------- Bản đồ offline theo tỉnh (phương án B) ---------- */
+const offDlg = $('offline') as HTMLDialogElement;
+let provinces: ProvinceInfo[] = [];
+let provincesUpdated = '';
+let dl: { slug: string; got: number; total: number; ctl: AbortController } | null = null;
+
+async function loadProvinces(): Promise<void> {
+  if (provinces.length) return;
+  const r = await fetch('./map/provinces.json', { cache: 'no-cache' });
+  if (!r.ok) throw new Error('chưa có');
+  const j = (await r.json()) as { updated?: string; provinces?: ProvinceInfo[] };
+  provinces = Array.isArray(j.provinces) ? j.provinces : [];
+  provincesUpdated = j.updated ?? '';
+}
+
+function offRow(p: { slug: string; name: string; bytes: number }, kind: 'mine' | 'suggest'): HTMLLIElement {
+  const li = document.createElement('li');
+  li.className = `off-row${kind === 'suggest' ? ' suggest' : ''}`;
+  const name = document.createElement('div');
+  name.className = 'off-name';
+  name.textContent = p.name;
+  const sm = document.createElement('small');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  if (dl?.slug === p.slug) {
+    sm.textContent = `Đang tải ${formatMB(dl.got)} / ${formatMB(dl.total)}`;
+    const bar = document.createElement('div');
+    bar.className = 'off-bar';
+    const i = document.createElement('i');
+    i.style.width = `${Math.min(100, (dl.got / Math.max(1, dl.total)) * 100)}%`;
+    bar.append(i);
+    name.append(sm, bar);
+    btn.className = 'del';
+    btn.textContent = 'Dừng';
+    btn.addEventListener('click', () => dl?.ctl.abort());
+  } else if (offline.has(p.slug)) {
+    const m = offline.list().find((x) => x.slug === p.slug)!;
+    sm.className = 'ok';
+    sm.textContent = `Đã tải · ${formatMB(m.bytes)}${m.updated ? ` · ${m.updated.split('-').reverse().join('/')}` : ''}`;
+    name.append(sm);
+    btn.className = 'del';
+    btn.textContent = 'Xoá';
+    btn.addEventListener('click', async () => {
+      await offline.remove(p.slug);
+      void renderOffline();
+    });
+  } else {
+    sm.textContent = formatMB(p.bytes);
+    name.append(sm);
+    btn.className = 'dl';
+    btn.textContent = 'Tải';
+    btn.disabled = dl !== null;
+    btn.addEventListener('click', () => void startDownload(p.slug));
+  }
+  li.append(name, btn);
+  return li;
+}
+
+async function renderOffline(): Promise<void> {
+  const status = $('off-status');
+  try {
+    await loadProvinces();
+  } catch {
+    $('off-all').replaceChildren();
+    status.textContent = navigator.onLine
+      ? 'Bản đồ offline đang được chuẩn bị trên máy chủ, anh thử lại sau ít phút.'
+      : 'Cần có mạng để xem danh sách và tải bản đồ.';
+  }
+  const q = ($('off-q') as HTMLInputElement).value;
+  const mine = offline.list();
+  const downloading = dl ? provinces.find((p) => p.slug === dl!.slug) : undefined;
+  const mineRows = [...mine.map((m) => ({ slug: m.slug, name: m.name, bytes: m.bytes }))];
+  if (downloading && !offline.has(downloading.slug)) mineRows.unshift(downloading);
+  $('off-mine-box').hidden = mineRows.length === 0;
+  $('off-mine').replaceChildren(...mineRows.map((p) => offRow(p, 'mine')));
+
+  const sug = !q ? suggestProvince(provinces, lastFix ? { lat: lastFix.lat, lng: lastFix.lng } : null) : null;
+  const showSug = sug && !offline.has(sug.slug) && dl?.slug !== sug.slug;
+  $('off-suggest-box').hidden = !showSug;
+  $('off-suggest').replaceChildren(...(showSug ? [offRow(sug!, 'suggest')] : []));
+
+  const rest = filterProvinces(provinces, q).filter((p) => !offline.has(p.slug) && dl?.slug !== p.slug && !(showSug && p.slug === sug!.slug));
+  $('off-all').replaceChildren(
+    ...rest.map((p) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = `${p.name} · ${formatMB(p.bytes)}`;
+      b.disabled = dl !== null;
+      b.setAttribute('aria-label', `Tải bản đồ ${p.name}, ${formatMB(p.bytes)}`);
+      b.addEventListener('click', () => void startDownload(p.slug));
+      return b;
+    }),
+  );
+  if (provinces.length && !rest.length && q) status.textContent = 'Không tìm thấy tỉnh/thành nào khớp.';
+  const u = await offline.usage();
+  $('off-usage').textContent = `Đã dùng ${formatMB(u.used)}${u.free !== null ? ` · còn trống khoảng ${formatMB(u.free)}` : ''}`;
+}
+
+async function startDownload(slug: string): Promise<void> {
+  const p = provinces.find((x) => x.slug === slug);
+  if (!p || dl) return;
+  dl = { slug, got: 0, total: p.bytes, ctl: new AbortController() };
+  $('off-status').textContent = '';
+  void renderOffline();
+  let last = 0;
+  try {
+    await offline.download(
+      p,
+      provincesUpdated,
+      (got, total) => {
+        if (!dl) return;
+        dl.got = got;
+        dl.total = total;
+        if (Date.now() - last > 300) {
+          last = Date.now();
+          void renderOffline();
+        }
+      },
+      dl.ctl.signal,
+    );
+    $('off-status').textContent = `Đã tải xong bản đồ ${p.name}. Có thể dùng khi mất mạng.`;
+  } catch (e) {
+    $('off-status').textContent =
+      (e as Error).name === 'AbortError' ? 'Đã dừng tải.' : (e as Error).message || 'Tải không thành công, vui lòng thử lại.';
+  } finally {
+    dl = null;
+    void renderOffline();
+  }
+}
+
+$('btn-offline').addEventListener('click', () => {
+  settingsDlg.close();
+  ($('off-q') as HTMLInputElement).value = '';
+  $('off-status').textContent = '';
+  offDlg.showModal();
+  void renderOffline();
+});
+$('btn-off-close').addEventListener('click', () => offDlg.close());
+$('off-q').addEventListener('input', () => void renderOffline());
 
 /* ---------- Tìm đích ---------- */
 const destDlg = $('dest') as HTMLDialogElement;

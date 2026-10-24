@@ -163,6 +163,33 @@
   </div>
 </dialog>
 
+<dialog id="offline" class="settings" aria-labelledby="off-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="off-title">Bản đồ offline</h2>
+      <button class="icon-btn" id="btn-off-close" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <label class="field stack" for="off-q">
+      <span class="sr-only">Tìm tỉnh/thành</span>
+      <input id="off-q" type="search" autocomplete="off" placeholder="Tìm tỉnh/thành…">
+    </label>
+    <p class="muted note" id="off-usage"></p>
+    <div id="off-suggest-box" hidden>
+      <p class="muted note">Gợi ý: tỉnh bạn đang ở</p>
+      <ul class="off-list" id="off-suggest"></ul>
+    </div>
+    <div id="off-mine-box" hidden>
+      <h3 class="settings-sub">Đã tải</h3>
+      <ul class="off-list" id="off-mine"></ul>
+    </div>
+    <h3 class="settings-sub">Tất cả tỉnh/thành</h3>
+    <div class="off-chips" id="off-all"></div>
+    <p class="muted note" id="off-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+
 <dialog id="settings" class="settings" aria-labelledby="settings-title">
   <form method="dialog" class="settings-form">
     <div class="settings-head">
@@ -223,6 +250,7 @@
     <p class="muted note" id="voice-hint">Muốn giọng hay hơn: iPhone vào Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt và tải giọng bản nâng cao nếu có; Android vào Cài đặt → Chuyển văn bản thành giọng nói, chọn Google và tải giọng tiếng Việt. Tải xong mở lại app.</p>
     <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
     <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>
+    <button class="secondary" id="btn-offline" type="button">Bản đồ offline theo tỉnh…</button>
     <h3 class="settings-sub">Camera tự đánh dấu</h3>
     <p class="muted note" id="marks-info"></p>
     <button class="secondary" id="btn-sync" type="button">Đồng bộ ngay</button>

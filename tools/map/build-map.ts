@@ -11,6 +11,9 @@ import { collectFontstacks, GLYPH_RANGES, rewriteStyle } from '../../src/pipelin
 const OUT = join(process.cwd(), 'public', 'map');
 const REGIONS = join(process.cwd(), 'regions');
 const OFM = 'https://tiles.openfreemap.org';
+const FALLBACK: { name: string; slug: string; bbox: [number, number, number, number] }[] = [
+  { name: 'Tỉnh Khánh Hòa', slug: 'tinh-khanh-hoa', bbox: [108.55, 11.15, 109.5, 12.9] },
+];
 const UA = 'LaiAnToan-map-builder/0.1 (https://github.com/neo-era/LVC_ITS_S_001)';
 
 async function get(url: string): Promise<Response> {
@@ -30,6 +33,20 @@ async function get(url: string): Promise<Response> {
 async function prepare(): Promise<void> {
   const fc = JSON.parse(await readFile('adm.geojson', 'utf8')) as { features: unknown[] };
   const provinces = pickProvinces(fc.features);
+  // Tỉnh có ranh giới gồm đảo xa ngoài bản trích (vd Khánh Hòa có Trường Sa) thì osmium không dựng được đa giác:
+  // dùng khung phần đất liền để vẫn có bản đồ offline.
+  for (const fb of FALLBACK) {
+    if (provinces.some((p) => p.slug === fb.slug)) continue;
+    const [w, s, e, n] = fb.bbox;
+    provinces.push({
+      name: fb.name,
+      slug: fb.slug,
+      bbox: fb.bbox,
+      feature: { type: 'Feature', properties: { name: fb.name }, geometry: { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } },
+    });
+    console.log(`::warning title=Dùng khung bao cho ${fb.name}::Không có đa giác ranh giới trong dữ liệu`);
+  }
+  provinces.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   if (provinces.length < 20) throw new Error(`Chỉ tìm thấy ${provinces.length} tỉnh — dữ liệu ranh giới bất thường`);
   await mkdir(REGIONS, { recursive: true });
   for (const p of provinces) await writeFile(join(REGIONS, `${p.slug}.geojson`), JSON.stringify(p.feature));
