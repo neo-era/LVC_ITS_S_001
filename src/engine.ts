@@ -86,6 +86,25 @@ export class Engine {
     for (const a of data.alerts) add(cellKey(a.lat, a.lng), { alerts: [a] });
   }
 
+  /** Thêm một điểm cảnh báo vào ô của nó; trùng id thì thay thế (dùng cho dấu người dùng tự đánh dấu). */
+  addAlert(a: AlertPoint): void {
+    const key = cellKey(a.lat, a.lng);
+    const cur = this.cells.get(key) ?? { segments: [], alerts: [] };
+    cur.alerts = [...cur.alerts.filter((x) => x.id !== a.id), a];
+    this.cells.set(key, cur);
+  }
+
+  removeAlert(a: { id: string; lat: number; lng: number }): void {
+    const key = cellKey(a.lat, a.lng);
+    const cur = this.cells.get(key);
+    if (cur) cur.alerts = cur.alerts.filter((x) => x.id !== a.id);
+  }
+
+  /** Hướng đi hiện tại (độ) nếu đã xác định. */
+  currentHeading(): number | null {
+    return this.heading;
+  }
+
   /** Các điểm cảnh báo đã nạp trong bán kính (m) quanh vị trí — để vẽ trên bản đồ. */
   alertsNear(pos: LatLng, radiusM: number): AlertPoint[] {
     const out = new Map<string, AlertPoint>();

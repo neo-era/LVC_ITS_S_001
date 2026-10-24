@@ -38,6 +38,8 @@ jobs:
         if: github.event_name != 'push' || steps.cache.outputs.cache-matched-key == ''
         # Đêm: lỗi thì dừng để giữ bản đang chạy. Lúc đẩy code: lỗi vẫn triển khai (app chạy không có dữ liệu).
         continue-on-error: ${{ github.event_name != 'schedule' }}
+        env:
+          MARKS_URL: ${{ secrets.MARKS_URL }}
         run: npm run data
       - name: Lưu dữ liệu cho các lần sau
         if: steps.data.outcome == 'success'

@@ -6,6 +6,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseCell } from '../src/core/cells';
+import { parseRemoteMarks } from '../src/marks';
 import { bucketCells, convertElements, type OverpassElement } from '../src/pipeline/osm';
 
 const URLS = (process.env.OVERPASS_URLS ?? 'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter').split(',');
@@ -61,6 +62,18 @@ async function main(): Promise<void> {
       tiles++;
       console.log(`ô ${tiles}: ${els.length} phần tử`);
       await sleep(1000);
+    }
+  }
+  // Dấu camera đã duyệt từ Google Sheet (địa chỉ giữ trong biến bí mật MARKS_URL, không để trong repo công khai).
+  if (process.env.MARKS_URL) {
+    try {
+      const res = await fetch(`${process.env.MARKS_URL}?action=approved`, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const extra = parseRemoteMarks(await res.json());
+      for (const a of extra) alerts.set(a.id, a);
+      console.log(`Dấu camera đã duyệt: ${extra.length}`);
+    } catch (e) {
+      console.warn('Không lấy được dấu camera đã duyệt, bỏ qua:', String(e));
     }
   }
   const cells = bucketCells({ segments: [...segments.values()], alerts: [...alerts.values()] });

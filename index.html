@@ -92,6 +92,10 @@
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
       <span>Dẫn đường</span>
     </button>
+    <button class="bar-btn" id="btn-mark" type="button">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>Đánh dấu camera</span>
+    </button>
     <button class="bar-btn" id="btn-voice" type="button" aria-pressed="true">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
       <span id="btn-voice-text">Giọng nói: Bật</span>
@@ -101,6 +105,11 @@
       <span>Dừng</span>
     </button>
   </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button id="toast-undo" type="button" hidden>Hoàn tác</button>
+  </div>
 
   <div class="start" id="start">
     <div class="start-card">
@@ -168,6 +177,15 @@
     <button class="secondary" id="btn-test-voice" type="button">Thử giọng đọc</button>
     <button class="secondary" id="btn-install" type="button" hidden>Cài đặt ứng dụng</button>
     <p class="muted note" id="ios-hint" hidden>Trên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”.</p>
+    <h3 class="settings-sub">Camera tự đánh dấu</h3>
+    <p class="muted note" id="marks-info"></p>
+    <label class="field stack" for="set-sync">
+      <span>Địa chỉ đồng bộ (Google Apps Script)</span>
+      <input id="set-sync" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+    </label>
+    <button class="secondary" id="btn-sync" type="button">Đồng bộ ngay</button>
+    <button class="secondary" id="btn-clear-marks" type="button">Xoá tất cả dấu trên máy</button>
+    <p class="muted note" id="sync-status" role="status" aria-live="polite"></p>
     <p class="muted note" id="settings-data"></p>
     <p class="muted note">Nhắc “tuyến có camera phạt nguội” dựa trên danh sách tên đường do báo chí nêu (cập nhật 01/2026), không phải vị trí camera và có thể chưa đầy đủ.</p>
     <p class="muted note">Dữ liệu cảnh báo chỉ mang tính tham khảo. Luôn tuân thủ biển báo và quy định giao thông.</p>

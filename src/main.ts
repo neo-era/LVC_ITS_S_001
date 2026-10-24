@@ -4,6 +4,8 @@ import { alertLabel, formatDistance, speakDistance } from './core/format';
 import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
 import { Engine, type ViewState } from './engine';
+import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
+import { isValidSyncUrl, pushMarks } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
 import { searchPlaces, type Place } from './nav/geocode';
 import { fetchRoute, type Route } from './nav/route';
@@ -110,6 +112,137 @@ let mode: 'idle' | 'gps' | 'sim' = 'idle';
 let watchId: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;
 let tickTimer: number | null = null;
+
+/* ---------- Camera tự đánh dấu ---------- */
+const MARKS_KEY = 'lat.marks.v1';
+const SYNC_KEY = 'lat.sync.url';
+const DEVICE_KEY = 'lat.device';
+
+function lsGet(k: string): string | null {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+function lsSet(k: string, v: string): void {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
+let marks: Mark[] = [];
+try {
+  marks = parseMarks(JSON.parse(lsGet(MARKS_KEY) ?? '[]'));
+} catch {
+  marks = [];
+}
+for (const m of marks) engine.addAlert(markToAlert(m));
+const saveMarks = () => lsSet(MARKS_KEY, JSON.stringify(marks));
+
+function deviceId(): string {
+  let d = lsGet(DEVICE_KEY);
+  if (!d) {
+    d = Math.random().toString(36).slice(2, 8);
+    lsSet(DEVICE_KEY, d);
+  }
+  return d;
+}
+
+let toastTimer: number | null = null;
+let undoFn: (() => void) | null = null;
+function toast(text: string, undo?: () => void): void {
+  $('toast-text').textContent = text;
+  undoFn = undo ?? null;
+  $('toast-undo').hidden = !undo;
+  $('toast').hidden = false;
+  if (toastTimer !== null) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => ($('toast').hidden = true), 6000);
+}
+
+function refreshMarksInfo(): void {
+  const pending = marks.filter((m) => !m.synced).length;
+  $('marks-info').textContent = marks.length
+    ? `${marks.length} dấu trên máy, ${pending} chưa đồng bộ. Bấm “Đánh dấu camera” khi xe đi ngang camera.`
+    : 'Chưa có dấu nào. Bấm “Đánh dấu camera” khi xe đi ngang camera để lưu đúng vị trí.';
+}
+
+function refreshMapAlerts(): void {
+  if (mapView && lastFix) mapView.setAlerts(engine.alertsNear({ lat: lastFix.lat, lng: lastFix.lng }, 2000));
+}
+
+async function syncMarks(silent: boolean): Promise<void> {
+  const url = (lsGet(SYNC_KEY) ?? '').trim();
+  const status = $('sync-status');
+  const say = (t: string) => {
+    if (!silent) status.textContent = t;
+  };
+  if (!isValidSyncUrl(url)) return say('Chưa có địa chỉ đồng bộ hợp lệ (phải là địa chỉ https://script.google.com/…/exec).');
+  const pending = marks.filter((m) => !m.synced);
+  if (!pending.length) return say('Không có dấu nào cần đồng bộ.');
+  say('Đang đồng bộ…');
+  try {
+    const saved = new Set(await pushMarks(url, deviceId(), pending));
+    marks = marks.map((m) => (saved.has(m.id) ? { ...m, synced: true } : m));
+    saveMarks();
+    refreshMarksInfo();
+    say(`Đã gửi ${saved.size} dấu. Dấu sẽ vào dữ liệu cảnh báo sau khi được duyệt trong Google Sheet.`);
+  } catch (e) {
+    say(`Chưa gửi được: ${(e as Error).message}. Dấu vẫn lưu trên máy.`);
+  }
+}
+
+function markHere(): void {
+  if (mode === 'sim') return toast('Không đánh dấu khi đang chạy thử mô phỏng.');
+  if (!lastFix) return toast('Chưa có vị trí GPS để đánh dấu.');
+  const m = createMark({ lat: lastFix.lat, lng: lastFix.lng }, engine.currentHeading(), 'camera', Date.now());
+  const r = addMark(marks, m);
+  if (!r.added) return toast('Đã có dấu camera ở gần đây rồi.');
+  marks = r.marks;
+  saveMarks();
+  engine.addAlert(markToAlert(m));
+  refreshMapAlerts();
+  refreshMarksInfo();
+  voice.speak('Đã đánh dấu camera.');
+  toast('Đã đánh dấu camera tại vị trí này.', () => {
+    marks = removeMark(marks, m.id);
+    saveMarks();
+    engine.removeAlert(m);
+    refreshMapAlerts();
+    refreshMarksInfo();
+    $('toast').hidden = true;
+  });
+  void syncMarks(true);
+}
+
+let clearArmed = false;
+$('btn-mark').addEventListener('click', markHere);
+$('toast-undo').addEventListener('click', () => undoFn?.());
+$('btn-sync').addEventListener('click', () => void syncMarks(false));
+($('set-sync') as HTMLInputElement).value = lsGet(SYNC_KEY) ?? '';
+$('set-sync').addEventListener('change', (e) => lsSet(SYNC_KEY, (e.target as HTMLInputElement).value.trim()));
+$('btn-clear-marks').addEventListener('click', () => {
+  const b = $('btn-clear-marks');
+  if (!clearArmed) {
+    clearArmed = true;
+    b.textContent = 'Chạm lần nữa để xoá hết';
+    window.setTimeout(() => {
+      clearArmed = false;
+      b.textContent = 'Xoá tất cả dấu trên máy';
+    }, 4000);
+    return;
+  }
+  for (const m of marks) engine.removeAlert(m);
+  marks = [];
+  saveMarks();
+  clearArmed = false;
+  b.textContent = 'Xoá tất cả dấu trên máy';
+  refreshMapAlerts();
+  refreshMarksInfo();
+});
+refreshMarksInfo();
 
 /* ---------- Dẫn đường ---------- */
 const navBox = $('nav');
