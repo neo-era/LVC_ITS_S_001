@@ -1,5 +1,5 @@
 /** Báo đèn tắt / sự cố chiếu sáng ghi ngay từ xe. */
-export type ReportKind = 'den_tat' | 'su_co';
+export type ReportKind = 'den_tat' | 'su_co' | 'ngap';
 export interface Report {
   id: string;
   kind: ReportKind;
@@ -7,12 +7,14 @@ export interface Report {
   lng: number;
   dir?: number;
   t: number;
+  /** Mã trụ (khi báo từ tuần tra hoặc quét QR). */
+  pole?: string;
   synced?: boolean;
   /** Máy chủ từ chối (dữ liệu không hợp lệ) — không gửi lại, vẫn xuất CSV được. */
   rejected?: boolean;
 }
 
-export const REPORT_LABEL: Record<ReportKind, string> = { den_tat: 'Đèn tắt', su_co: 'Sự cố chiếu sáng' };
+export const REPORT_LABEL: Record<ReportKind, string> = { den_tat: 'Đèn tắt', su_co: 'Sự cố chiếu sáng', ngap: 'Đường ngập' };
 
 export function parseReports(raw: unknown): Report[] {
   if (!Array.isArray(raw)) return [];
@@ -20,7 +22,7 @@ export function parseReports(raw: unknown): Report[] {
     (r): r is Report =>
       !!r &&
       typeof r.id === 'string' &&
-      (r.kind === 'den_tat' || r.kind === 'su_co') &&
+      (r.kind === 'den_tat' || r.kind === 'su_co' || r.kind === 'ngap') &&
       typeof r.lat === 'number' &&
       typeof r.lng === 'number' &&
       r.lat >= 8 &&
@@ -50,11 +52,11 @@ export function fmtVnTime(t: number): string {
 
 /** CSV mở thẳng bằng Excel (UTF-8 có BOM), có link bản đồ từng điểm. */
 export function reportsToCsv(list: Report[]): string {
-  const rows = [['STT', 'Loại', 'Thời điểm', 'Vĩ độ', 'Kinh độ', 'Hướng', 'Bản đồ']];
+  const rows = [['STT', 'Loại', 'Mã trụ', 'Thời điểm', 'Vĩ độ', 'Kinh độ', 'Hướng', 'Bản đồ']];
   list.forEach((r, i) => {
     const lat = r.lat.toFixed(6);
     const lng = r.lng.toFixed(6);
-    rows.push([String(i + 1), REPORT_LABEL[r.kind], fmtVnTime(r.t), lat, lng, r.dir === undefined ? '' : String(r.dir), `https://www.google.com/maps?q=${lat},${lng}`]);
+    rows.push([String(i + 1), REPORT_LABEL[r.kind], r.pole ?? '', fmtVnTime(r.t), lat, lng, r.dir === undefined ? '' : String(r.dir), `https://www.google.com/maps?q=${lat},${lng}`]);
   });
   return '﻿' + rows.map((r) => r.map((c) => (/[",\r\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\r\n') + '\r\n';
 }

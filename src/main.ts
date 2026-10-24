@@ -20,6 +20,7 @@ import { OfflineMaps } from './offline/store';
 import { Simulator, simData } from './sim';
 import { updateAction } from './update';
 import { freshFix, setupFeatures } from './features/wire';
+import { setupFeatures2 } from './features/wire2';
 import { Voice } from './voice';
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
@@ -316,9 +317,10 @@ function stopNav(): void {
   renderNav(null);
 }
 
+let lastNavState: NavState | null = null;
 function feedNav(g: GpsSample): void {
   lastFix = g;
-  if (guidance) renderNav(guidance.update({ lat: g.lat, lng: g.lng, t: g.t }));
+  if (guidance) renderNav((lastNavState = guidance.update({ lat: g.lat, lng: g.lng, t: g.t })));
 }
 
 /* ---------- Giao diện ---------- */
@@ -476,12 +478,14 @@ function onGeo(p: GeolocationPosition): void {
     speed: p.coords.speed,
     accuracy: p.coords.accuracy,
   };
+  if (speedOverrideKmh !== null) g.speed = speedOverrideKmh / 3.6; // OBD-II: tốc độ từ xe thay cho GPS
   void ensureCells(g.lat, g.lng);
   feedNav(g);
   const v = engine.push(g, p.coords.heading);
   render(v);
   updateMap(g, p.coords.heading, v);
   features.onSample(g, v);
+  features2.onSample(g, v);
 }
 
 async function holdScreen(): Promise<void> {
@@ -545,6 +549,7 @@ function startSim(): void {
     render(v);
     updateMap(g, 0, v); // mô phỏng luôn đi về phía bắc
     features.onSample(g, v);
+    features2.onSample(g, v);
   });
   startTicker();
   void holdScreen();
@@ -553,6 +558,7 @@ function startSim(): void {
 
 function stopAll(): void {
   features.onStop();
+  features2.onStop();
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
   sim.stop();
@@ -564,7 +570,8 @@ function stopAll(): void {
   window.setTimeout(applyUpdateIfSafe, 300);
   stopNav();
   lastFix = null;
-  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false, limitEstimated: false });
+  lastNavState = null;
+  render({ status: 'idle', kmh: null, limit: null, state: 'unknown', alert: null, upcoming: [], camRoute: false, limitEstimated: false, truckBan: false });
   refreshNotes();
 }
 
@@ -1072,6 +1079,48 @@ const features = setupFeatures({
   },
   openSettings: () => settingsDlg.showModal(),
   closeSettings: () => settingsDlg.close(),
+});
+
+/* ---------- nhóm 2: chia sẻ hành trình, thời tiết, cấm xe tải/ngập, SOS, tuần tra, QR, đèn tín hiệu, OBD, nhận dạng biển ---------- */
+let speedOverrideKmh: number | null = null;
+const features2 = setupFeatures2({
+  $,
+  lsGet,
+  lsSet,
+  speak: (t) => voice.speak(t),
+  toast,
+  lastFix: () => lastFix,
+  heading: () => engine.currentHeading(),
+  mode: () => mode,
+  deviceId,
+  goTo: async (p) => {
+    await beginRoute(p, true);
+    if (destDlg.open) destDlg.close();
+  },
+  stopNav,
+  markCamera: markHere,
+  toggleVoice: () => {},
+  openSettings: () => settingsDlg.showModal(),
+  closeSettings: () => settingsDlg.close(),
+  view: () => engine.view(),
+  navInfo: () => {
+    if (!navRoute || !navDest || !lastNavState) return null;
+    const secs = (navRoute.durS * lastNavState.remainingM) / Math.max(1, navRoute.distM);
+    return { dest: navDest.name, etaT: Date.now() + secs * 1000 };
+  },
+  reportHere: features.reportHere,
+  camPreview: features.camPreview,
+  onImpact: features.onImpact,
+  setSpeedOverride: (k) => (speedOverrideKmh = k),
+  setSignLimit: (k) => engine.setSignLimit(k),
+  showDialog: (id) => {
+    settingsDlg.close();
+    ($(id) as HTMLDialogElement).showModal();
+  },
+});
+$('btn-obd-open').addEventListener('click', () => {
+  settingsDlg.close();
+  ($('obd') as HTMLDialogElement).showModal();
 });
 
 applyTheme();

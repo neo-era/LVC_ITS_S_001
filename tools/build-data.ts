@@ -13,6 +13,7 @@ import { parseRemoteMarks } from '../src/marks';
 import { matchCameraRoute } from '../src/pipeline/camera-routes';
 import { CellWriter, FLAG, simplify, wayFlags } from '../src/pipeline/compact';
 import { NameIndex } from '../src/pipeline/names';
+import { parseHgv } from '../src/pipeline/hgv';
 import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
 
@@ -46,6 +47,7 @@ async function main(): Promise<void> {
   const ways: WayInfo[] = [];
   const seenWays = new Set<number>();
   let nWays = 0;
+  let nHgv = 0;
   let nCams = 0;
   let lines = 0;
 
@@ -77,7 +79,9 @@ async function main(): Promise<void> {
       const mid = geom[Math.floor(geom.length / 2)];
       names.add(tags['name:vi'] ?? tags.name, mid.lat, mid.lon, 's');
       const flags = wayFlags(tags) | (matchCameraRoute(tags.name, mid.lat, mid.lon) ? FLAG.cam : 0);
-      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), flags);
+      const hgv = parseHgv(tags);
+      if (hgv) nHgv++;
+      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), flags, hgv);
       nWays++;
     } else if (p['@type'] === 'node' && f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const [lon, lat] = f.geometry.coordinates as number[];
@@ -147,7 +151,7 @@ async function main(): Promise<void> {
     .map(([k, c]) => `${k}: ${c.pct}% (${c.kmWithLimit}/${c.km} km)`);
   console.log(`Độ phủ giới hạn tốc độ: tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km)\n  ${byClass.join('\n  ')}`);
   console.log(`::notice title=Độ phủ giới hạn tốc độ (toàn quốc)::tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km). ${byClass.join('; ')}`);
-  console.log(`::notice title=Kích thước dữ liệu::${files.size} ô, ${(bytes / 1048576).toFixed(1)} MB (đầu vào ${inMB} MB), ${nWays} đường, ${nCams} camera OSM, ${nMarks} dấu đã duyệt`);
+  console.log(`::notice title=Kích thước dữ liệu::${files.size} ô, ${(bytes / 1048576).toFixed(1)} MB (đầu vào ${inMB} MB), ${nWays} đường (${nHgv} có cấm xe tải), ${nCams} camera OSM, ${nMarks} dấu đã duyệt`);
 }
 
 main().catch(async (e) => {

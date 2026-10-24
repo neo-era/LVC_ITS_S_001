@@ -1546,3 +1546,144 @@ select {
   font-size: 15px;
   padding: 0 12px;
 }
+
+/* ===== nhóm tính năng 2 ===== */
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.status-chips:empty {
+  display: none;
+}
+.status-chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--btn-fill);
+  border: 2px solid var(--ring);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.status-chip.warn {
+  border-color: var(--accent);
+}
+.status-chip.danger {
+  border-color: #e53935;
+  color: var(--over-ink);
+}
+.status-chip.ok {
+  border-color: var(--ok);
+}
+.nav-stop.active {
+  background: #14532d;
+  color: #fff;
+  border-color: #14532d;
+}
+.patrol-box {
+  position: absolute;
+  z-index: 3;
+  left: calc(12px + env(safe-area-inset-left));
+  right: 84px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.patrol-box.near {
+  outline: 3px solid var(--accent);
+}
+.patrol-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 16px;
+}
+.patrol-btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.pb {
+  min-height: 56px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+}
+.pb.ok {
+  background: #1b8a4b;
+}
+.pb.off {
+  background: #c62828;
+}
+.pb.bad {
+  background: #b45309;
+}
+.sos {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  z-index: 30;
+  background: #c62828;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+.sos:not([open]) {
+  display: none;
+}
+.sos h2 {
+  margin: 0;
+  font-size: 36px;
+}
+.sos p {
+  font-size: 18px;
+}
+.sos b {
+  font-size: 40px;
+}
+.big {
+  min-height: 80px;
+  font-size: 22px;
+}
+.sos .primary {
+  background: #fff;
+  color: #0b0f14;
+}
+.sos .secondary {
+  border-color: #fff;
+  color: #fff;
+}
+.field input[type='tel'],
+.field input[type='file'] {
+  min-height: 52px;
+  border-radius: var(--radius-s);
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  padding: 10px 14px;
+}
+.app:has(#patrol-box:not([hidden])) .toast {
+  bottom: calc(150px + env(safe-area-inset-bottom));
+}

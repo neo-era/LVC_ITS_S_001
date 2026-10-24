@@ -41,7 +41,8 @@ create policy lat_marks_read_approved on public.lat_camera_marks
 -- =====================================================================
 create table if not exists public.lat_reports (
   id          text primary key check (char_length(id) between 3 and 40),
-  kind        text not null check (kind in ('den_tat', 'su_co')),
+  kind        text not null check (kind in ('den_tat', 'su_co', 'ngap')),
+  pole        text check (char_length(pole) <= 60),
   lat         double precision not null check (lat between 8 and 24),
   lng         double precision not null check (lng between 102 and 110),
   dir         integer check (dir between 0 and 360),
@@ -52,9 +53,11 @@ create table if not exists public.lat_reports (
 );
 alter table public.lat_reports enable row level security;
 revoke all on table public.lat_reports from anon, authenticated;
-grant insert (id, kind, lat, lng, dir, device, t_client) on table public.lat_reports to anon;
+grant insert (id, kind, pole, lat, lng, dir, device, t_client) on table public.lat_reports to anon;
 drop policy if exists lat_reports_insert on public.lat_reports;
 create policy lat_reports_insert on public.lat_reports for insert to anon with check (status = 'moi');
+-- Nếu đã tạo bảng từ bản trước: alter table public.lat_reports add column if not exists pole text check (char_length(pole) <= 60);
+--   alter table public.lat_reports drop constraint lat_reports_kind_check; alter table public.lat_reports add constraint lat_reports_kind_check check (kind in ('den_tat','su_co','ngap'));
 -- Xem báo cáo mới: select * from public.lat_reports where status = 'moi' order by created_at desc;
 
 -- =====================================================================

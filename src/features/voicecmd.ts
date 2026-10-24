@@ -3,6 +3,7 @@ import { foldName } from '../pipeline/names';
 export type Command =
   | { type: 'mark_camera' }
   | { type: 'report_light' }
+  | { type: 'report_flood' }
   | { type: 'go_place'; name: string }
   | { type: 'stop_nav' }
   | { type: 'voice'; on: boolean }
@@ -28,6 +29,7 @@ export function parseCommand(text: string): Command {
   if (off && (has('quay') || has('camera') || has('video'))) return { type: 'dashcam', on: false };
   if (has('tat') && has('giong')) return { type: 'voice', on: false };
   if (has('bat') && has('giong')) return { type: 'voice', on: true };
+  if (has('ngap') && (has('bao') || has('duong') || has('nuoc') || words.size <= 2)) return { type: 'report_flood' };
   if (hasRaw('đèn') && (has('tat') || has('hu') || has('hong') || has('su co'))) {
     // "tắt đèn" là lệnh tắt, không phải báo đèn tắt; "đèn tắt" / "báo đèn hư" mới là báo cáo
     if (/^tắt\s+đèn/.test(raw)) return { type: 'unknown' };

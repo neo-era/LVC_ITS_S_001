@@ -1,4 +1,5 @@
 import type { Vehicle } from './core/vehicle';
+import { hgvBlockedAt } from './pipeline/hgv';
 import { AlertDeduper, findAlerts, type AlertHit, type AlertPoint } from './core/alerts';
 import type { CellData } from './core/cells';
 import { alertVoiceText, overspeedVoiceText, speedState, type SpeedState } from './core/format';
@@ -19,6 +20,8 @@ export interface ViewState {
   upcoming: AlertHit[];
   /** Đang chạy trên tuyến đường được báo chí nêu có camera phạt nguội. */
   camRoute: boolean;
+  /** Xe tải đang trên đường cấm xe tải vào giờ này (theo biển ghi trong OSM). */
+  truckBan: boolean;
 }
 
 export interface EngineOptions {
@@ -39,6 +42,7 @@ const idleView = (): ViewState => ({
   alert: null,
   upcoming: [],
   camRoute: false,
+  truckBan: false,
 });
 
 /** Gom GPS → tốc độ lọc → giới hạn → cảnh báo → lời đọc. Không phụ thuộc DOM nên kiểm thử được. */
@@ -60,6 +64,12 @@ export class Engine {
     this.vehicle = opts.vehicle ?? 'car';
     this.speak = opts.speak;
     this.deduper = new AlertDeduper(opts.radiusM);
+  }
+
+  /** Biển nhận dạng từ camera (thử nghiệm): chỉ dùng khi dữ liệu không có biển thật. */
+  private signLimit: number | null = null;
+  setSignLimit(kmh: number | null): void {
+    this.signLimit = kmh;
   }
 
   setVehicle(v: Vehicle): void {
@@ -170,7 +180,9 @@ export class Engine {
   private compute(kmh: number | null, status: GpsStatus, pos: LatLng, t: number): void {
     const { segments, alerts } = this.nearby(pos);
     const lim = kmh !== null ? findLimit(segments, pos, this.heading, this.vehicle) : null;
-    const camRoute = matchSegment(segments, pos, this.heading)?.cam === true;
+    const seg = matchSegment(segments, pos, this.heading);
+    const camRoute = seg?.cam === true;
+    const truckBan = this.vehicle === 'truck' && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);
 
@@ -200,6 +212,7 @@ export class Engine {
       alert: hits[0] ?? null,
       upcoming: hits.slice(1, 4),
       camRoute,
+      truckBan,
     };
   }
 }

@@ -16,5 +16,13 @@ const stampServiceWorker = () => ({
 export default defineConfig({
   base: './',
   plugins: [stampServiceWorker()],
-  build: { rollupOptions: { input: { main: join(__dirname, 'index.html'), fleet: join(__dirname, 'fleet.html') } } },
+  build: {
+    rollupOptions: {
+      input: {
+        main: join(__dirname, 'index.html'),
+        fleet: join(__dirname, 'fleet.html'),
+        ...(process.env.OCR_TEST ? { ocrtest: join(__dirname, 'tools/ocr/ocr-test.html') } : {}),
+      },
+    },
+  },
 });

@@ -63,6 +63,13 @@ export function estimateLimit(ef: number, vehicle: Vehicle = 'car'): number | nu
 function parseV2(raw: Record<string, unknown>): CellData {
   const segments: RoadSegment[] = [];
   const urban = raw.u === 1;
+  const hgvMap = isObj(raw.h) ? (raw.h as Record<string, unknown>) : {};
+  const hgvOf = (wayId: number): [number, number][] | undefined => {
+    const w = hgvMap[String(wayId)];
+    if (!Array.isArray(w)) return undefined;
+    const ok = w.filter((x): x is [number, number] => Array.isArray(x) && x.length === 2 && num(x[0]) && num(x[1]) && x[0] >= 0 && x[1] <= 1440 && x[0] < x[1]);
+    return ok.length ? ok : undefined;
+  };
   if (Array.isArray(raw.w)) {
     for (const e of raw.w as unknown[]) {
       if (!Array.isArray(e) || e.length < 8 || e.length % 2 !== 0) continue;
@@ -85,9 +92,11 @@ function parseV2(raw: Record<string, unknown>): CellData {
       if (!ok) continue;
       const maxspeed = validLimit(ms) ? ms : null;
       const ef = (flags & 14) | (urban ? EF_URBAN : 0);
+      const hgv = hgvOf(wayId);
       for (let i = 0; i + 1 < pts.length; i++) {
         const seg: RoadSegment = { id: `w${wayId}_${start + i}`, a: pts[i], b: pts[i + 1], maxspeed, ef };
         if (flags & 1) seg.cam = true;
+        if (hgv) seg.hgv = hgv;
         segments.push(seg);
       }
     }

@@ -43,6 +43,7 @@
       <span id="over-text"></span>
     </div>
 
+    <div class="status-chips" id="status-chips"></div>
     <p class="route-chip" id="route-chip" hidden>
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span>Tuyến này có camera phạt nguội</span>
@@ -55,6 +56,9 @@
           <span class="nav-dist" id="nav-dist">--</span>
           <span class="nav-instr" id="nav-instr" role="status" aria-live="polite"></span>
         </div>
+        <button class="nav-stop" id="btn-share" type="button" aria-label="Chia sẻ hành trình" title="Chia sẻ hành trình">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+        </button>
         <button class="nav-stop" id="btn-nav-stop" type="button">Dừng</button>
       </div>
       <div class="nav-foot" id="nav-foot"></div>
@@ -139,6 +143,22 @@
       <span>Dừng</span>
     </button>
   </nav>
+
+  <div class="patrol-box" id="patrol-box" hidden>
+    <div class="patrol-head"><strong id="pole-name"></strong><span id="pole-dist"></span></div>
+    <div class="patrol-btns">
+      <button class="pb ok" id="btn-pole-ok" type="button">Sáng</button>
+      <button class="pb off" id="btn-pole-off" type="button">Tắt</button>
+      <button class="pb bad" id="btn-pole-bad" type="button">Hư</button>
+    </div>
+  </div>
+
+  <dialog class="sos" id="sos" aria-labelledby="sos-title">
+    <h2 id="sos-title">Anh có ổn không?</h2>
+    <p>Phát hiện va chạm mạnh. Sau <b id="sos-count">20</b> giây app sẽ mở tin nhắn khẩn cấp gửi vị trí cho người thân.</p>
+    <button class="primary big" id="btn-sos-ok" type="button">Tôi ổn — huỷ</button>
+    <button class="secondary big" id="btn-sos-send" type="button">Gửi SOS ngay</button>
+  </dialog>
 
   <div class="rec" id="rec" hidden><span class="rec-dot" aria-hidden="true"></span><span id="rec-text">REC</span></div>
   <video class="cam-preview" id="cam-preview" muted playsinline hidden></video>
@@ -268,6 +288,7 @@
     </div>
     <p class="muted note" id="rep-info"></p>
     <ul class="off-list" id="rep-list"></ul>
+    <button class="secondary" id="btn-rep-flood" type="button">Báo điểm ngập tại đây</button>
     <button class="primary" id="btn-rep-csv" type="button">Xuất CSV (Excel)</button>
     <button class="secondary" id="btn-rep-sync" type="button">Gửi lên máy chủ</button>
     <button class="secondary" id="btn-rep-clear" type="button">Xoá danh sách trên máy</button>
@@ -290,6 +311,54 @@
     <label class="field check" for="fleet-on"><span>Chia sẻ vị trí khi lái</span><input id="fleet-on" type="checkbox"></label>
     <a class="secondary link-btn" id="fleet-open" href="./fleet.html" target="_blank" rel="noopener">Mở trang điều độ</a>
     <p class="muted note" id="fleet-status" role="status" aria-live="polite"></p>
+  </div>
+</dialog>
+
+<dialog id="patrol" class="settings" aria-labelledby="patrol-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="patrol-title">Tuần tra chiếu sáng</h2>
+      <button class="icon-btn" data-close="patrol" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note" id="patrol-info"></p>
+    <label class="field stack" for="patrol-file"><span>Nạp danh sách trụ (CSV/GeoJSON)</span><input id="patrol-file" type="file" accept=".csv,.txt,.json,.geojson"></label>
+    <label class="field check" for="patrol-on"><span>Bật chế độ tuần tra khi lái</span><input id="patrol-on" type="checkbox"></label>
+    <p class="muted note">Khi chạy dọc tuyến, app báo “Sắp tới trụ …” và hiện 3 nút Sáng / Tắt / Hư. Trụ tắt hoặc hư được ghi thành báo cáo (gửi lên máy chủ, xuất CSV).</p>
+    <button class="primary" id="btn-patrol-csv" type="button">Xuất báo cáo tuần tra (CSV)</button>
+    <button class="secondary" id="btn-qr-print" type="button">In mã QR cho các trụ…</button>
+    <button class="secondary" id="btn-patrol-reset" type="button">Xoá kết quả, bắt đầu lượt mới</button>
+  </div>
+</dialog>
+
+<dialog id="qrreport" class="settings" aria-labelledby="qrreport-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="qrreport-title">Báo sự cố trụ</h2>
+      <button class="icon-btn" data-close="qrreport" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p>Trụ: <strong id="qr-pole"></strong></p>
+    <button class="primary big" id="btn-qr-off" type="button">Đèn tắt</button>
+    <button class="secondary big" id="btn-qr-bad" type="button">Hư hỏng khác</button>
+    <p class="muted note">Vị trí lấy theo toạ độ trụ (nếu có trong danh sách) hoặc GPS điện thoại.</p>
+  </div>
+</dialog>
+
+<dialog id="obd" class="settings" aria-labelledby="obd-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="obd-title">Kết nối OBD-II</h2>
+      <button class="icon-btn" data-close="obd" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note">Cần đầu đọc ELM327 Bluetooth LE cắm vào cổng OBD của xe (khoảng 150–300 nghìn đồng). Chỉ chạy trên Chrome Android. Khi kết nối, tốc độ lấy từ xe thay cho GPS (chính xác cả trong hầm).</p>
+    <button class="primary" id="btn-obd" type="button">Tìm và kết nối</button>
+    <button class="secondary" id="btn-obd-off" type="button">Ngắt kết nối</button>
+    <p class="muted note" id="obd-status" role="status" aria-live="polite"></p>
   </div>
 </dialog>
 
@@ -369,6 +438,15 @@
     <button class="secondary" id="btn-clips" type="button">Video hành trình…</button>
     <button class="secondary" id="btn-reports" type="button">Báo cáo chiếu sáng…</button>
     <button class="secondary" id="btn-fleet" type="button">Đội xe…</button>
+    <button class="secondary" id="btn-patrol" type="button">Tuần tra chiếu sáng…</button>
+    <button class="secondary" id="btn-obd-open" type="button">Kết nối OBD-II (Android)…</button>
+    <h3 class="settings-sub">SOS va chạm</h3>
+    <label class="field stack" for="set-sos-phone"><span>Số điện thoại người thân</span><input id="set-sos-phone" type="tel" autocomplete="tel" placeholder="09xx xxx xxx"></label>
+    <label class="field check" for="set-sos-on"><span>Hỏi và mở tin nhắn SOS khi va chạm mạnh</span><input id="set-sos-on" type="checkbox"></label>
+    <button class="secondary" id="btn-sos-test" type="button">Thử màn hình SOS</button>
+    <h3 class="settings-sub">Thử nghiệm</h3>
+    <label class="field check" for="set-ocr"><span>Đọc biển tốc độ bằng camera (khi đang quay)</span><input id="set-ocr" type="checkbox"></label>
+    <p class="muted note">Nhận dạng biển tròn viền đỏ từ camera hành trình; chỉ dùng khi bản đồ chưa có biển thật. Độ chính xác ban đêm/mưa thấp.</p>
     <h3 class="settings-sub">Camera tự đánh dấu</h3>
     <p class="muted note" id="marks-info"></p>
     <button class="secondary" id="btn-sync" type="button">Đồng bộ ngay</button>

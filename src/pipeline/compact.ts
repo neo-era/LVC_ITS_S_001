@@ -35,6 +35,8 @@ export interface CellFileV2 {
   cell: string;
   /** 1 = khu đông dân cư (ước lượng theo mật độ đường). */
   u?: 1;
+  /** Giờ cấm xe tải theo way (phút trong ngày). */
+  h?: Record<string, [number, number][]>;
   w: number[][];
   alerts: AlertPoint[];
 }
@@ -128,9 +130,10 @@ export class CellWriter {
   private readonly alerts = new Map<string, AlertPoint[]>();
   private readonly alertIds = new Set<string>();
   private readonly km = new Map<string, number>();
+  private readonly hgv = new Map<string, Record<string, [number, number][]>>();
 
-  /** flags: số cờ FLAG, hoặc true/false = chỉ cờ camera. */
-  addWay(wayId: number, pts: LatLng[], maxspeed: number | null, flags: number | boolean): void {
+  /** flags: số cờ FLAG, hoặc true/false = chỉ cờ camera. hgv: giờ cấm xe tải (nếu có). */
+  addWay(wayId: number, pts: LatLng[], maxspeed: number | null, flags: number | boolean, hgv?: [number, number][] | null): void {
     if (pts.length < 2) return;
     const f = typeof flags === 'boolean' ? (flags ? FLAG.cam : 0) : flags;
     for (const [key, runs] of splitWay(pts)) {
@@ -143,6 +146,11 @@ export class CellWriter {
       }
       this.ways.set(key, list);
       this.km.set(key, (this.km.get(key) ?? 0) + m / 1000);
+      if (hgv?.length) {
+        const h = this.hgv.get(key) ?? {};
+        h[String(wayId)] = hgv;
+        this.hgv.set(key, h);
+      }
     }
   }
 
@@ -161,6 +169,8 @@ export class CellWriter {
     for (const k of keys) {
       const f: CellFileV2 = { v: 2, cell: k, w: this.ways.get(k) ?? [], alerts: this.alerts.get(k) ?? [] };
       if ((this.km.get(k) ?? 0) >= URBAN_KM) f.u = 1;
+      const h = this.hgv.get(k);
+      if (h) f.h = h;
       out.set(k, f);
     }
     return out;

@@ -14,6 +14,8 @@ export interface RoadSegment {
   ef?: number;
   /** Giới hạn ước tính cố định (dùng cho dữ liệu mô phỏng). */
   est?: number;
+  /** Giờ cấm xe tải (phút trong ngày, giờ VN). */
+  hgv?: [number, number][];
 }
 
 export interface LimitResult {

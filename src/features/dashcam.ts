@@ -65,6 +65,7 @@ export class Dashcam {
   motionGranted = false;
   onChange: () => void = () => {};
   onWarn: (msg: string, severe?: boolean) => void = () => {};
+  onImpact: () => void = () => {};
   private stream: MediaStream | null = null;
   private rec: MediaRecorder | null = null;
   private current: ClipMeta | null = null;
@@ -298,6 +299,7 @@ export class Dashcam {
     if (!this.autoLock || !this.stream || !a || a.x === null || a.y === null || a.z === null) return;
     if (this.impact.push({ x: a.x, y: a.y, z: a.z }, Date.now())) {
       if (this.lockNow(Date.now(), true) > 0) this.onWarn('Phát hiện va chạm mạnh — đã khoá video quanh thời điểm này.', true);
+      this.onImpact();
     }
   };
 

@@ -76,7 +76,7 @@ describe('reports (báo đèn tắt / sự cố chiếu sáng)', () => {
     const csv = reportsToCsv([r]);
     expect(csv.startsWith('﻿')).toBe(true);
     const lines = csv.trim().split('\r\n');
-    expect(lines[0]).toBe('STT,Loại,Thời điểm,Vĩ độ,Kinh độ,Hướng,Bản đồ');
+    expect(lines[0]).toBe('STT,Loại,Mã trụ,Thời điểm,Vĩ độ,Kinh độ,Hướng,Bản đồ');
     expect(lines[1]).toContain('Đèn tắt');
     expect(lines[1]).toContain('24/10/2026 21:05');
     expect(lines[1]).toContain('10.771234');
@@ -184,6 +184,8 @@ describe('parseCommand — sửa sau review', () => {
     ['tới đâu rồi', { type: 'unknown' }],
     ['đến cơ quan', { type: 'go_place', name: 'cơ quan' }],
     ['đèn tắt', { type: 'report_light' }],
+    ['báo ngập', { type: 'report_flood' }],
+    ['đường ngập nước', { type: 'report_flood' }],
     ['báo đèn hư', { type: 'report_light' }],
   ])('%s', (text, want) => expect(parseCommand(text)).toEqual(want));
 });

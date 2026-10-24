@@ -186,7 +186,7 @@ export function setupFeatures(ctx: Ctx) {
     fetch(`${SUPABASE_URL}/rest/v1/lat_reports?on_conflict=id`, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=minimal' },
-      body: JSON.stringify(rows.map((r) => ({ id: r.id, kind: r.kind, lat: r.lat, lng: r.lng, dir: r.dir ?? null, device: ctx.deviceId(), t_client: r.t }))),
+      body: JSON.stringify(rows.map((r) => ({ id: r.id, kind: r.kind, pole: r.pole ?? null, lat: r.lat, lng: r.lng, dir: r.dir ?? null, device: ctx.deviceId(), t_client: r.t }))),
     });
   let repSyncing = false;
   async function syncReports(silent: boolean): Promise<void> {
@@ -225,13 +225,15 @@ export function setupFeatures(ctx: Ctx) {
     }
     renderReports();
   }
-  function reportHere(): void {
+  function reportHere(kind: Report['kind'] = 'den_tat', pole?: string, at?: { lat: number; lng: number }): void {
     if (ctx.mode() === 'sim') return ctx.toast('Không báo khi đang chạy thử mô phỏng.');
-    const f = freshFix(ctx.lastFix());
+    const f = at ?? freshFix(ctx.lastFix());
     if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt (cần tín hiệu mới, sai số ≤ 50 m).');
     const h = ctx.heading();
-    const r: Report = { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind: 'den_tat', lat: f.lat, lng: f.lng, t: Date.now() };
+    const r: Report = { id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, kind, lat: f.lat, lng: f.lng, t: Date.now() };
+    if (pole) r.pole = pole;
     if (h !== null) r.dir = Math.round(h) % 360;
+    const label = REPORT_LABEL[kind].toLowerCase();
     // giữ tối đa 1000, bỏ các báo cáo ĐÃ GỬI cũ nhất trước
     reports = [...reports, r];
     while (reports.length > 1000) {
@@ -239,9 +241,9 @@ export function setupFeatures(ctx: Ctx) {
       reports.splice(i >= 0 ? i : 0, 1);
     }
     saveReps();
-    ctx.speak('Đã ghi đèn tắt.');
+    ctx.speak(`Đã ghi ${label}${pole ? ` trụ ${pole}` : ''}.`);
     let undone = false;
-    ctx.toast('Đã ghi đèn tắt tại vị trí này.', () => {
+    ctx.toast(`Đã ghi ${label}${pole ? ` (trụ ${pole})` : ''} tại vị trí này.`, () => {
       undone = true;
       reports = reports.filter((x) => x.id !== r.id);
       saveReps();
@@ -262,7 +264,7 @@ export function setupFeatures(ctx: Ctx) {
           li.className = 'off-row';
           const d = document.createElement('div');
           d.className = 'off-name';
-          d.textContent = `${REPORT_LABEL[r.kind]} · ${fmtVnTime(r.t)}`;
+          d.textContent = `${REPORT_LABEL[r.kind]}${r.pole ? ` · trụ ${r.pole}` : ''} · ${fmtVnTime(r.t)}`;
           const sm = document.createElement('small');
           sm.textContent = `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}${r.synced ? ' · đã gửi' : ''}`;
           d.append(sm);
@@ -277,7 +279,8 @@ export function setupFeatures(ctx: Ctx) {
         }),
     );
   }
-  $('btn-light').addEventListener('click', reportHere);
+  $('btn-light').addEventListener('click', () => reportHere('den_tat'));
+  $('btn-rep-flood').addEventListener('click', () => reportHere('ngap'));
   $('btn-reports').addEventListener('click', () => {
     renderReports();
     $('rep-status').textContent = '';
@@ -554,7 +557,9 @@ export function setupFeatures(ctx: Ctx) {
       case 'mark_camera':
         return ctx.markCamera();
       case 'report_light':
-        return reportHere();
+        return reportHere('den_tat');
+      case 'report_flood':
+        return reportHere('ngap');
       case 'stop_nav':
         ctx.stopNav();
         return ctx.speak('Đã dừng dẫn đường.');
@@ -658,5 +663,9 @@ export function setupFeatures(ctx: Ctx) {
       if (cam.recording) cam.stop();
     },
     renderPlaces,
+    reportHere,
+    camPreview: () => (cam.recording ? (cam.preview as HTMLVideoElement) : null),
+    onImpact: (fn: () => void) => (cam.onImpact = fn),
+    runCommand,
   };
 }

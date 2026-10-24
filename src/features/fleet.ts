@@ -18,3 +18,13 @@ export function fleetPingBody(team: string, device: string, name: string, p: { l
 export function fleetFresh(updatedAt: string, now: number): 'live' | 'stale' {
   return now - Date.parse(updatedAt) < 2 * 60_000 ? 'live' : 'stale';
 }
+
+/** Tên hiển thị khi chia sẻ hành trình: "Tên → Điểm đến ~HH:MM" (≤ 40 ký tự). */
+export function shareName(name: string, dest: string, etaT: number): string {
+  const d = new Date(etaT + 7 * 3_600_000);
+  const eta = ` ~${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  let base = `${name} → ${dest}`;
+  const max = 40 - eta.length;
+  if (base.length > max) base = base.slice(0, max - 1) + '…';
+  return base + eta;
+}

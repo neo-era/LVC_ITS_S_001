@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mapHud } from '../src/hud';
 import type { ViewState } from '../src/engine';
 
-const base: ViewState = { status: 'ok', kmh: 57.6, limit: 50, limitEstimated: false, state: 'over', alert: null, upcoming: [], camRoute: false };
+const base: ViewState = { status: 'ok', kmh: 57.6, limit: 50, limitEstimated: false, state: 'over', alert: null, upcoming: [], camRoute: false, truckBan: false };
 
 describe('mapHud (tốc độ + cảnh báo trên bản đồ toàn màn hình)', () => {
   it('tốc độ làm tròn, biển giới hạn, trạng thái vượt', () => {
