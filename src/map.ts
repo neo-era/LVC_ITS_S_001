@@ -9,6 +9,7 @@ type MLMarker = import('maplibre-gl').Marker;
 
 const SRC = 'alerts';
 const ROUTE = 'route';
+const ROUTE_ALT = 'route-alt';
 
 /** Bản đồ nền OpenStreetMap (OpenFreeMap) + vị trí xe + camera/điểm đen. Nạp trễ để màn hình lái xe mở nhanh. */
 export class MapView {
@@ -25,6 +26,9 @@ export class MapView {
   onFollowChange: (follow: boolean) => void = () => {};
   /** Chạm vào chấm cảnh báo (camera/điểm đen) trên bản đồ. */
   onAlertTap: (id: string) => void = () => {};
+  /** Chạm vào một tuyến thay thế (màu xám) khi đang chọn lộ trình. */
+  onAltTap: (index: number) => void = () => {};
+  private alts: { lat: number; lng: number }[][] = [];
 
   private static registered = false;
   private readonly styles = new Map<string, unknown>();
@@ -116,7 +120,16 @@ export class MapView {
         { layers: ['alerts-dot'] },
       );
       const id = hits[0]?.properties?.id;
-      if (typeof id === 'string') this.onAlertTap(id);
+      if (typeof id === 'string') return this.onAlertTap(id);
+      if (!map.getLayer('route-alt') || !this.alts.length) return;
+      const alt = map.queryRenderedFeatures(
+        [
+          [e.point.x - r, e.point.y - r],
+          [e.point.x + r, e.point.y + r],
+        ],
+        { layers: ['route-alt'] },
+      )[0]?.properties?.idx;
+      if (typeof alt === 'number') this.onAltTap(alt);
     });
     map.on('dragstart', () => {
       this.setFollow(false);
@@ -138,6 +151,21 @@ export class MapView {
     const map = this.map;
     if (!map || map.getSource(SRC)) return;
     map.addSource(ROUTE, { type: 'geojson', data: this.routeGeoJSON() });
+    map.addSource(ROUTE_ALT, { type: 'geojson', data: this.altGeoJSON() });
+    map.addLayer({
+      id: 'route-alt-casing',
+      type: 'line',
+      source: ROUTE_ALT,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 9 },
+    });
+    map.addLayer({
+      id: 'route-alt',
+      type: 'line',
+      source: ROUTE_ALT,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#8A94A6', 'line-width': 6 },
+    });
     map.addLayer({
       id: 'route-casing',
       type: 'line',
@@ -178,6 +206,44 @@ export class MapView {
       properties: {},
       geometry: { type: 'LineString' as const, coordinates: this.routePts.map((p) => [p.lng, p.lat]) },
     };
+  }
+
+  private altGeoJSON() {
+    return {
+      type: 'FeatureCollection' as const,
+      features: this.alts.map((pts, idx) => ({
+        type: 'Feature' as const,
+        properties: { idx },
+        geometry: { type: 'LineString' as const, coordinates: pts.map((p) => [p.lng, p.lat]) },
+      })),
+    };
+  }
+
+  /** Các tuyến thay thế (xám) khi chọn lộ trình; mảng rỗng = xoá. idx của mỗi tuyến = vị trí trong danh sách gốc. */
+  setAltRoutes(alts: { idx: number; points: { lat: number; lng: number }[] }[]): void {
+    this.alts = [];
+    for (const a of alts) this.alts[a.idx] = a.points;
+    const src = this.map?.getSource(ROUTE_ALT) as import('maplibre-gl').GeoJSONSource | undefined;
+    src?.setData({
+      type: 'FeatureCollection',
+      features: alts.map((a) => ({ type: 'Feature', properties: { idx: a.idx }, geometry: { type: 'LineString', coordinates: a.points.map((p) => [p.lng, p.lat]) } })),
+    });
+  }
+
+  /** Thu phóng để thấy trọn các tuyến (dừng bám theo xe). */
+  fitRoutes(lists: { lat: number; lng: number }[][], pad: { top: number; bottom: number; left: number; right: number }): void {
+    const m = this.map;
+    const all = lists.flat();
+    if (!m || all.length < 2) return;
+    this.stopFollow();
+    let w = 180, s = 90, e = -180, n = -90;
+    for (const p of all) {
+      w = Math.min(w, p.lng);
+      e = Math.max(e, p.lng);
+      s = Math.min(s, p.lat);
+      n = Math.max(n, p.lat);
+    }
+    m.fitBounds([[w, s], [e, n]], { padding: pad, bearing: 0, duration: 600, maxZoom: 16 });
   }
 
   /** Vẽ tuyến đường dẫn (rỗng = xoá). */

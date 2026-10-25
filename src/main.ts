@@ -15,7 +15,7 @@ import { isShortMapLink, parseCoords } from './nav/coords';
 import { parseNameShard, searchLocal, type NameEntry } from './nav/localsearch';
 import { foldName, shardsAround } from './pipeline/names';
 import { haversine } from './core/geo';
-import { fetchRoute, type Route } from './nav/route';
+import { fetchRoute, fetchRoutes, routeLabel, type Route } from './nav/route';
 import { mapHud } from './hud';
 import { MapView } from './map';
 import { filterProvinces, formatMB, suggestProvince, type ProvinceInfo } from './offline/core';
@@ -116,6 +116,11 @@ async function ensureMap(lat: number, lng: number): Promise<void> {
   try {
     const mv = new MapView($('map'), isDark(), offline);
     mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
+    mv.onAltTap = (idx) => {
+      if (!choice || !choice.routes[idx]) return;
+      choice.sel = idx;
+      drawChoice();
+    };
     mv.onAlertTap = (id) => {
       const m = marks.find((x) => x.id === id);
       if (m) toast(`Dấu camera anh đánh lúc ${fmtVnTime(m.t)}.`, () => deleteMark(id), 'Xoá dấu', 8000);
@@ -381,9 +386,24 @@ function renderNav(s: NavState | null): void {
   $('nav-foot').textContent = `${navDest?.name ?? ''} · còn ${formatDistance(s.remainingM)} · khoảng ${mins} phút`;
 }
 
-async function beginRoute(dest: Place, announce: boolean): Promise<void> {
+/**
+ * Bắt đầu dẫn đường. pick = true: lấy thêm tuyến thay thế và cho chọn (khi người dùng chủ động tìm);
+ * tìm lại khi lệch tuyến / lệnh giọng nói thì đi luôn tuyến nhanh nhất.
+ */
+async function beginRoute(dest: Place, announce: boolean, pick = false): Promise<void> {
   if (!lastFix) throw new Error('Chưa có vị trí GPS. Hãy bấm “Bắt đầu lái xe” và chờ có tín hiệu.');
-  const route = await fetchRoute({ lat: lastFix.lat, lng: lastFix.lng }, { lat: dest.lat, lng: dest.lng }, settings.vehicle);
+  const from = { lat: lastFix.lat, lng: lastFix.lng };
+  if (pick) {
+    const routes = await fetchRoutes(from, { lat: dest.lat, lng: dest.lng }, settings.vehicle, 2);
+    if (routes.length > 1) return showRouteChoice(routes, dest);
+    return startRoute(routes[0], dest, announce);
+  }
+  startRoute(await fetchRoute(from, { lat: dest.lat, lng: dest.lng }, settings.vehicle), dest, announce);
+}
+
+function startRoute(route: Route, dest: Place, announce: boolean): void {
+  if (!lastFix) return;
+  endRouteChoice();
   navRoute = route;
   navDest = dest;
   guidance = new Guidance(route, (t) => voice.speak(t), () => void reroute());
@@ -392,11 +412,81 @@ async function beginRoute(dest: Place, announce: boolean): Promise<void> {
   if (announce) voice.speak(`Bắt đầu dẫn đường. Quãng đường ${speakDistance(route.distM)}.`);
 }
 
+/* ---------- Chọn lộ trình (nhiều tuyến thay thế) ---------- */
+let choice: { routes: Route[]; dest: Place; sel: number } | null = null;
+function drawChoice(): void {
+  if (!choice) return;
+  const { routes, sel } = choice;
+  mapView?.setRoute(routes[sel].points);
+  mapView?.setAltRoutes(routes.map((r, idx) => ({ idx, points: r.points })).filter((a) => a.idx !== sel));
+  $('rc-list').replaceChildren(
+    ...routes.map((r, i) => {
+      const li = document.createElement('li');
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(i === sel));
+      const sw = document.createElement('span');
+      sw.className = 'rc-swatch';
+      const t = document.createElement('span');
+      t.textContent = routeLabel(r, routes[0]);
+      b.append(sw, t);
+      b.addEventListener('click', () => {
+        if (!choice) return;
+        choice.sel = i;
+        drawChoice();
+      });
+      li.append(b);
+      return li;
+    }),
+  );
+}
+function showRouteChoice(routes: Route[], dest: Place): void {
+  choice = { routes, dest, sel: 0 };
+  $('route-choice').hidden = false;
+  drawChoice();
+  mapView?.fitRoutes(
+    routes.map((r) => r.points),
+    { top: 40, left: 30, right: 90, bottom: $('route-choice').offsetHeight + 30 },
+  );
+  voice.speak(`Có ${routes.length} lộ trình. Chọn một tuyến rồi bấm đi.`);
+}
+function endRouteChoice(): void {
+  if (!choice) return;
+  choice = null;
+  $('route-choice').hidden = true;
+  mapView?.setAltRoutes([]);
+}
+$('btn-rc-go').addEventListener('click', () => {
+  if (!choice) return;
+  const { routes, sel, dest } = choice;
+  startRoute(routes[sel], dest, true);
+  mapView?.recenter();
+});
+$('btn-rc-cancel').addEventListener('click', () => {
+  const wasNav = !!guidance;
+  endRouteChoice();
+  if (wasNav && navRoute) mapView?.setRoute(navRoute.points);
+  else mapView?.setRoute([]);
+  mapView?.recenter();
+});
+// đang dẫn đường: chạm dòng "… còn x km" để xem lộ trình khác từ vị trí hiện tại
+$('nav-foot').addEventListener('click', () => {
+  if (!navDest || choice) return;
+  const dest = navDest;
+  toast('Đang tìm lộ trình khác…');
+  beginRoute(dest, false, true).catch((e) => toast((e as Error).message || 'Không tìm được lộ trình khác.'));
+});
+
+let rerouteSpokenAt = 0;
 async function reroute(): Promise<void> {
-  if (!navDest || rerouting || Date.now() - lastRerouteAt < 10_000) return;
+  if (!navDest || rerouting || choice || Date.now() - lastRerouteAt < 10_000) return;
   rerouting = true;
   lastRerouteAt = Date.now();
-  voice.speak('Đang tìm đường mới.');
+  // chỉ đọc một lần mỗi phút, tránh lặp khi đang đứng yên ngoài tuyến
+  if (Date.now() - rerouteSpokenAt > 60_000) {
+    rerouteSpokenAt = Date.now();
+    voice.speak('Đang tìm đường mới.');
+  }
   try {
     await beginRoute(navDest, false);
   } catch {
@@ -407,6 +497,7 @@ async function reroute(): Promise<void> {
 }
 
 function stopNav(): void {
+  endRouteChoice();
   guidance = null;
   navRoute = null;
   navDest = null;
@@ -1085,7 +1176,7 @@ async function doSearch(q: string): Promise<void> {
 async function choose(p: Place): Promise<void> {
   destMsg('Đang tìm đường…');
   try {
-    await beginRoute(p, true);
+    await beginRoute(p, true, true);
     destDlg.close();
   } catch (e) {
     destMsg((e as Error).message || 'Không tìm được đường đi.');
@@ -1134,9 +1225,9 @@ $('btn-pick-go').addEventListener('click', async () => {
   $('map-pick-hint').textContent = 'Đang tìm đường…';
   try {
     const place = pickedPlace(c.lat, c.lng, navigator.onLine ? await reversePlace(c.lat, c.lng) : []);
-    await beginRoute(place, true);
     endPick();
-    mapView?.recenter();
+    await beginRoute(place, true, true);
+    if (!choice) mapView?.recenter();
   } catch (e) {
     $('map-pick-hint').textContent = (e as Error).message || 'Không tìm được đường đi tới điểm này.';
   } finally {
@@ -1231,8 +1322,8 @@ const features = setupFeatures({
   heading: () => engine.currentHeading(),
   mode: () => mode,
   deviceId,
-  goTo: async (p) => {
-    await beginRoute(p, true);
+  goTo: async (p, pick = false) => {
+    await beginRoute(p, true, pick);
     if (destDlg.open) destDlg.close();
   },
   stopNav,
@@ -1260,8 +1351,8 @@ const features2 = setupFeatures2({
   heading: () => engine.currentHeading(),
   mode: () => mode,
   deviceId,
-  goTo: async (p) => {
-    await beginRoute(p, true);
+  goTo: async (p, pick = false) => {
+    await beginRoute(p, true, pick);
     if (destDlg.open) destDlg.close();
   },
   stopNav,

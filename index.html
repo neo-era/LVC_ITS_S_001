@@ -61,7 +61,7 @@
         </button>
         <button class="nav-stop" id="btn-nav-stop" type="button">Dừng</button>
       </div>
-      <div class="nav-foot" id="nav-foot"></div>
+      <button class="nav-foot" id="nav-foot" type="button" title="Xem lộ trình khác"></button>
     </section>
 
     <section class="alert" id="alert" role="status" aria-live="polite" hidden>
@@ -80,6 +80,14 @@
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
       </button>
       <button class="map-btn map-follow" id="btn-map-follow" type="button" hidden>Theo xe</button>
+      <div class="route-choice" id="route-choice" hidden>
+        <p class="rc-title">Chọn lộ trình <span class="muted">· chạm tuyến xám trên bản đồ hoặc chọn dưới đây</span></p>
+        <ul class="rc-list" id="rc-list"></ul>
+        <div class="map-pick-actions">
+          <button class="secondary" id="btn-rc-cancel" type="button">Huỷ</button>
+          <button class="primary" id="btn-rc-go" type="button">Đi tuyến này</button>
+        </div>
+      </div>
       <div class="map-pick" id="map-pick" hidden>
         <svg class="map-pin" aria-hidden="true" width="44" height="44" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="#E53935" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>
         <div class="map-pick-bar">

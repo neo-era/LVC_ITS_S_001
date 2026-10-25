@@ -24,8 +24,9 @@ export interface Route {
 /** Máy chủ tìm đường công cộng (FOSSGIS Valhalla). Có thể đổi sang nhà cung cấp khác — điều khoản dùng cần xem lại khi đưa ra rộng rãi. */
 export const VALHALLA_URL = 'https://valhalla1.openstreetmap.de/route';
 
-export function buildRouteBody(from: LatLng, to: LatLng, vehicle: Vehicle = 'car'): string {
+export function buildRouteBody(from: LatLng, to: LatLng, vehicle: Vehicle = 'car', alternates = 0): string {
   return JSON.stringify({
+    ...(alternates > 0 ? { alternates } : {}),
     locations: [
       { lat: from.lat, lon: from.lng, type: 'break' },
       { lat: to.lat, lon: to.lng, type: 'break' },
@@ -73,4 +74,38 @@ export async function fetchRoute(from: LatLng, to: LatLng, vehicle: Vehicle = 'c
   const route = parseValhalla(await res.json());
   if (!route) throw new Error('Không tìm được đường đi tới nơi này.');
   return route;
+}
+
+/** Tuyến chính + các tuyến thay thế (Valhalla "alternates"); tuyến hỏng bị bỏ. */
+export function parseValhallaAll(raw: unknown): Route[] {
+  const out: Route[] = [];
+  const main = parseValhalla(raw);
+  if (main) out.push(main);
+  if (isObj(raw) && Array.isArray(raw.alternates)) {
+    for (const a of raw.alternates as unknown[]) {
+      const r = parseValhalla(a);
+      if (r) out.push(r);
+    }
+  }
+  return out;
+}
+
+const km = (m: number) => `${(m / 1000).toFixed(1).replace('.', ',')} km`;
+const min = (s: number) => `${Math.max(1, Math.round(s / 60))} phút`;
+
+/** Nhãn ngắn để chọn tuyến: so với tuyến nhanh nhất. */
+export function routeLabel(r: Route, fastest: Route): string {
+  if (r === fastest) return `Nhanh nhất · ${km(r.distM)} · ${min(r.durS)}`;
+  const d = Math.round((r.durS - fastest.durS) / 60);
+  return `${km(r.distM)} · ${min(r.durS)}${d > 0 ? ` (+${d} phút)` : ''}`;
+}
+
+/** Lấy tối đa 1 + alternates tuyến; xếp nhanh nhất lên đầu. */
+export async function fetchRoutes(from: LatLng, to: LatLng, vehicle: Vehicle = 'car', alternates = 2, signal?: AbortSignal): Promise<Route[]> {
+  const url = `${VALHALLA_URL}?json=${encodeURIComponent(buildRouteBody(from, to, vehicle, alternates))}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`Máy chủ tìm đường trả lỗi ${res.status}`);
+  const all = parseValhallaAll(await res.json());
+  if (!all.length) throw new Error('Không tìm được đường đi tới nơi này.');
+  return all.sort((a, b) => a.durS - b.durS);
 }

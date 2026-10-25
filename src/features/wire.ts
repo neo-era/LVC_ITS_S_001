@@ -22,7 +22,8 @@ export interface Ctx {
   heading: () => number | null;
   mode: () => 'idle' | 'gps' | 'sim';
   deviceId: () => string;
-  goTo: (p: Place) => Promise<void>;
+  /** pick = true: cho chọn giữa các lộ trình thay thế (người dùng chủ động bấm). */
+  goTo: (p: Place, pick?: boolean) => Promise<void>;
   stopNav: () => void;
   markCamera: () => void;
   toggleVoice: (on: boolean) => void;
@@ -138,7 +139,7 @@ export function setupFeatures(ctx: Ctx) {
         const go = document.createElement('button');
         go.type = 'button';
         go.textContent = `★ ${p.name}`;
-        go.addEventListener('click', () => void ctx.goTo({ name: p.name, detail: 'Địa điểm đã lưu', lat: p.lat, lng: p.lng }));
+        go.addEventListener('click', () => void ctx.goTo({ name: p.name, detail: 'Địa điểm đã lưu', lat: p.lat, lng: p.lng }, true).catch((e) => ctx.toast((e as Error).message || 'Không tìm được đường đi.')));
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.className = 'x';

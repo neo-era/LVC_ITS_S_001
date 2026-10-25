@@ -102,7 +102,8 @@ export class Guidance {
 
     if (best.dist > OFF_ROUTE_M) {
       this.offCount++;
-      if (this.offCount >= OFF_ROUTE_COUNT && !this.offNotified) {
+      // báo lần đầu, rồi nhắc lại mỗi 10 mẫu nếu vẫn lệch (lần tìm đường trước có thể đã lỗi/mất mạng)
+      if (this.offCount >= OFF_ROUTE_COUNT && (!this.offNotified || (this.offCount - OFF_ROUTE_COUNT) % 10 === 0)) {
         this.offNotified = true;
         this.onOffRoute();
       }
