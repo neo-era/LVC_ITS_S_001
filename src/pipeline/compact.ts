@@ -14,6 +14,8 @@ export const FLAG = { cam: 1, divided: 2, noEstimate: 4, minor: 8 } as const;
 
 /** Tổng chiều dài đường (km) trong một ô ~1,2 km² từ mức này trở lên thì coi là khu đông dân cư. */
 export const URBAN_KM = 10;
+/** Ô thưa hơn nhưng vẫn có đường (≥ 4 km) mà có ≥ 2 ô bên cạnh dày → cũng coi là khu dân cư (đường qua làng không nhảy 50↔80). */
+export const URBAN_EDGE_KM = 4;
 
 const MAJOR = new Set(['motorway', 'trunk', 'primary', 'secondary']);
 const MINOR = new Set(['residential', 'unclassified', 'living_street']);
@@ -171,12 +173,23 @@ export class CellWriter {
     this.alerts.set(key, list);
   }
 
+  private isUrban(k: string): boolean {
+    const km = this.km.get(k) ?? 0;
+    if (km >= URBAN_KM) return true;
+    if (km < URBAN_EDGE_KM) return false;
+    const [y, x] = k.split('_').map(Number);
+    let dense = 0;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) if ((dy || dx) && (this.km.get(`${y + dy}_${x + dx}`) ?? 0) >= URBAN_KM) dense++;
+    return dense >= 2;
+  }
+
   files(): Map<string, CellFileV2> {
     const out = new Map<string, CellFileV2>();
     const keys = new Set([...this.ways.keys(), ...this.alerts.keys()]);
     for (const k of keys) {
       const f: CellFileV2 = { v: 2, cell: k, w: this.ways.get(k) ?? [], alerts: this.alerts.get(k) ?? [] };
-      if ((this.km.get(k) ?? 0) >= URBAN_KM) f.u = 1;
+      if (this.isUrban(k)) f.u = 1;
       const h = this.hgv.get(k);
       if (h) f.h = h;
       const c = this.carLane.get(k);

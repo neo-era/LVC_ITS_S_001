@@ -52,7 +52,8 @@ export const POSTED_RULES: Rule[] = [
   },
 ];
 
-const MAIN = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary']);
+// không áp cho cao tốc (vd cầu vượt Vành đai 3 tên "Cầu vượt Quốc lộ 22")
+const MAIN = new Set(['trunk', 'primary', 'secondary', 'tertiary']);
 const normRef = (r: string) => r.toLowerCase().replace(/[^a-z0-9;]/g, '');
 
 export function matchPosted(tags: Record<string, string | undefined>, lat: number, lng: number): PostedLimit | null {
@@ -62,7 +63,10 @@ export function matchPosted(tags: Record<string, string | undefined>, lat: numbe
   for (const r of POSTED_RULES) {
     const { s, w, n, e } = r.box;
     if (lat < s || lat > n || lng < w || lng > e) continue;
-    if (r.refs.some((x) => refs.includes(x)) || r.names.some((x) => name.includes(x))) return r.car ? { mixed: r.mixed, car: r.car } : { mixed: r.mixed };
+    // đường có số hiệu khác (vd CT.40) thì không khớp theo tên
+    const byRef = r.refs.some((x) => refs.includes(x));
+    const byName = (refs.length === 0 || r.refs.length === 0) && r.names.some((x) => name.includes(x));
+    if (byRef || byName) return r.car ? { mixed: r.mixed, car: r.car } : { mixed: r.mixed };
   }
   return null;
 }
