@@ -23,6 +23,7 @@ import { updateAction } from './update';
 import { freshFix, setupFeatures } from './features/wire';
 import { setupFeatures2 } from './features/wire2';
 import { Voice } from './voice';
+import { setSpeedCal, shownSpeed, SPEED_CAL_OPTIONS } from './core/speedcal';
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
 interface Settings {
@@ -32,8 +33,10 @@ interface Settings {
   voiceName: string;
   voiceStyle: string;
   vehicle: Vehicle;
+  /** Bù số hiển thị theo đồng hồ xe (%), 0 = tốc độ GPS thật. */
+  speedCal: number;
 }
-const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto', voiceName: '', voiceStyle: 'normal', vehicle: 'car' };
+const DEFAULTS: Settings = { radius: 500, voice: true, theme: 'auto', voiceName: '', voiceStyle: 'normal', vehicle: 'car', speedCal: 0 };
 const KEY = 'lat.settings.v1';
 
 function loadSettings(): Settings {
@@ -45,7 +48,8 @@ function loadSettings(): Settings {
       const voiceName = typeof raw.voiceName === 'string' ? raw.voiceName : '';
       const voiceStyle = ['cute', 'normal', 'warm'].includes(raw.voiceStyle) ? raw.voiceStyle : 'normal';
       const vehicle = isVehicle(raw.vehicle) ? raw.vehicle : 'car';
-      return { radius, theme, voice: raw.voice !== false, voiceName, voiceStyle, vehicle };
+      const speedCal = (SPEED_CAL_OPTIONS as readonly number[]).includes(raw.speedCal) ? raw.speedCal : 0;
+      return { radius, theme, voice: raw.voice !== false, voiceName, voiceStyle, vehicle, speedCal };
     }
   } catch {
     /* bỏ qua */
@@ -60,6 +64,7 @@ function saveSettings(): void {
   }
 }
 const settings = loadSettings();
+setSpeedCal(settings.speedCal);
 
 /* ---------- DOM ---------- */
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -361,7 +366,7 @@ function render(v: ViewState): void {
   app.dataset.gps = gps;
   app.dataset.state = v.state;
   gpsText.textContent = mode === 'sim' ? 'Mô phỏng' : GPS_LABEL[v.status] ?? '';
-  speedNum.textContent = v.kmh === null ? '--' : String(Math.round(v.kmh));
+  speedNum.textContent = shownSpeed(v.kmh);
 
   if (v.limit !== null) {
     limitBox.hidden = false;
@@ -647,6 +652,7 @@ $('btn-voice').addEventListener('click', () => {
 });
 $('btn-settings').addEventListener('click', () => {
   ($('set-radius') as HTMLSelectElement).value = String(settings.radius);
+  ($('set-speedcal') as HTMLSelectElement).value = String(settings.speedCal);
   ($('set-theme') as HTMLSelectElement).value = settings.theme;
   ($('set-vehicle') as HTMLSelectElement).value = settings.vehicle;
   ($('set-voice-style') as HTMLSelectElement).value = settings.voiceStyle;
@@ -660,6 +666,12 @@ $('set-vehicle').addEventListener('change', (e) => {
   settings.vehicle = v;
   engine.setVehicle(v);
   saveSettings();
+});
+$('set-speedcal').addEventListener('change', (e) => {
+  settings.speedCal = Number((e.target as HTMLSelectElement).value);
+  setSpeedCal(settings.speedCal);
+  saveSettings();
+  render(engine.view());
 });
 $('set-radius').addEventListener('change', (e) => {
   settings.radius = Number((e.target as HTMLSelectElement).value);

@@ -1,4 +1,5 @@
 import { alertLabel, formatDistance } from './core/format';
+import { shownSpeed } from './core/speedcal';
 import type { ViewState } from './engine';
 
 export interface MapHud {
@@ -12,7 +13,7 @@ export interface MapHud {
 /** Dữ liệu hiển thị cho lớp tốc độ + cảnh báo nổi trên bản đồ toàn màn hình. */
 export function mapHud(v: ViewState): MapHud {
   return {
-    speed: v.kmh === null || v.status === 'lost' ? '--' : String(Math.round(v.kmh)),
+    speed: v.status === 'lost' ? '--' : shownSpeed(v.kmh),
     limit: v.limit === null ? null : String(v.limit),
     estimated: v.limitEstimated,
     state: v.state,

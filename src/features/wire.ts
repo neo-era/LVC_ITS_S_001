@@ -1,5 +1,6 @@
 /** Nối giao diện cho 8 tính năng: HUD kính lái, địa điểm lưu, nhắc nghỉ, báo đèn tắt, nhật ký chuyến, đội xe, lệnh giọng nói, camera hành trình. */
 import type { GpsSample } from '../core/gps';
+import { shownSpeed } from '../core/speedcal';
 import type { ViewState } from '../engine';
 import type { Place } from '../nav/geocode';
 import { authHeaders, SUPABASE_URL } from '../sync';
@@ -241,7 +242,7 @@ export function setupFeatures(ctx: Ctx) {
   hud.addEventListener('dblclick', () => hudOn(false));
   function renderHud(v: ViewState): void {
     if (hud.hidden) return;
-    $('hm-speed').textContent = v.kmh === null || v.status === 'lost' ? '--' : String(Math.round(v.kmh));
+    $('hm-speed').textContent = v.status === 'lost' ? '--' : shownSpeed(v.kmh);
     $('hm-speed').dataset.state = v.state;
     const sign = $('hm-limit');
     sign.hidden = v.limit === null;
