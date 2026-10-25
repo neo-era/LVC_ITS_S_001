@@ -6,9 +6,10 @@ import type { GpsSample } from './core/gps';
 import { isVehicle, type Vehicle } from './core/vehicle';
 import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
-import { pushMarks } from './sync';
+import { authHeaders, pushMarks, SUPABASE_URL } from './sync';
 import { Guidance, type NavState } from './nav/guidance';
 import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geocode';
+import { isShortMapLink, parseCoords } from './nav/coords';
 import { parseNameShard, searchLocal, type NameEntry } from './nav/localsearch';
 import { foldName, shardsAround } from './pipeline/names';
 import { haversine } from './core/geo';
@@ -923,9 +924,44 @@ function mergePlaces(local: Place[], online: Place[]): Place[] {
   return out.slice(0, 8);
 }
 
+/** Link rút gọn maps.app.goo.gl → toạ độ, qua hàm máy chủ expand-link (trình duyệt không đọc được chuyển hướng). */
+async function expandMapLink(u: string, signal: AbortSignal): Promise<{ lat: number; lng: number } | null> {
+  if (!navigator.onLine) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/expand-link?u=${encodeURIComponent(u.trim())}`, { headers: authHeaders(), signal });
+    if (!r.ok) return null;
+    const j = (await r.json()) as { url?: string; lat?: number; lng?: number };
+    if (typeof j.lat === 'number' && typeof j.lng === 'number') return { lat: j.lat, lng: j.lng };
+    return j.url ? parseCoords(j.url) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function doSearch(q: string): Promise<void> {
   searchCtl?.abort();
   const ctl = (searchCtl = new AbortController());
+  // gõ/dán toạ độ (hoặc link Google Maps) → đi thẳng tới điểm đó, kèm tên nơi nếu tra được
+  let c = parseCoords(q);
+  if (!c && isShortMapLink(q)) {
+    destMsg('Đang mở link Google Maps…');
+    c = await expandMapLink(q, ctl.signal);
+    if (ctl.signal.aborted) return;
+    if (!c) {
+      renderResults([]);
+      return destMsg('Chưa mở được link rút gọn. Cách khác: trong Google Maps chạm giữ vào điểm → chép toạ độ (dạng 10.77, 106.70) rồi dán vào đây.');
+    }
+  }
+  if (c) {
+    const coordPlace: Place = { name: `Toạ độ ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`, detail: lastFix ? `cách ${formatDistance(haversine(lastFix, c))}` : 'Điểm theo toạ độ', lat: c.lat, lng: c.lng };
+    renderResults([coordPlace]);
+    destMsg('');
+    if (!navigator.onLine) return;
+    const nearby = await reversePlace(c.lat, c.lng, ctl.signal);
+    if (ctl.signal.aborted || !nearby[0]) return;
+    renderResults([{ ...coordPlace, detail: `${coordPlace.detail} · gần ${nearby[0].name}${nearby[0].detail ? `, ${nearby[0].detail}` : ''}` }]);
+    return;
+  }
   destMsg('Đang tìm…');
   const near = lastFix ? { lat: lastFix.lat, lng: lastFix.lng } : null;
   const local = searchLocal(await localEntries(), q, near, 5);
