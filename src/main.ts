@@ -8,6 +8,7 @@ import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
 import { authHeaders, pushMarks, queueWithdraw, SUPABASE_URL, withdrawMarks } from './sync';
 import { fmtVnTime } from './features/reports';
+import { setupFeedback } from './features/feedback-ui';
 import { Guidance, type NavState } from './nav/guidance';
 import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geocode';
 import { isShortMapLink, parseCoords } from './nav/coords';
@@ -660,6 +661,7 @@ function startSim(): void {
 function stopAll(): void {
   features.onStop();
   features2.onStop();
+  feedback.onTripEnd();
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
   sim.stop();
@@ -1282,6 +1284,19 @@ const features2 = setupFeatures2({
     settingsDlg.close();
     ($(id) as HTMLDialogElement).showModal();
   },
+});
+/* ---------- Góp ý & đánh giá gửi người phát triển ---------- */
+const feedback = setupFeedback({
+  $,
+  lsGet,
+  lsSet,
+  toast,
+  lastFix: () => lastFix,
+  view: () => engine.view(),
+  segment: () => engine.currentSegment(),
+  vehicle: () => settings.vehicle,
+  deviceId,
+  closeSettings: () => settingsDlg.close(),
 });
 $('btn-obd-open').addEventListener('click', () => {
   settingsDlg.close();

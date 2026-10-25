@@ -142,3 +142,35 @@ as $$
 $$;
 revoke all on function public.lat_mark_withdraw(text[], text) from public;
 grant execute on function public.lat_mark_withdraw(text[], text) to anon;
+
+-- =====================================================================
+-- Góp ý & đánh giá của người dùng gửi người phát triển (khoá công khai chỉ được GỬI, không đọc)
+create table if not exists public.lat_feedback (
+  id          text primary key check (char_length(id) between 3 and 40),
+  rating      integer check (rating between 1 and 5),
+  kind        text not null check (kind in ('de_xuat', 'loi', 'sai_toc_do', 'sai_camera', 'khac')),
+  text        text not null default '' check (char_length(text) <= 2000),
+  lat         double precision check (lat between -90 and 90),
+  lng         double precision check (lng between -180 and 180),
+  ctx         jsonb not null default '{}'::jsonb check (pg_column_size(ctx) <= 2000),
+  app_build   text check (char_length(app_build) <= 40),
+  device      text check (char_length(device) <= 40),
+  t_client    bigint,
+  status      text not null default 'moi' check (status in ('moi', 'dang_xu_ly', 'da_xu_ly', 'bo_qua')),
+  note        text,
+  created_at  timestamptz not null default now(),
+  check (rating is not null or char_length(text) > 0)
+);
+create index if not exists lat_feedback_created_idx on public.lat_feedback (created_at desc);
+alter table public.lat_feedback enable row level security;
+revoke all on table public.lat_feedback from anon, authenticated;
+grant insert (id, rating, kind, text, lat, lng, ctx, app_build, device, t_client) on table public.lat_feedback to anon;
+drop policy if exists lat_feedback_insert on public.lat_feedback;
+create policy lat_feedback_insert on public.lat_feedback for insert to anon with check (status = 'moi');
+
+-- Người phát triển xem (Table Editor hoặc SQL Editor):
+--   select created_at, rating, kind, text, ctx, lat, lng, app_build from public.lat_feedback where status = 'moi' order by created_at desc;
+-- Tổng hợp số sao theo tuần:
+--   select date_trunc('week', created_at) tuan, count(*) so_luot, round(avg(rating), 2) sao_tb from public.lat_feedback group by 1 order by 1 desc;
+-- Đánh dấu đã xử lý:
+--   update public.lat_feedback set status = 'da_xu_ly', note = 'Đã sửa ở bản ...' where id = '...';

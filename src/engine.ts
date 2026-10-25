@@ -162,6 +162,11 @@ export class Engine {
   }
 
   private readonly tracker = new SegmentTracker();
+  private segId: string | null = null;
+  /** Mã đoạn đường đang khớp (để báo sai tốc độ chính xác đoạn). */
+  currentSegment(): string | null {
+    return this.segId;
+  }
 
   private nearby(pos: LatLng): { segments: RoadSegment[]; alerts: AlertPoint[] } {
     const segs = new Map<string, RoadSegment>();
@@ -178,6 +183,7 @@ export class Engine {
   private compute(kmh: number | null, status: GpsStatus, pos: LatLng, t: number): void {
     const { segments, alerts } = this.nearby(pos);
     const seg = this.tracker.match(segments, pos, this.heading);
+    this.segId = seg?.id ?? null;
     const lim = kmh !== null ? limitOf(seg, this.vehicle) : null;
     const camRoute = seg?.cam === true;
     const truckBan = (this.vehicle === 'truck' || this.vehicle === 'bus') && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);

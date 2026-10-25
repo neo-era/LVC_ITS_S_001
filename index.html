@@ -241,6 +241,48 @@
   </div>
 </dialog>
 
+<dialog id="feedback" class="settings" aria-labelledby="fb-title">
+  <form class="settings-form" id="fb-form" method="dialog">
+    <div class="settings-head">
+      <h2 id="fb-title">Góp ý &amp; đánh giá</h2>
+      <button class="icon-btn" data-close="feedback" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="muted note">Ý kiến gửi thẳng cho người phát triển để sửa lỗi và cải tiến app.</p>
+    <div class="stars" id="fb-stars" role="radiogroup" aria-label="Đánh giá app">
+      <button type="button" role="radio" aria-checked="false" data-v="1" aria-label="1 sao">★</button>
+      <button type="button" role="radio" aria-checked="false" data-v="2" aria-label="2 sao">★</button>
+      <button type="button" role="radio" aria-checked="false" data-v="3" aria-label="3 sao">★</button>
+      <button type="button" role="radio" aria-checked="false" data-v="4" aria-label="4 sao">★</button>
+      <button type="button" role="radio" aria-checked="false" data-v="5" aria-label="5 sao">★</button>
+    </div>
+    <p class="muted note" id="fb-stars-label">Chạm để chọn số sao</p>
+    <label class="field" for="fb-kind">
+      <span>Loại góp ý</span>
+      <select id="fb-kind">
+        <option value="de_xuat">Đề xuất tính năng</option>
+        <option value="loi">Lỗi app</option>
+        <option value="sai_toc_do">Sai giới hạn tốc độ</option>
+        <option value="sai_camera">Sai / thiếu camera</option>
+        <option value="khac">Khác</option>
+      </select>
+    </label>
+    <label class="field" for="fb-posted" id="fb-posted-row" hidden>
+      <span>Biển thật trên đường</span>
+      <select id="fb-posted">
+        <option value="">Không rõ</option>
+        <option value="0">Không có biển</option>
+        <option value="30">30</option><option value="40">40</option><option value="50">50</option><option value="60">60</option>
+        <option value="70">70</option><option value="80">80</option><option value="90">90</option><option value="100">100</option><option value="120">120</option>
+      </select>
+    </label>
+    <label class="field stack" for="fb-text"><span>Nội dung</span><textarea id="fb-text" rows="4" maxlength="2000" placeholder="Anh/chị gặp gì, muốn app làm thêm gì…"></textarea></label>
+    <label class="field check" for="fb-loc"><span>Gửi kèm vị trí hiện tại và thông tin đoạn đường</span><input id="fb-loc" type="checkbox"></label>
+    <button class="primary" id="btn-fb-send" type="button">Gửi góp ý</button>
+    <p class="muted note" id="fb-status" role="status" aria-live="polite"></p>
+  </form>
+</dialog>
 <dialog id="trips" class="settings" aria-labelledby="trips-title">
   <div class="settings-form">
     <div class="settings-head">
@@ -452,6 +494,7 @@
     <button class="secondary" id="btn-fleet" type="button">Đội xe…</button>
     <button class="secondary" id="btn-patrol" type="button">Tuần tra chiếu sáng…</button>
     <button class="secondary" id="btn-obd-open" type="button">Kết nối OBD-II (Android)…</button>
+    <button class="secondary" id="btn-feedback" type="button">Góp ý &amp; đánh giá…</button>
     <h3 class="settings-sub">SOS va chạm</h3>
     <label class="field stack" for="set-sos-phone"><span>Số điện thoại người thân</span><input id="set-sos-phone" type="tel" autocomplete="tel" placeholder="09xx xxx xxx"></label>
     <label class="field check" for="set-sos-on"><span>Hỏi và mở tin nhắn SOS khi va chạm mạnh</span><input id="set-sos-on" type="checkbox"></label>
