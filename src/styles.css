@@ -1724,3 +1724,107 @@ button.status-chip {
   font-weight: 800;
   cursor: pointer;
 }
+
+/* ===== Xoay ngang (điện thoại nằm ngang): thông tin cột trái, nút 2 cột bên phải, xe ở giữa vùng bản đồ còn lại ===== */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app {
+    padding-top: calc(6px + env(safe-area-inset-top));
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+  .topbar {
+    position: absolute;
+    top: calc(6px + env(safe-area-inset-top));
+    left: calc(12px + env(safe-area-inset-left));
+    right: calc(12px + env(safe-area-inset-right));
+  }
+  .main {
+    max-width: min(40vw, 360px);
+    padding-right: 0;
+    padding-top: 30px; /* chừa dòng trạng thái GPS */
+    gap: 4px;
+  }
+  .hud {
+    gap: 12px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .speed-num {
+    font-size: clamp(56px, 22vh, 96px);
+  }
+  .speed-unit {
+    font-size: 15px;
+    margin-top: 0;
+  }
+  .sign {
+    width: clamp(56px, 17vh, 72px);
+    border-width: 6px;
+    font-size: clamp(22px, 7vh, 30px);
+  }
+  .limit {
+    gap: 4px;
+  }
+  .limit-label {
+    font-size: 12px;
+  }
+  .over-banner {
+    font-size: 16px;
+  }
+  .status-chip {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  .alert-dist {
+    font-size: 26px;
+  }
+  /* 8 nút xếp 2 cột × 4 hàng; nút mở rộng ngay trên, bánh răng ở góc trên */
+  .bar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(4, 48px);
+    grid-template-columns: none;
+    grid-auto-columns: 48px;
+    width: auto;
+    height: auto;
+    gap: 8px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  /* nút Dừng luôn ở góc dưới bên phải (dễ bấm nhất) */
+  #btn-stop {
+    grid-row: 4;
+    grid-column: 2;
+  }
+  .bar > [hidden] {
+    display: none;
+  }
+  .mapbox:not(.full) .map-expand {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    bottom: calc(12px + var(--bar-h, 216px) + 8px + env(safe-area-inset-bottom));
+  }
+  .icon-btn {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  /* nút Theo xe: dưới cùng, sát cột nút, không đè mũi tên xe (xe nằm giữa vùng bản đồ) */
+  .mapbox:not(.full) .map-follow {
+    left: auto;
+    transform: none;
+    right: calc(24px + 2 * 48px + 8px + env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .toast {
+    left: calc(24px + min(40vw, 360px) + env(safe-area-inset-left));
+    right: calc(24px + 2 * 48px + 8px + env(safe-area-inset-right));
+    bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+  .patrol-box {
+    right: calc(24px + 2 * 48px + 8px + env(safe-area-inset-right));
+    left: auto;
+    width: min(46vw, 420px);
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}

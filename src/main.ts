@@ -584,20 +584,31 @@ function stopAll(): void {
 
 /* ---------- Sự kiện ---------- */
 /** Chừa chỗ cho thẻ nổi: xe hiện ở phần bản đồ còn trống giữa thẻ trên và thanh nút dưới. */
+const LANDSCAPE = matchMedia('(orientation: landscape) and (max-height: 520px)');
 function applyMapPadding(): void {
   if (!mapView) return;
   if (mapbox.classList.contains('full')) return mapView.setPadding({ top: 0, bottom: 0 });
   const bar = document.querySelector('.bar') as HTMLElement;
   if (bar) document.documentElement.style.setProperty('--bar-h', `${bar.offsetHeight}px`);
   let top = 0;
+  let left = 0;
   for (const el of document.querySelectorAll<HTMLElement>('.main > :not(.mapbox)')) {
     const r = el.getBoundingClientRect();
-    if (r.height > 0) top = Math.max(top, r.bottom);
+    if (r.height > 0) {
+      top = Math.max(top, r.bottom);
+      left = Math.max(left, r.right);
+    }
   }
   void bar;
-  mapView.setPadding({ top: Math.min(top, window.innerHeight * 0.55), bottom: 40, right: 60 });
+  if (LANDSCAPE.matches) {
+    // nằm ngang: thông tin ở cột trái → xe nằm giữa phần bản đồ bên phải, chừa cột nút 2 hàng
+    mapView.setPadding({ top: 0, bottom: 0, left: Math.min(left, window.innerWidth * 0.45), right: 120 });
+  } else {
+    mapView.setPadding({ top: Math.min(top, window.innerHeight * 0.55), bottom: 40, right: 60 });
+  }
 }
 window.addEventListener('resize', applyMapPadding);
+LANDSCAPE.addEventListener('change', () => setTimeout(applyMapPadding, 50));
 
 function setMapFull(full: boolean): void {
   if (!full) endPick();
