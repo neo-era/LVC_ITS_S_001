@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hướng dẫn sử dụng — Lái An Toàn</title>
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<style>
+:root { --bg:#f6f7f9; --surface:#fff; --text:#0b0f14; --muted:#5b6474; --line:#d9dee6; --accent:#ffd400; --link:#1d4ed8; --note:#fff8dc; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0b0f14; --surface:#131a22; --text:#eef2f6; --muted:#9aa5b4; --line:#2a3440; --link:#7cb3ff; --note:#2a2410; } }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin:0; background:var(--bg); color:var(--text); font: 16px/1.6 "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+header { position: sticky; top: 0; z-index: 2; display:flex; align-items:center; gap:8px; padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(8px + env(safe-area-inset-left)); background: var(--surface); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 18px; margin: 0; flex: 1; padding: 0; border: 0; }
+.back { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; border-radius:999px; color:var(--text); text-decoration:none; font-size:30px; line-height:1; }
+.dl { font-size: 14px; font-weight: 700; color: var(--link); text-decoration: none; padding: 8px 10px; border: 2px solid var(--line); border-radius: 999px; white-space: nowrap; }
+main { max-width: 760px; margin: 0 auto; padding: 12px calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+.toc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin: 8px 0 16px; }
+.toc summary { font-weight: 800; cursor: pointer; min-height: 32px; }
+.toc ul { padding-left: 18px; margin: 6px 0; }
+.toc a { color: var(--link); text-decoration: none; }
+h1 { font-size: 22px; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 3px solid var(--accent); scroll-margin-top: 70px; }
+h2 { font-size: 18px; margin: 22px 0 8px; scroll-margin-top: 70px; }
+p, li { margin: 6px 0; }
+img { max-width: 100%; height: auto; max-height: 70vh; display: block; margin: 10px auto; border-radius: 12px; box-shadow: 0 2px 12px rgb(0 0 0 / .15); }
+.tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; background: var(--surface); font-size: 14px; }
+table:has(th) { min-width: 480px; }
+table:not(:has(th)) td { background: var(--note); border: 0; border-left: 4px solid #b8860b; padding: 8px 12px; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+th { background: #1f2937; color: #fff; }
+blockquote { margin: 10px 0; padding: 8px 12px; background: var(--note); border-left: 4px solid #b8860b; border-radius: 6px; }
+code { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: 14px; }
+a { color: var(--link); }
+.top { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #111; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size: 22px; font-weight: 800; box-shadow: 0 4px 14px rgb(0 0 0 / .3); }
+</style>
+</head>
+<body id="dau">
+<header>
+  <a class="back" id="back" href="../" aria-label="Quay lại app" title="Quay lại app">‹</a>
+  <h1>Hướng dẫn sử dụng</h1>
+  <a class="dl" href="Huong-dan-su-dung-Lai-An-Toan.docx" download>Tải Word</a>
+</header>
+<main>
+<details class="toc"><summary>Mục lục</summary><nav><ul>
+<li><a href="#giới-thiệu" id="toc-giới-thiệu">1. Giới thiệu</a>
+<ul>
+<li><a href="#yêu-cầu-thiết-bị" id="toc-yêu-cầu-thiết-bị">1.1. Yêu cầu
+thiết bị</a></li>
+</ul></li>
+<li><a href="#cài-đặt-ứng-dụng-lên-điện-thoại"
+id="toc-cài-đặt-ứng-dụng-lên-điện-thoại">2. Cài đặt ứng dụng lên điện
+thoại</a>
+<ul>
+<li><a href="#iphone" id="toc-iphone">2.1. iPhone</a></li>
+<li><a href="#android" id="toc-android">2.2. Android</a></li>
+<li><a href="#tự-cập-nhật" id="toc-tự-cập-nhật">2.3. Tự cập
+nhật</a></li>
+</ul></li>
+<li><a href="#bắt-đầu-sử-dụng" id="toc-bắt-đầu-sử-dụng">3. Bắt đầu sử
+dụng</a>
+<ul>
+<li><a href="#bố-cục-màn-hình-lái-xe"
+id="toc-bố-cục-màn-hình-lái-xe">3.1. Bố cục màn hình lái xe</a></li>
+<li><a href="#các-nút-ở-cột-bên-phải-từ-trên-xuống"
+id="toc-các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút ở cột bên
+phải (từ trên xuống)</a></li>
+<li><a href="#điều-khiển-bản-đồ" id="toc-điều-khiển-bản-đồ">3.3. Điều
+khiển bản đồ</a></li>
+</ul></li>
+<li><a href="#tốc-độ-và-biển-giới-hạn"
+id="toc-tốc-độ-và-biển-giới-hạn">4. Tốc độ và biển giới hạn</a>
+<ul>
+<li><a href="#mức-ước-tính-theo-luật"
+id="toc-mức-ước-tính-theo-luật">4.1. Mức ước tính theo luật</a></li>
+<li><a href="#số-tốc-độ-khác-đồng-hồ-xe"
+id="toc-số-tốc-độ-khác-đồng-hồ-xe">4.2. Số tốc độ khác đồng hồ
+xe?</a></li>
+<li><a href="#báo-sai-giới-hạn-tốc-độ"
+id="toc-báo-sai-giới-hạn-tốc-độ">4.3. Báo sai giới hạn tốc độ</a></li>
+<li><a href="#đọc-biển-báo-bằng-camera-thử-nghiệm"
+id="toc-đọc-biển-báo-bằng-camera-thử-nghiệm">4.4. Đọc biển báo bằng
+camera (thử nghiệm)</a></li>
+</ul></li>
+<li><a href="#cảnh-báo-camera-và-điểm-đen"
+id="toc-cảnh-báo-camera-và-điểm-đen">5. Cảnh báo camera và điểm đen</a>
+<ul>
+<li><a href="#cảnh-báo-phía-trước" id="toc-cảnh-báo-phía-trước">5.1.
+Cảnh báo phía trước</a></li>
+<li><a href="#tuyến-có-camera" id="toc-tuyến-có-camera">5.2. Tuyến có
+camera</a></li>
+<li><a href="#tự-đánh-dấu-camera" id="toc-tự-đánh-dấu-camera">5.3. Tự
+đánh dấu camera</a></li>
+<li><a href="#xoá-dấu-camera-bấm-nhầm"
+id="toc-xoá-dấu-camera-bấm-nhầm">5.4. Xoá dấu camera bấm nhầm</a></li>
+</ul></li>
+<li><a href="#dẫn-đường" id="toc-dẫn-đường">6. Dẫn đường</a>
+<ul>
+<li><a href="#tìm-điểm-đến" id="toc-tìm-điểm-đến">6.1. Tìm điểm
+đến</a></li>
+<li><a href="#b.-tìm-bằng-toạ-độ-hoặc-link-google-maps"
+id="toc-b.-tìm-bằng-toạ-độ-hoặc-link-google-maps">6.1b. Tìm bằng toạ độ
+hoặc link Google Maps</a></li>
+<li><a href="#chọn-trên-bản-đồ" id="toc-chọn-trên-bản-đồ">6.2. Chọn trên
+bản đồ</a></li>
+<li><a href="#nơi-đã-lưu" id="toc-nơi-đã-lưu">6.3. Nơi đã lưu</a></li>
+<li><a href="#trong-khi-dẫn-đường" id="toc-trong-khi-dẫn-đường">6.4.
+Trong khi dẫn đường</a></li>
+<li><a href="#chia-sẻ-hành-trình" id="toc-chia-sẻ-hành-trình">6.5. Chia
+sẻ hành trình</a></li>
+</ul></li>
+<li><a href="#bản-đồ-offline-theo-tỉnh"
+id="toc-bản-đồ-offline-theo-tỉnh">7. Bản đồ offline theo tỉnh</a></li>
+<li><a href="#giọng-nói" id="toc-giọng-nói">8. Giọng nói</a>
+<ul>
+<li><a href="#giọng-đọc-cảnh-báo" id="toc-giọng-đọc-cảnh-báo">8.1. Giọng
+đọc cảnh báo</a></li>
+<li><a href="#ra-lệnh-bằng-giọng-nói"
+id="toc-ra-lệnh-bằng-giọng-nói">8.2. Ra lệnh bằng giọng nói</a></li>
+</ul></li>
+<li><a href="#báo-cáo-chiếu-sáng-và-tuần-tra"
+id="toc-báo-cáo-chiếu-sáng-và-tuần-tra">9. Báo cáo chiếu sáng và tuần
+tra</a>
+<ul>
+<li><a href="#báo-đèn-tắt-báo-ngập" id="toc-báo-đèn-tắt-báo-ngập">9.1.
+Báo đèn tắt, báo ngập</a></li>
+<li><a href="#tuần-tra-chiếu-sáng-theo-danh-sách-trụ"
+id="toc-tuần-tra-chiếu-sáng-theo-danh-sách-trụ">9.2. Tuần tra chiếu sáng
+theo danh sách trụ</a></li>
+<li><a href="#mã-qr-trên-trụ" id="toc-mã-qr-trên-trụ">9.3. Mã QR trên
+trụ</a></li>
+</ul></li>
+<li><a href="#camera-hành-trình" id="toc-camera-hành-trình">10. Camera
+hành trình</a></li>
+<li><a href="#tính-năng-an-toàn" id="toc-tính-năng-an-toàn">11. Tính
+năng an toàn</a>
+<ul>
+<li><a href="#sos-khi-va-chạm" id="toc-sos-khi-va-chạm">11.1. SOS khi va
+chạm</a></li>
+<li><a href="#nhắc-nghỉ-khi-lái-lâu"
+id="toc-nhắc-nghỉ-khi-lái-lâu">11.2. Nhắc nghỉ khi lái lâu</a></li>
+<li><a href="#thời-tiết" id="toc-thời-tiết">11.3. Thời tiết</a></li>
+<li><a href="#đường-cấm-xe-tải" id="toc-đường-cấm-xe-tải">11.4. Đường
+cấm xe tải</a></li>
+<li><a href="#đèn-tín-hiệu-tốc-độ-làn-sóng-xanh"
+id="toc-đèn-tín-hiệu-tốc-độ-làn-sóng-xanh">11.5. Đèn tín hiệu (tốc độ
+làn sóng xanh)</a></li>
+</ul></li>
+<li><a href="#tiện-ích-khác" id="toc-tiện-ích-khác">12. Tiện ích
+khác</a>
+<ul>
+<li><a href="#chuyến-đi-và-điểm-an-toàn"
+id="toc-chuyến-đi-và-điểm-an-toàn">12.1. Chuyến đi và điểm an
+toàn</a></li>
+<li><a href="#chiếu-kính-lái-hud" id="toc-chiếu-kính-lái-hud">12.2.
+Chiếu kính lái (HUD)</a></li>
+<li><a href="#đội-xe" id="toc-đội-xe">12.3. Đội xe</a></li>
+<li><a href="#kết-nối-obd-ii-android"
+id="toc-kết-nối-obd-ii-android">12.4. Kết nối OBD-II (Android)</a></li>
+<li><a href="#góp-ý-đánh-giá" id="toc-góp-ý-đánh-giá">12.5. Góp ý &amp;
+đánh giá</a></li>
+<li><a href="#giao-diện" id="toc-giao-diện">12.6. Giao diện</a></li>
+</ul></li>
+<li><a href="#bảng-tổng-hợp-cài-đặt" id="toc-bảng-tổng-hợp-cài-đặt">13.
+Bảng tổng hợp Cài đặt</a></li>
+<li><a href="#câu-hỏi-thường-gặp-và-xử-lý-sự-cố"
+id="toc-câu-hỏi-thường-gặp-và-xử-lý-sự-cố">14. Câu hỏi thường gặp và xử
+lý sự cố</a>
+<ul>
+<li><a href="#lưu-ý-pháp-lý" id="toc-lưu-ý-pháp-lý">Lưu ý pháp
+lý</a></li>
+</ul></li>
+</ul></nav></details>
+<h1 id="giới-thiệu">1. Giới thiệu</h1>
+<p><strong>Lái An Toàn</strong> là ứng dụng web cài được lên điện thoại
+(PWA), giúp người lái xe:</p>
+<ul>
+<li><p>Xem <strong>tốc độ hiện tại</strong> và <strong>tốc độ tối đa cho
+phép</strong> của đoạn đường đang đi.</p></li>
+<li><p>Nghe <strong>cảnh báo bằng giọng nói</strong> khi sắp tới camera
+phạt nguội, điểm đen tai nạn hoặc khi chạy quá tốc độ.</p></li>
+<li><p><strong>Dẫn đường</strong> tới điểm đến, có báo trước tuyến đường
+nào có camera.</p></li>
+<li><p>Dùng <strong>bản đồ offline</strong> theo tỉnh/thành khi mất
+sóng.</p></li>
+<li><p>Hỗ trợ công việc: <strong>báo đèn chiếu sáng tắt/hư</strong>, báo
+điểm ngập, <strong>tuần tra chiếu sáng</strong> theo danh sách trụ,
+<strong>quản lý đội xe</strong>.</p></li>
+<li><p>Tính năng an toàn: <strong>camera hành trình</strong>,
+<strong>SOS khi va chạm</strong>, nhắc nghỉ khi lái lâu, cảnh báo thời
+tiết, đường cấm xe tải.</p></li>
+</ul>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>Quyền riêng tư:</strong> Vị trí chỉ được xử lý ngay trên
+điện thoại. App chỉ gửi dữ liệu lên máy chủ khi anh/chị chủ động bật:
+đồng bộ dấu camera, gửi báo cáo chiếu sáng, tham gia đội xe hoặc chia sẻ
+hành trình.</td>
+</tr>
+</tbody>
+</table></div>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>An toàn là trên hết:</strong> Chỉ thao tác trên điện thoại
+khi xe đã dừng. Khi đang chạy, hãy dùng giọng nói hoặc để người ngồi
+cạnh thao tác. Biển báo thực tế trên đường luôn có giá trị cao hơn thông
+tin trong app.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="yêu-cầu-thiết-bị">1.1. Yêu cầu thiết bị</h2>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 73%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Hạng mục</strong></th>
+<th><strong>Yêu cầu</strong></th>
+</tr>
+<tr class="odd">
+<th>Điện thoại</th>
+<th>iPhone (iOS 16.4 trở lên) hoặc Android (Chrome mới)</th>
+</tr>
+<tr class="header">
+<th>Trình duyệt</th>
+<th>iPhone: <strong>Safari</strong>. Android:
+<strong>Chrome</strong></th>
+</tr>
+<tr class="odd">
+<th>Quyền cần cấp</th>
+<th>Vị trí (bắt buộc); Micro (ra lệnh giọng nói); Camera (camera hành
+trình, đọc biển báo); Cảm biến chuyển động (SOS)</th>
+</tr>
+<tr class="header">
+<th>Mạng</th>
+<th>Cần mạng lần đầu mở app. Sau đó chạy được khi mất sóng nếu đã tải dữ
+liệu/bản đồ offline</th>
+</tr>
+<tr class="odd">
+<th>Giá đỡ</th>
+<th>Nên gắn điện thoại trên giá đỡ, cắm sạc khi chạy đường dài</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h1 id="cài-đặt-ứng-dụng-lên-điện-thoại">2. Cài đặt ứng dụng lên điện
+thoại</h1>
+<h2 id="iphone">2.1. iPhone</h2>
+<ol type="1">
+<li><p>Mở <strong>Safari</strong>, vào địa chỉ
+<strong>neo-era.github.io/LVC_ITS_S_001</strong>.</p></li>
+<li><p>Bấm nút <strong>Chia sẻ</strong> (ô vuông có mũi tên lên) ở thanh
+dưới.</p></li>
+<li><p>Chọn <strong>Thêm vào MH chính</strong> (Add to Home Screen) →
+<strong>Thêm</strong>.</p></li>
+<li><p>Mở app bằng biểu tượng <strong>Lái An Toàn</strong> trên màn hình
+chính (không mở lại bằng Safari).</p></li>
+<li><p>Khi app hỏi quyền vị trí, chọn <strong>Cho phép khi dùng
+app</strong>.</p></li>
+</ol>
+<h2 id="android">2.2. Android</h2>
+<ol type="1">
+<li><p>Mở <strong>Chrome</strong>, vào địa chỉ trên.</p></li>
+<li><p>Bấm <strong>Cài đặt ứng dụng</strong> (trong phần Cài đặt của
+app) hoặc menu ⋮ → <strong>Cài đặt ứng dụng / Thêm vào màn hình
+chính</strong>.</p></li>
+<li><p>Mở app từ biểu tượng trên màn hình chính, cho phép quyền vị
+trí.</p></li>
+</ol>
+<h2 id="tự-cập-nhật">2.3. Tự cập nhật</h2>
+<p>App <strong>tự cập nhật</strong> khi có phiên bản mới:</p>
+<ul>
+<li><p>Nếu đang không lái: app tự tải lại sang bản mới.</p></li>
+<li><p>Nếu đang lái: app hiện thông báo nhỏ và chỉ cập nhật khi anh/chị
+bấm <strong>Dừng</strong>, không làm gián đoạn chuyến đi.</p></li>
+<li><p>Dữ liệu tốc độ/camera được làm mới <strong>hằng đêm</strong>; bản
+đồ nền được làm mới <strong>hằng tháng</strong>.</p></li>
+</ul>
+<h1 id="bắt-đầu-sử-dụng">3. Bắt đầu sử dụng</h1>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><p><img loading="lazy" src="./media/260eb025546ded0f0d3e9b7e83f5fab8e914c052.png"
+title="Hình 1. Màn hình mở đầu" 
+alt="Hình 1. Màn hình mở đầu" /></p>
+<p><em>Hình 1. Màn hình mở đầu</em></p></td>
+<td><p><img loading="lazy" src="./media/14438c6521927f8c6554a255929acf4415eb1ca4.png"
+title="Hình 2. Màn hình lái xe" 
+alt="Hình 2. Màn hình lái xe" /></p>
+<p><em>Hình 2. Màn hình lái xe</em></p></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><p><strong>Bắt đầu lái xe:</strong> app bắt đầu đọc GPS, hiển thị
+tốc độ và cảnh báo.</p></li>
+<li><p><strong>Chạy thử mô phỏng:</strong> xe ảo tự chạy một đoạn đường
+mẫu để anh/chị làm quen giao diện và nghe thử giọng cảnh báo, không cần
+ra đường.</p></li>
+<li><p>Bấm nút <strong>Dừng</strong> (ô vuông, dưới cùng bên phải) để
+kết thúc. Chuyến đi được lưu lại tự động.</p></li>
+</ul>
+<h2 id="bố-cục-màn-hình-lái-xe">3.1. Bố cục màn hình lái xe</h2>
+<p>Bản đồ phủ <strong>toàn màn hình</strong>, các thông tin nổi trên nền
+trong suốt:</p>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 24%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Vị trí</strong></th>
+<th><strong>Thành phần</strong></th>
+<th><strong>Ý nghĩa</strong></th>
+</tr>
+<tr class="odd">
+<th>Trên cùng bên trái</th>
+<th>Chấm trạng thái</th>
+<th>Xanh: <strong>GPS tốt</strong>; đỏ: <strong>mất tín hiệu
+GPS</strong>; “Mô phỏng” khi chạy thử</th>
+</tr>
+<tr class="header">
+<th>Góc trái</th>
+<th>Số lớn + km/h</th>
+<th>Tốc độ hiện tại. Chuyển <strong>đỏ</strong> khi vượt giới hạn</th>
+</tr>
+<tr class="odd">
+<th>Góc phải</th>
+<th>Biển tròn viền đỏ</th>
+<th>Tốc độ tối đa của đoạn đường (xem mục 4)</th>
+</tr>
+<tr class="header">
+<th>Dưới tốc độ</th>
+<th>Dòng cảnh báo / thẻ nhỏ (chip)</th>
+<th>Vượt tốc độ, tuyến có camera, thời tiết, đèn tín hiệu, cấm xe
+tải…</th>
+</tr>
+<tr class="odd">
+<th>Góc phải trên</th>
+<th>Bánh răng</th>
+<th><strong>Cài đặt</strong></th>
+</tr>
+<tr class="header">
+<th>Cột nút bên phải</th>
+<th>Các nút tròn</th>
+<th>Xem bảng 3.2</th>
+</tr>
+<tr class="odd">
+<th>Giữa màn hình</th>
+<th>Mũi tên xanh</th>
+<th>Vị trí và hướng xe</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h2 id="các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút ở cột bên
+phải (từ trên xuống)</h2>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 70%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Nút</strong></th>
+<th><strong>Chức năng</strong></th>
+</tr>
+<tr class="odd">
+<th>⤢ Mở rộng</th>
+<th>Thu gọn/mở rộng các khung thông tin để xem bản đồ rộng hơn; bấm lại
+để <strong>theo xe</strong></th>
+</tr>
+<tr class="header">
+<th>➤ Dẫn đường</th>
+<th>Mở hộp <strong>Đi đến đâu?</strong> (mục 6)</th>
+</tr>
+<tr class="odd">
+<th>📍 Đánh dấu camera</th>
+<th>Đánh dấu vị trí hiện tại là có camera (mục 5.3)</th>
+</tr>
+<tr class="header">
+<th>💡 Báo đèn tắt</th>
+<th>Báo nhanh đèn chiếu sáng tắt tại vị trí hiện tại (mục 9.1)</th>
+</tr>
+<tr class="odd">
+<th>🎥 Camera hành trình</th>
+<th>Bật/tắt quay video hành trình (mục 10)</th>
+</tr>
+<tr class="header">
+<th>🎤 Micro</th>
+<th>Ra lệnh bằng giọng nói (mục 8)</th>
+</tr>
+<tr class="odd">
+<th>🔊 Giọng nói</th>
+<th>Bật/tắt đọc cảnh báo bằng giọng nói</th>
+</tr>
+<tr class="header">
+<th>■ Dừng</th>
+<th>Kết thúc chuyến đi</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>Tất cả các nút chỉ có biểu tượng. Nhấn giữ hoặc rê chuột vào nút để
+thấy tên.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="điều-khiển-bản-đồ">3.3. Điều khiển bản đồ</h2>
+<ul>
+<li><p><strong>Kéo</strong> bản đồ bằng một ngón để xem chỗ khác;
+<strong>chụm/mở hai ngón</strong> hoặc <strong>chạm hai lần</strong> để
+thu nhỏ/phóng to.</p></li>
+<li><p>Khi đã kéo bản đồ, nút vàng <strong>Theo xe</strong> hiện ở dưới:
+bấm để quay về vị trí xe. Nếu đang chạy, sau <strong>15 giây</strong>
+không chạm app tự quay về theo xe.</p></li>
+<li><p>Bản đồ tự xoay theo hướng xe chạy, nên thao tác xoay bằng tay
+được tắt.</p></li>
+</ul>
+<h1 id="tốc-độ-và-biển-giới-hạn">4. Tốc độ và biển giới hạn</h1>
+<p>App tự xác định anh/chị đang đi trên đường nào và hiển thị tốc độ tối
+đa cho phép:</p>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 48%" />
+<col style="width: 22%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Hiển thị biển</strong></th>
+<th><strong>Nguồn</strong></th>
+<th><strong>Cảnh báo giọng nói khi vượt</strong></th>
+</tr>
+<tr class="odd">
+<th>Viền đỏ <strong>liền</strong>, nhãn “Giới hạn”</th>
+<th>Biển thật đã ghi nhận trên bản đồ OpenStreetMap, hoặc theo công bố
+của cơ quan chức năng cho tuyến lớn</th>
+<th><strong>Có</strong></th>
+</tr>
+<tr class="header">
+<th>Viền đỏ liền, nhãn “Làn ô tô · hỗn hợp 50”</th>
+<th>Tuyến tách làn (vd QL22 Hóc Môn: làn hỗn hợp 50, làn ô tô 60). Ô tô
+thấy số làn ô tô; xe máy thấy số làn hỗn hợp</th>
+<th><strong>Có</strong></th>
+</tr>
+<tr class="odd">
+<th>Viền <strong>nét đứt</strong>, nhãn “Ước tính theo luật”</th>
+<th>App <strong>ước tính</strong> theo quy định chung (khu đô thị/ngoài
+đô thị, đường đôi/đường hai chiều, loại xe)</th>
+<th><strong>Không</strong> — chỉ đổi màu chữ để tham khảo</th>
+</tr>
+<tr class="header">
+<th>Không có biển</th>
+<th>Chưa đủ dữ liệu (đường nhỏ, ngõ hẻm)</th>
+<th>Không</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h2 id="mức-ước-tính-theo-luật">4.1. Mức ước tính theo luật</h2>
+<p>Áp dụng theo quy định tốc độ hiện hành (VBHN 74/2026/VBHN-BXD):</p>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 26%" />
+<col style="width: 35%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Loại xe</strong></th>
+<th><strong>Trong khu đông dân cư</strong></th>
+<th><strong>Ngoài khu đông dân cư (đường đôi / đường khác)</strong></th>
+</tr>
+<tr class="odd">
+<th>Ô tô con (đến 28 chỗ, tải đến 3,5 tấn)</th>
+<th>60 / 50 km/h</th>
+<th>90 / 80 km/h</th>
+</tr>
+<tr class="header">
+<th>Xe mô tô (xe máy)</th>
+<th>60 / 50 km/h</th>
+<th>70 / 60 km/h</th>
+</tr>
+<tr class="odd">
+<th>Xe khách &gt; 28 chỗ, xe tải &gt; 3,5 tấn</th>
+<th>60 / 50 km/h</th>
+<th>80 / 70 km/h</th>
+</tr>
+<tr class="header">
+<th>Xe buýt, đầu kéo sơ mi rơ moóc</th>
+<th>60 / 50 km/h</th>
+<th>70 / 60 km/h</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><strong>Quan trọng:</strong> chọn đúng <strong>Loại xe</strong>
+trong Cài đặt để mức ước tính và lộ trình dẫn đường phù hợp. Biển báo
+thực tế trên đường luôn được ưu tiên.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="số-tốc-độ-khác-đồng-hồ-xe">4.2. Số tốc độ khác đồng hồ xe?</h2>
+<p>Đồng hồ ô tô/xe máy luôn báo <strong>cao hơn</strong> tốc độ thật vài
+% (ví dụ xe báo 53 thì thật ra khoảng 49). App đo bằng GPS nên hiện
+<strong>tốc độ thật</strong> — đúng như camera đo. Muốn số trên app khớp
+đồng hồ xe: <strong>Cài đặt → Số tốc độ hiển thị → Như đồng hồ xe
+(+3/5/8/10%)</strong>. Cảnh báo vượt tốc độ vẫn tính theo tốc độ
+thật.</p>
+<h2 id="báo-sai-giới-hạn-tốc-độ">4.3. Báo sai giới hạn tốc độ</h2>
+<p>Thấy biển trên app khác biển thật: <strong>chạm vào biển tốc
+độ</strong> trên màn hình → chọn <strong>số trên biển thật</strong> →
+<strong>Gửi góp ý</strong>. Vị trí và đoạn đường được gửi kèm để người
+phát triển sửa dữ liệu.</p>
+<h2 id="đọc-biển-báo-bằng-camera-thử-nghiệm">4.4. Đọc biển báo bằng
+camera (thử nghiệm)</h2>
+<p>Khi bật <strong>Cài đặt → Thử nghiệm → Đọc biển tốc độ bằng camera
+(khi đang quay)</strong>, app dùng hình ảnh camera hành trình để nhận
+dạng biển tròn viền đỏ (20–120 km/h). Biển chỉ được công nhận khi thấy
+cùng một số ở ít nhất 3 trong 5 khung hình gần nhất. Kết quả chỉ hiện ở
+thẻ <strong>“Biển nhận dạng: … (tham khảo)”</strong> trong 5 phút,
+<strong>không</strong> thay đổi giới hạn tốc độ của app (camera có thể
+đọc nhầm số dán sau đuôi xe tải).</p>
+<h1 id="cảnh-báo-camera-và-điểm-đen">5. Cảnh báo camera và điểm đen</h1>
+<h2 id="cảnh-báo-phía-trước">5.1. Cảnh báo phía trước</h2>
+<ul>
+<li><p>Khi còn cách camera/điểm đen một khoảng (mặc định <strong>500
+m</strong>, chỉnh trong Cài đặt → <strong>Báo cảnh báo trước</strong>:
+300/500/800/1000 m), app hiện thẻ cảnh báo kèm khoảng cách đếm lùi và
+đọc bằng giọng nói.</p></li>
+<li><p>Thẻ vàng: camera phạt nguội, điểm đen tai nạn (“Chú ý quan
+sát”).</p></li>
+<li><p>Chỉ cảnh báo những điểm nằm <strong>cùng chiều đi</strong>, không
+báo camera phía sau hoặc ở đường song song.</p></li>
+</ul>
+<h2 id="tuyến-có-camera">5.2. Tuyến có camera</h2>
+<p>Khi đi trên tuyến đường có camera phạt nguội, app hiện thẻ
+<strong>“Tuyến này có camera phạt nguội”</strong> để anh/chị giữ tốc độ
+đều cả tuyến.</p>
+<h2 id="tự-đánh-dấu-camera">5.3. Tự đánh dấu camera</h2>
+<ol type="1">
+<li><p>Khi thấy camera mới, bấm nút <strong>📍 Đánh dấu camera</strong>
+(hoặc nói “đánh dấu camera”).</p></li>
+<li><p>Có <strong>6,5 giây</strong> để bấm <strong>Hoàn tác</strong> nếu
+bấm nhầm.</p></li>
+<li><p>Dấu được lưu trên máy và (nếu bật <strong>Đồng bộ</strong>) gửi
+lên máy chủ. Dấu được nhiều người xác nhận sẽ được đưa vào dữ liệu chung
+cho mọi người.</p></li>
+</ol>
+<p>Quản lý dấu trong <strong>Cài đặt → Camera tự đánh dấu</strong>: danh
+sách các dấu (giờ, khoảng cách) có nút <strong>Xoá</strong> từng dấu,
+<strong>Đồng bộ ngay</strong>, <strong>Xoá tất cả dấu trên
+máy</strong>.</p>
+<h2 id="xoá-dấu-camera-bấm-nhầm">5.4. Xoá dấu camera bấm nhầm</h2>
+<ul>
+<li><p><strong>Chạm vào chấm cam</strong> trên bản đồ → thông báo “Dấu
+camera anh đánh lúc…” → bấm <strong>Xoá dấu</strong>. Có <strong>Hoàn
+tác</strong> trong vài giây.</p></li>
+<li><p>Dấu đã gửi lên máy chủ mà chưa được duyệt sẽ được rút lại luôn.
+Chấm camera của dữ liệu chung thì không xoá từ máy được.</p></li>
+</ul>
+<h1 id="dẫn-đường">6. Dẫn đường</h1>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><p><img loading="lazy" src="./media/d7880205bea7882958711ae45add096687363ab1.png"
+title="Hình 3. Hộp “Đi đến đâu?”"
+
+alt="Hình 3. Hộp “Đi đến đâu?”" /></p>
+<p><em>Hình 3. Hộp “Đi đến đâu?”</em></p></td>
+<td><p><img loading="lazy" src="./media/fe706748cf8ea72af2b88f1911c6a07719e7ebf4.png"
+title="Hình 4. Chọn điểm đến trên bản đồ"
+
+alt="Hình 4. Chọn điểm đến trên bản đồ" /></p>
+<p><em>Hình 4. Chọn điểm đến trên bản đồ</em></p></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="tìm-điểm-đến">6.1. Tìm điểm đến</h2>
+<ol type="1">
+<li><p>Bấm nút <strong>➤ Dẫn đường</strong>.</p></li>
+<li><p>Gõ tên nơi hoặc địa chỉ (ví dụ: “Chợ Bến Thành”, “Liên khu
+16-18”). Có thể gõ <strong>không dấu</strong>. Bấm nút
+<strong>Tìm</strong> trên bàn phím để tìm ngay.</p></li>
+<li><p>Chọn kết quả trong danh sách. App tính đường theo <strong>loại
+xe</strong> đã chọn.</p></li>
+<li><p>Nếu có nhiều đường đi, app hiện <strong>Chọn lộ trình</strong>:
+tuyến xanh là tuyến đang chọn, tuyến xám là tuyến khác. Chạm tuyến xám
+trên bản đồ hoặc chọn trong danh sách (Nhanh nhất · km · phút, +x phút
+so với nhanh nhất) → bấm <strong>Đi tuyến này</strong>.</p></li>
+</ol>
+<h2 id="b.-tìm-bằng-toạ-độ-hoặc-link-google-maps">6.1b. Tìm bằng toạ độ
+hoặc link Google Maps</h2>
+<ul>
+<li><p>Gõ/dán toạ độ vào ô tìm: `10.7725, 106.698`, `11,06176
+106,529633`, `(11.06176, 106.529633)` hoặc dạng độ-phút-giây
+`11°03'42.3"N 106°31'46.7"E`.</p></li>
+<li><p>Dán link chia sẻ từ Google Maps (kể cả link rút gọn
+`maps.app.goo.gl/…`), link OpenStreetMap. Kết quả hiện “Toạ độ …, cách …
+km” → bấm để đi.</p></li>
+<li><p>Mở lại hộp tìm mà ô vẫn còn nội dung cũ thì app tự tìm
+lại.</p></li>
+</ul>
+<h2 id="chọn-trên-bản-đồ">6.2. Chọn trên bản đồ</h2>
+<ol type="1">
+<li><p>Trong hộp “Đi đến đâu?” bấm <strong>Chọn trên bản
+đồ</strong>.</p></li>
+<li><p>Kéo bản đồ để đặt <strong>ghim đỏ</strong> vào nơi muốn
+đến.</p></li>
+<li><p>Bấm <strong>Đi đến đây</strong> (hoặc
+<strong>Huỷ</strong>).</p></li>
+</ol>
+<h2 id="nơi-đã-lưu">6.3. Nơi đã lưu</h2>
+<ul>
+<li><p>Gõ tên (ví dụ “Nhà”, “Cơ quan”) vào ô <strong>Tên</strong> rồi
+bấm <strong>Lưu vị trí hiện tại</strong>; hoặc bấm <strong>☆
+Lưu</strong> cạnh một kết quả tìm kiếm. Chưa gõ tên thì app mở ngay ô
+đặt tên.</p></li>
+<li><p>Các nơi đã lưu hiện thành nút nhanh trong hộp dẫn đường; bấm để
+đi hoặc nói “đi đến nhà”.</p></li>
+<li><p><strong>Đổi tên</strong>: bấm <strong>✎</strong> cạnh điểm lưu →
+sửa → <strong>Lưu</strong>. <strong>Xoá</strong>: bấm <strong>×</strong>
+(có Hoàn tác).</p></li>
+</ul>
+<h2 id="trong-khi-dẫn-đường">6.4. Trong khi dẫn đường</h2>
+<ul>
+<li><p>Thẻ hướng dẫn cho biết khoảng cách tới chỗ rẽ, tên đường, quãng
+đường và thời gian còn lại.</p></li>
+<li><p>Lộ trình được báo trước là <strong>có đi qua camera</strong> hay
+không.</p></li>
+<li><p>Đi lệch đường: app tự tính lại lộ trình (thử lại định kỳ nếu mất
+sóng).</p></li>
+<li><p>Muốn đổi tuyến giữa chừng: <strong>chạm dòng “… còn x km · khoảng
+y phút”</strong> dưới thẻ dẫn đường → app tìm các lộ trình khác từ vị
+trí hiện tại để chọn.</p></li>
+<li><p>Kết thúc: bấm <strong>Dừng</strong> trên thẻ dẫn đường hoặc nói
+“dừng dẫn đường”.</p></li>
+</ul>
+<h2 id="chia-sẻ-hành-trình">6.5. Chia sẻ hành trình</h2>
+<p>Bấm nút <strong>Chia sẻ hành trình</strong> trên thẻ dẫn đường để gửi
+cho người thân đường link xem vị trí xe trên bản đồ, kèm điểm đến và giờ
+đến dự kiến (qua Zalo, tin nhắn…). Khi đang chia sẻ, màn hình có thẻ
+xanh <strong>“Đang chia sẻ hành trình · bấm để tắt”</strong>; bấm vào
+thẻ để tắt. Dừng chuyến đi cũng tự tắt. Nếu app bị tắt giữa chuyến, mở
+lại sẽ tiếp tục chia sẻ với cùng đường link.</p>
+<h1 id="bản-đồ-offline-theo-tỉnh">7. Bản đồ offline theo tỉnh</h1>
+<p>Dùng khi đi vùng sóng yếu hoặc muốn tiết kiệm dữ liệu di động.</p>
+<ol type="1">
+<li><p>Vào <strong>Cài đặt → Bản đồ offline theo tỉnh…</strong></p></li>
+<li><p>App gợi ý tỉnh/thành anh/chị đang đứng. Có thể tìm tỉnh khác
+trong ô tìm kiếm (34 tỉnh/thành theo đơn vị hành chính mới).</p></li>
+<li><p>Bấm vào tỉnh để tải (mỗi tỉnh khoảng 5–50 MB). Nên tải khi có
+<strong>Wi-Fi</strong>.</p></li>
+<li><p>Mục <strong>Đã tải</strong> liệt kê các tỉnh đã có, dung lượng,
+ngày tải; bấm <strong>Cập nhật</strong> khi có bản mới hoặc
+<strong>Xoá</strong> để giải phóng bộ nhớ.</p></li>
+</ol>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>Khi có mạng, app vẫn ưu tiên bản đồ trực tuyến mới nhất; khi mất
+mạng mới dùng bản đồ đã tải. Dữ liệu tốc độ/camera của khu vực đã đi qua
+cũng được giữ lại để dùng offline.</td>
+</tr>
+</tbody>
+</table></div>
+<h1 id="giọng-nói">8. Giọng nói</h1>
+<h2 id="giọng-đọc-cảnh-báo">8.1. Giọng đọc cảnh báo</h2>
+<ul>
+<li><p><strong>Cài đặt → Giọng đọc:</strong> chọn giọng tiếng Việt có
+trên máy.</p></li>
+<li><p><strong>Kiểu giọng:</strong> Dễ thương / Bình thường / Trầm ấm.
+Bấm <strong>Thử giọng đọc</strong> để nghe.</p></li>
+<li><p>Muốn giọng hay hơn: iPhone vào <strong>Cài đặt → Trợ năng → Nội
+dung được đọc → Giọng nói → Tiếng Việt</strong>, tải giọng <strong>nâng
+cao</strong>. Android vào <strong>Cài đặt → Chuyển văn bản thành giọng
+nói</strong>, chọn Google và tải giọng tiếng Việt. Tải xong mở lại
+app.</p></li>
+</ul>
+<h2 id="ra-lệnh-bằng-giọng-nói">8.2. Ra lệnh bằng giọng nói</h2>
+<p>Bấm nút <strong>🎤 Micro</strong> rồi nói một trong các lệnh sau:</p>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 41%" />
+<col style="width: 58%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Câu nói (ví dụ)</strong></th>
+<th><strong>Tác dụng</strong></th>
+</tr>
+<tr class="odd">
+<th>“Đánh dấu camera”</th>
+<th>Đánh dấu camera tại vị trí hiện tại</th>
+</tr>
+<tr class="header">
+<th>“Báo đèn tắt” / “đèn hư”</th>
+<th>Báo đèn chiếu sáng tắt/hư</th>
+</tr>
+<tr class="odd">
+<th>“Báo ngập”</th>
+<th>Báo điểm ngập tại vị trí hiện tại</th>
+</tr>
+<tr class="header">
+<th>“Đi đến nhà” / “đi tới cơ quan”</th>
+<th>Dẫn đường tới nơi đã lưu hoặc tìm theo tên</th>
+</tr>
+<tr class="odd">
+<th>“Dừng dẫn đường”</th>
+<th>Huỷ dẫn đường</th>
+</tr>
+<tr class="header">
+<th>“Bật giọng nói” / “tắt giọng nói”</th>
+<th>Bật/tắt đọc cảnh báo</th>
+</tr>
+<tr class="odd">
+<th>“Bắt đầu quay” / “dừng quay”</th>
+<th>Bật/tắt camera hành trình</th>
+</tr>
+<tr class="header">
+<th>“Khoá video” / “lưu video”</th>
+<th>Khoá đoạn video đang quay để không bị ghi đè</th>
+</tr>
+<tr class="odd">
+<th>“Tốc độ”</th>
+<th>Đọc tốc độ hiện tại và giới hạn</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h1 id="báo-cáo-chiếu-sáng-và-tuần-tra">9. Báo cáo chiếu sáng và tuần
+tra</h1>
+<p>Nhóm tính năng dành cho đơn vị quản lý, duy tu hệ thống chiếu sáng
+công cộng.</p>
+<h2 id="báo-đèn-tắt-báo-ngập">9.1. Báo đèn tắt, báo ngập</h2>
+<ul>
+<li><p>Bấm nút <strong>💡 Báo đèn tắt</strong> khi đi qua đoạn đèn tắt;
+vị trí, giờ được ghi lại. Có 6,5 giây để hoàn tác.</p></li>
+<li><p>Báo điểm ngập: <strong>Cài đặt → Báo cáo chiếu sáng… → Báo điểm
+ngập tại đây</strong>, hoặc nói “báo ngập”.</p></li>
+<li><p>Trong <strong>Báo cáo chiếu sáng…</strong>: <strong>Xuất CSV
+(Excel)</strong>, <strong>Gửi lên máy chủ</strong>, <strong>Xoá danh
+sách trên máy</strong>.</p></li>
+</ul>
+<h2 id="tuần-tra-chiếu-sáng-theo-danh-sách-trụ">9.2. Tuần tra chiếu sáng
+theo danh sách trụ</h2>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><p><img loading="lazy" src="./media/0f9d82af76fb41931faaf9aff20058a086e1995e.png"
+title="Hình 5. Thẻ trụ gần nhất khi tuần tra"
+
+alt="Hình 5. Thẻ trụ gần nhất khi tuần tra" /></p>
+<p><em>Hình 5. Thẻ trụ gần nhất khi tuần tra</em></p></td>
+<td><p><img loading="lazy" src="./media/1389d62c8b4061b7ad8337cfa7daee79bec0c5dc.png"
+title="Hình 6. Thẻ thời tiết, đèn tín hiệu"
+
+alt="Hình 6. Thẻ thời tiết, đèn tín hiệu" /></p>
+<p><em>Hình 6. Thẻ thời tiết, đèn tín hiệu</em></p></td>
+</tr>
+</tbody>
+</table></div>
+<ol type="1">
+<li><p>Chuẩn bị file <strong>CSV</strong> danh sách trụ với các cột:
+<strong>Mã trụ, Vĩ độ, Kinh độ, Tuyến</strong> (xuất từ Excel: Lưu thành
+→ CSV UTF-8).</p></li>
+<li><p>Vào <strong>Cài đặt → Tuần tra chiếu sáng…</strong>, chọn file
+CSV. App báo “Đã nạp N trụ”.</p></li>
+<li><p>Bật <strong>Tuần tra</strong>. Khi lái xe, app hiện thẻ
+<strong>trụ gần nhất</strong> (mã trụ, tên tuyến, khoảng cách).</p></li>
+<li><p>Bấm <strong>Sáng</strong> / <strong>Tắt</strong> /
+<strong>Hư</strong> cho từng trụ. Trụ vừa đi qua được giữ trên màn hình
+thêm vài giây để bấm đúng trụ; báo cáo dùng toạ độ trụ trong danh sách.
+Trụ đã đánh giá sẽ chuyển sang trụ kế tiếp.</p></li>
+<li><p>Xong lượt: <strong>Xuất báo cáo tuần tra (CSV)</strong>. Bắt đầu
+lượt mới: <strong>Xoá kết quả, bắt đầu lượt mới</strong>.</p></li>
+</ol>
+<h2 id="mã-qr-trên-trụ">9.3. Mã QR trên trụ</h2>
+<ul>
+<li><p><strong>In mã QR cho các trụ…</strong> tạo trang in mã QR từ danh
+sách trụ đã nạp (mỗi file tối đa 200 mã; danh sách lớn được tải về thành
+nhiều file), để dán lên trụ.</p></li>
+<li><p>Người dân hoặc công nhân quét mã QR bằng camera điện thoại → mở
+app với hộp <strong>Báo sự cố trụ</strong> (mã trụ điền sẵn) → chọn
+<strong>Đèn tắt</strong> hoặc <strong>Hư hỏng khác</strong>. App lấy vị
+trí của trụ trong danh sách (hoặc xin vị trí điện thoại một lần) và gửi
+báo cáo ngay.</p></li>
+</ul>
+<h1 id="camera-hành-trình">10. Camera hành trình</h1>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><p><img loading="lazy" src="./media/e0aca848109cb281fde46375eca957c813dfea4d.png"
+title="Hình 7. Quản lý video hành trình"
+
+alt="Hình 7. Quản lý video hành trình" /></p>
+<p><em>Hình 7. Quản lý video hành trình</em></p></td>
+<td><p><img loading="lazy" src="./media/7f36a3dfcc92b4b8ef18dde789b4212baab34334.png"
+title="Hình 8. Màn hình SOS khi va chạm"
+
+alt="Hình 8. Màn hình SOS khi va chạm" /></p>
+<p><em>Hình 8. Màn hình SOS khi va chạm</em></p></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><p>Gắn điện thoại sao cho camera sau nhìn ra phía trước. Bấm nút
+<strong>🎥</strong> để bắt đầu/dừng quay. Khi đang quay có chấm đỏ
+<strong>REC</strong>.</p></li>
+<li><p>Video được chia thành đoạn ngắn, lưu <strong>trên điện
+thoại</strong> (không gửi đi đâu). Khi đầy dung lượng tối đa (1/2/4/8
+GB), đoạn cũ nhất chưa khoá sẽ bị xoá.</p></li>
+<li><p><strong>Tự khoá video khi va chạm mạnh:</strong> đoạn đang quay
+được giữ lại, không bị ghi đè.</p></li>
+<li><p><strong>Cài đặt → Video hành trình…</strong>: Xem, Tải về, Khoá,
+Xoá từng đoạn; <strong>Khoá đoạn đang quay</strong>; <strong>Xoá tất cả
+video không khoá</strong>.</p></li>
+</ul>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>Trên trình duyệt, app chỉ quay khi đang mở và màn hình sáng. Nên cắm
+sạc khi dùng lâu.</td>
+</tr>
+</tbody>
+</table></div>
+<h1 id="tính-năng-an-toàn">11. Tính năng an toàn</h1>
+<h2 id="sos-khi-va-chạm">11.1. SOS khi va chạm</h2>
+<ol type="1">
+<li><p>Vào <strong>Cài đặt → SOS va chạm</strong>, nhập <strong>số điện
+thoại người thân</strong> và bật tính năng.</p></li>
+<li><p>Khi phát hiện va chạm mạnh <strong>và xe dừng hẳn ngay sau
+đó</strong> (nếu xe vẫn chạy bình thường, ví dụ qua ổ gà, app bỏ qua),
+app hiện màn hình đỏ <strong>“Anh có ổn không?”</strong> và đếm ngược
+<strong>20 giây</strong>.</p></li>
+<li><p>Bấm <strong>Tôi ổn — huỷ</strong> nếu không sao. Nếu không bấm,
+app mở sẵn <strong>tin nhắn khẩn cấp</strong> chứa vị trí để gửi cho
+người thân (nếu chưa có GPS, tin nhắn ghi rõ “chưa xác định được vị
+trí”); có thể bấm <strong>Gửi SOS ngay</strong>.</p></li>
+<li><p>Dùng <strong>Thử màn hình SOS</strong> để kiểm tra trước (không
+gửi tin).</p></li>
+</ol>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 100%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>Trình duyệt không cho tự gửi tin nhắn: anh/chị (hoặc người đi cùng)
+vẫn cần bấm <strong>Gửi</strong> trong ứng dụng Tin nhắn. Đây là công cụ
+hỗ trợ, không thay thế gọi cấp cứu 115.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="nhắc-nghỉ-khi-lái-lâu">11.2. Nhắc nghỉ khi lái lâu</h2>
+<p><strong>Cài đặt → Nhắc nghỉ khi lái liên tục:</strong> Tắt / 2 / 3 /
+4 giờ. Theo Điều 64 Luật TTATGT đường bộ 2024, lái xe kinh doanh vận tải
+không lái liên tục quá <strong>4 giờ</strong> và quá <strong>10
+giờ/ngày</strong>. Một lần dừng từ <strong>15 phút</strong> trở lên được
+tính là nghỉ. App cũng báo khi đủ 10 giờ lái trong ngày.</p>
+<h2 id="thời-tiết">11.3. Thời tiết</h2>
+<p>Khi có mạng, app lấy thời tiết tại vị trí xe và hiện thẻ khuyến nghị,
+ví dụ <strong>“Đang mưa — nên giảm 10 km/h”</strong>, sương mù, tầm nhìn
+kém.</p>
+<h2 id="đường-cấm-xe-tải">11.4. Đường cấm xe tải</h2>
+<p>Với loại xe <strong>tải/xe khách lớn</strong> và <strong>xe buýt, đầu
+kéo</strong>, app hiện thẻ đỏ <strong>“Đường cấm xe tải giờ
+này”</strong> khi đi vào đoạn đường có khung giờ cấm theo dữ liệu bản
+đồ. Luôn tuân theo biển báo thực tế.</p>
+<h2 id="đèn-tín-hiệu-tốc-độ-làn-sóng-xanh">11.5. Đèn tín hiệu (tốc độ
+làn sóng xanh)</h2>
+<p>Tại các nút giao đã có dữ liệu chu kỳ đèn, app hiện thẻ như
+<strong>“Xanh còn 9s”</strong>. Khi đèn đỏ, app gợi ý chạy chậm lại để
+tới nơi vừa lúc đèn xanh. Khi đèn xanh, app chỉ gợi ý nếu <strong>không
+cần tăng tốc</strong> và luôn chừa biên an toàn 3 giây; giọng nói chỉ
+đọc màu đèn và số giây. Chỉ báo các nút giao <strong>phía
+trước</strong>, không báo nút đã đi qua. Dữ liệu chu kỳ đèn do đơn vị
+quản lý cung cấp; nơi chưa có dữ liệu thì không hiện.</p>
+<h1 id="tiện-ích-khác">12. Tiện ích khác</h1>
+<h2 id="chuyến-đi-và-điểm-an-toàn">12.1. Chuyến đi và điểm an toàn</h2>
+<p>Mỗi chuyến đi được lưu: thời gian, quãng đường, tốc độ trung bình/tối
+đa, số lần vượt tốc độ và <strong>điểm lái an toàn</strong> (thang
+0–100: trừ điểm mỗi lần vượt tốc độ, phanh gấp). Xem tại <strong>Cài đặt
+→ Chuyến đi đã lưu…</strong>, có <strong>Xuất CSV (Excel)</strong> và
+<strong>Xoá lịch sử chuyến đi</strong>.</p>
+<h2 id="chiếu-kính-lái-hud">12.2. Chiếu kính lái (HUD)</h2>
+<ol type="1">
+<li><p><strong>Cài đặt → Chiếu kính lái (HUD):</strong> chọn <strong>Lật
+dọc</strong> (thường dùng khi đặt điện thoại nằm dưới kính lái) hoặc
+<strong>Lật ngang</strong>.</p></li>
+<li><p>Bấm <strong>Bật chế độ chiếu kính lái</strong>. Màn hình chuyển
+nền đen, chữ lớn phản chiếu lên kính.</p></li>
+<li><p>Bấm <strong>Thoát HUD</strong> để quay lại.</p></li>
+</ol>
+<h2 id="đội-xe">12.3. Đội xe</h2>
+<ul>
+<li><p><strong>Cài đặt → Đội xe…</strong>: nhập <strong>Tên xe / tài
+xế</strong> và <strong>Mã đội</strong> (bí mật, ít nhất 8 ký tự). Người
+phụ trách bấm <strong>Tạo mã đội mới (khó đoán)</strong> rồi gửi mã cho
+các tài xế.</p></li>
+<li><p>Bật <strong>Chia sẻ vị trí khi lái</strong>: xe gửi vị trí mỗi
+<strong>15 giây</strong> trong lúc chạy. Tắt là ngừng gửi ngay và vị trí
+của máy được xoá khỏi đội.</p></li>
+<li><p>Người điều độ bấm <strong>Mở trang điều độ</strong> (trang
+fleet.html#&lt;mã đội&gt;) trên máy tính để xem vị trí, tốc độ các xe
+trên bản đồ.</p></li>
+</ul>
+<h2 id="kết-nối-obd-ii-android">12.4. Kết nối OBD-II (Android)</h2>
+<p>Với thiết bị OBD-II Bluetooth LE (ELM327 BLE): <strong>Cài đặt → Kết
+nối OBD-II… → Tìm và kết nối</strong>. App lấy <strong>tốc độ từ
+xe</strong> thay cho GPS, hiện vòng tua máy và nhiệt độ nước làm mát.
+Nếu tốc độ OBD lệch nhiều so với GPS (quá 20 km/h trong 5 giây), app báo
+và tự quay về dùng GPS. Chỉ hỗ trợ Chrome trên Android.</p>
+<h2 id="góp-ý-đánh-giá">12.5. Góp ý &amp; đánh giá</h2>
+<p><strong>Cài đặt → Góp ý &amp; đánh giá…</strong>: chấm 1–5 sao, chọn
+loại (Đề xuất tính năng, Lỗi app, Sai giới hạn tốc độ, Sai/thiếu camera,
+Khác) và viết nội dung. Tích “Gửi kèm vị trí” nếu góp ý về một chỗ cụ
+thể. Mất mạng thì góp ý được lưu và tự gửi sau.</p>
+<h2 id="giao-diện">12.6. Giao diện</h2>
+<p><strong>Cài đặt → Giao diện:</strong> Theo thiết bị / Tối / Sáng. Ban
+đêm nên dùng <strong>Tối</strong> để đỡ chói mắt.</p>
+<h1 id="bảng-tổng-hợp-cài-đặt">13. Bảng tổng hợp Cài đặt</h1>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><p><img loading="lazy" src="./media/302f9950ab93691d3ca1c82170fab7eec86dc365.png"
+title="Hình 9. Cài đặt (phần đầu)"
+
+alt="Hình 9. Cài đặt (phần đầu)" /></p>
+<p><em>Hình 9. Cài đặt (phần đầu)</em></p></td>
+<td><p><img loading="lazy" src="./media/87bc6ccc41de956505f83a3cb014bea73faec375.png"
+title="Hình 10. Cài đặt (phần Lái xe)"
+
+alt="Hình 10. Cài đặt (phần Lái xe)" /></p>
+<p><em>Hình 10. Cài đặt (phần Lái xe)</em></p></td>
+</tr>
+</tbody>
+</table></div>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 39%" />
+<col style="width: 29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Mục</strong></th>
+<th><strong>Lựa chọn</strong></th>
+<th><strong>Ghi chú</strong></th>
+</tr>
+<tr class="odd">
+<th>Loại xe</th>
+<th>Ô tô con / Xe mô tô / Xe khách, tải lớn / Xe buýt, đầu kéo</th>
+<th>Ảnh hưởng mức ước tính và lộ trình</th>
+</tr>
+<tr class="header">
+<th>Số tốc độ hiển thị</th>
+<th>Theo GPS / Như đồng hồ xe +3…10%</th>
+<th>Mục 4.2</th>
+</tr>
+<tr class="odd">
+<th>Báo cảnh báo trước</th>
+<th>300 / 500 / 800 / 1000 m</th>
+<th>Mặc định 500 m</th>
+</tr>
+<tr class="header">
+<th>Giao diện</th>
+<th>Theo thiết bị / Tối / Sáng</th>
+<th></th>
+</tr>
+<tr class="odd">
+<th>Đọc cảnh báo bằng giọng nói</th>
+<th>Bật / Tắt</th>
+<th>Cũng bật/tắt được bằng nút 🔊</th>
+</tr>
+<tr class="header">
+<th>Giọng đọc, Kiểu giọng</th>
+<th>Theo giọng có trên máy; Dễ thương / Bình thường / Trầm ấm</th>
+<th></th>
+</tr>
+<tr class="odd">
+<th>Bản đồ offline theo tỉnh</th>
+<th>Tải / Cập nhật / Xoá</th>
+<th>Mục 7</th>
+</tr>
+<tr class="header">
+<th>Nhắc nghỉ</th>
+<th>Tắt / 2 / 3 / 4 giờ</th>
+<th>Mục 11.2</th>
+</tr>
+<tr class="odd">
+<th>Chiếu kính lái (HUD)</th>
+<th>Không lật / Lật ngang / Lật dọc</th>
+<th>Mục 12.2</th>
+</tr>
+<tr class="header">
+<th>Chuyến đi, Video, Báo cáo, Đội xe, Tuần tra, OBD</th>
+<th>Các hộp quản lý riêng</th>
+<th>Mục 9, 10, 12</th>
+</tr>
+<tr class="odd">
+<th>SOS va chạm</th>
+<th>Số điện thoại, Bật/Tắt, Thử</th>
+<th>Mục 11.1</th>
+</tr>
+<tr class="header">
+<th>Thử nghiệm</th>
+<th>Đọc biển tốc độ bằng camera</th>
+<th>Mục 4.2</th>
+</tr>
+<tr class="odd">
+<th>Camera tự đánh dấu</th>
+<th>Danh sách dấu (Xoá từng dấu) / Đồng bộ ngay / Xoá tất cả</th>
+<th>Mục 5.3–5.4</th>
+</tr>
+<tr class="header">
+<th>Góp ý &amp; đánh giá</th>
+<th>Sao, loại, nội dung, kèm vị trí</th>
+<th>Mục 12.5</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h1 id="câu-hỏi-thường-gặp-và-xử-lý-sự-cố">14. Câu hỏi thường gặp và xử
+lý sự cố</h1>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 68%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Hiện tượng</strong></th>
+<th><strong>Cách xử lý</strong></th>
+</tr>
+<tr class="odd">
+<th>Chấm đỏ “Mất tín hiệu GPS”</th>
+<th>Kiểm tra đã cho phép quyền <strong>Vị trí</strong> (iPhone: Cài đặt
+→ Quyền riêng tư → Dịch vụ định vị → Safari/Lái An Toàn → Khi dùng app,
+bật <strong>Vị trí chính xác</strong>). Đặt điện thoại nơi thoáng, không
+bị che.</th>
+</tr>
+<tr class="header">
+<th>Không nghe giọng nói</th>
+<th>Kiểm tra nút 🔊 đang bật, âm lượng điện thoại, iPhone không ở chế độ
+im lặng; cài giọng tiếng Việt (mục 8.1).</th>
+</tr>
+<tr class="odd">
+<th>Không có biển giới hạn</th>
+<th>Đoạn đường chưa có dữ liệu. Chạy theo biển báo thực tế.</th>
+</tr>
+<tr class="header">
+<th>Biển giới hạn sai</th>
+<th>Biển “ước tính” (viền nét đứt) chỉ để tham khảo. Kiểm tra lại
+<strong>Loại xe</strong> trong Cài đặt.</th>
+</tr>
+<tr class="odd">
+<th>Tìm không ra địa chỉ</th>
+<th>Thử gõ tên ngắn hơn, không dấu, hoặc dùng <strong>Chọn trên bản
+đồ</strong>.</th>
+</tr>
+<tr class="header">
+<th>Bản đồ trống khi mất mạng</th>
+<th>Tải trước bản đồ offline của tỉnh (mục 7).</th>
+</tr>
+<tr class="odd">
+<th>Camera hành trình dừng quay</th>
+<th>Màn hình bị tắt hoặc chuyển sang app khác. Giữ app mở, tắt tự khoá
+màn hình khi lái.</th>
+</tr>
+<tr class="header">
+<th>Micro không nghe lệnh</th>
+<th>Cho phép quyền Micro; nói rõ, gần điện thoại; trên iPhone dùng
+Safari phiên bản mới.</th>
+</tr>
+<tr class="odd">
+<th>Số tốc độ thấp hơn đồng hồ xe</th>
+<th>Bình thường (đồng hồ xe báo cao hơn thật). Chỉnh <strong>Số tốc độ
+hiển thị</strong> nếu muốn khớp (mục 4.2).</th>
+</tr>
+<tr class="header">
+<th>Biển giới hạn nhảy qua lại</th>
+<th>Đã xử lý: app giữ con đường đang đi. Nếu còn gặp, chạm biển → gửi
+góp ý kèm vị trí.</th>
+</tr>
+<tr class="odd">
+<th>App chưa lên bản mới</th>
+<th>Đóng hẳn app rồi mở lại; nếu vẫn chưa, kéo xuống để tải lại
+trang.</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table></div>
+<h2 id="lưu-ý-pháp-lý">Lưu ý pháp lý</h2>
+<ul>
+<li><p>App là công cụ <strong>hỗ trợ tham khảo</strong>, không thay thế
+biển báo, tín hiệu và hướng dẫn của người điều khiển giao
+thông.</p></li>
+<li><p>Dữ liệu bản đồ © những người đóng góp
+<strong>OpenStreetMap</strong> (giấy phép ODbL); nền bản đồ OpenFreeMap;
+dẫn đường Valhalla/FOSSGIS; thời tiết Open-Meteo.</p></li>
+<li><p>Người lái chịu trách nhiệm tuân thủ Luật Trật tự, an toàn giao
+thông đường bộ 2024. Không thao tác điện thoại khi xe đang
+chạy.</p></li>
+</ul>
+
+</main>
+<a class="top" href="#dau" aria-label="Lên đầu trang">↑</a>
+<script>
+// mở từ app → quay lại đúng màn hình cũ; mở thẳng link → vào app
+document.getElementById('back').addEventListener('click', function (e) {
+  try {
+    if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) { e.preventDefault(); history.back(); }
+  } catch (_) {}
+});
+</script>
+</body>
+</html>

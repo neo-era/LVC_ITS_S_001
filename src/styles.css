@@ -2002,3 +2002,16 @@ button.nav-foot {
     right: calc(24px + 2 * 48px + 8px + env(safe-area-inset-right));
   }
 }
+/* Link hướng dẫn trên màn hình đầu */
+.start-guide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
