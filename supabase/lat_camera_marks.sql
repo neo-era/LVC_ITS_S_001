@@ -121,3 +121,24 @@ revoke all on function public.fleet_leave(text, text) from public;
 grant execute on function public.fleet_ping(text, text, text, double precision, double precision, integer, integer) to anon;
 grant execute on function public.fleet_list(text) to anon;
 grant execute on function public.fleet_leave(text, text) to anon;
+
+-- =====================================================================
+-- Rút lại dấu camera bấm nhầm: chỉ xoá dấu CHƯA DUYỆT do chính máy đó gửi (khớp mã máy).
+create or replace function public.lat_mark_withdraw(p_ids text[], p_device text)
+returns integer
+language sql
+security definer
+set search_path = ''
+as $$
+  with d as (
+    delete from public.lat_camera_marks
+    where id = any (p_ids[1:200])
+      and device = p_device
+      and char_length(p_device) between 8 and 40
+      and status = 'moi'
+    returning 1
+  )
+  select count(*)::integer from d;
+$$;
+revoke all on function public.lat_mark_withdraw(text[], text) from public;
+grant execute on function public.lat_mark_withdraw(text[], text) to anon;

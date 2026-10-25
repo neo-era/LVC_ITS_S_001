@@ -59,3 +59,25 @@ export async function pushMarks(device: string, marks: Mark[]): Promise<string[]
   }
   return sent;
 }
+
+/** Rút (xoá) các dấu do chính máy này đã gửi mà chưa được duyệt — qua hàm lat_mark_withdraw. */
+export function withdrawBody(ids: string[], device: string) {
+  return { p_ids: ids, p_device: device };
+}
+
+/** Gộp id cần rút vào hàng chờ (không trùng, giữ 200 mục mới nhất) để gửi lại khi có mạng. */
+export function queueWithdraw(queue: string[], ids: string[]): string[] {
+  const out = [...queue];
+  for (const id of ids) if (!out.includes(id)) out.push(id);
+  return out.slice(Math.max(0, out.length - 200));
+}
+
+export async function withdrawMarks(device: string, ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/lat_mark_withdraw`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify(withdrawBody(ids, device)),
+  });
+  if (!res.ok) throw new Error(`Máy chủ trả lỗi ${res.status}`);
+}

@@ -23,6 +23,8 @@ export class MapView {
   private routePts: { lat: number; lng: number }[] = [];
   private last: { lat: number; lng: number; heading: number | null; kmh: number | null } | null = null;
   onFollowChange: (follow: boolean) => void = () => {};
+  /** Chạm vào chấm cảnh báo (camera/điểm đen) trên bản đồ. */
+  onAlertTap: (id: string) => void = () => {};
 
   private static registered = false;
   private readonly styles = new Map<string, unknown>();
@@ -102,6 +104,20 @@ export class MapView {
     });
     new ResizeObserver(() => map.resize()).observe(this.container);
     map.on('style.load', () => this.ensureLayers());
+    // chạm chấm camera → hỏi xem/xoá (vùng chạm rộng hơn chấm cho dễ bấm khi trên xe)
+    map.on('click', (e) => {
+      if (!map.getLayer('alerts-dot')) return;
+      const r = 22;
+      const hits = map.queryRenderedFeatures(
+        [
+          [e.point.x - r, e.point.y - r],
+          [e.point.x + r, e.point.y + r],
+        ],
+        { layers: ['alerts-dot'] },
+      );
+      const id = hits[0]?.properties?.id;
+      if (typeof id === 'string') this.onAlertTap(id);
+    });
     map.on('dragstart', () => {
       this.setFollow(false);
       this.armAutoFollow();

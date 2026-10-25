@@ -6,7 +6,8 @@ import type { GpsSample } from './core/gps';
 import { isVehicle, type Vehicle } from './core/vehicle';
 import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
-import { authHeaders, pushMarks, SUPABASE_URL } from './sync';
+import { authHeaders, pushMarks, queueWithdraw, SUPABASE_URL, withdrawMarks } from './sync';
+import { fmtVnTime } from './features/reports';
 import { Guidance, type NavState } from './nav/guidance';
 import { pickedPlace, reversePlace, searchPlaces, type Place } from './nav/geocode';
 import { isShortMapLink, parseCoords } from './nav/coords';
@@ -114,6 +115,11 @@ async function ensureMap(lat: number, lng: number): Promise<void> {
   try {
     const mv = new MapView($('map'), isDark(), offline);
     mv.onFollowChange = (f) => ($('btn-map-follow').hidden = f);
+    mv.onAlertTap = (id) => {
+      const m = marks.find((x) => x.id === id);
+      if (m) toast(`Dấu camera anh đánh lúc ${fmtVnTime(m.t)}.`, () => deleteMark(id), 'Xoá dấu', 8000);
+      else toast('Camera trong dữ liệu chung (bản đồ / dấu đã duyệt), không xoá được từ máy.', undefined, undefined, 5000);
+    };
     await mv.init({ lat, lng });
     mapView = mv;
     applyMapPadding();
@@ -193,7 +199,88 @@ function toast(text: string, undo?: () => void, actionLabel = 'Hoàn tác', ms =
   toastTimer = window.setTimeout(() => ($('toast').hidden = true), ms);
 }
 
+/* ---------- Xoá từng dấu camera (bấm nhầm) ---------- */
+const WD_KEY = 'lat.marks.withdraw.v1';
+let withdrawQ: string[] = (() => {
+  try {
+    const v = JSON.parse(lsGet(WD_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+})();
+const saveWithdraw = () => lsSet(WD_KEY, JSON.stringify(withdrawQ));
+let wdTimer: number | null = null;
+/** Gửi yêu cầu rút các dấu đã đồng bộ (chỉ dấu chưa duyệt của chính máy này mới bị xoá trên máy chủ). */
+async function flushWithdraw(): Promise<void> {
+  if (!withdrawQ.length || !navigator.onLine) return;
+  const ids = [...withdrawQ];
+  try {
+    await withdrawMarks(deviceId(), ids);
+    withdrawQ = withdrawQ.filter((x) => !ids.includes(x));
+    saveWithdraw();
+  } catch {
+    /* thử lại lần sau */
+  }
+}
+window.addEventListener('online', () => void flushWithdraw());
+setTimeout(() => void flushWithdraw(), 5000);
+
+function deleteMark(id: string): void {
+  const m = marks.find((x) => x.id === id);
+  if (!m) return;
+  marks = removeMark(marks, id);
+  saveMarks();
+  engine.removeAlert(m);
+  if (m.synced) {
+    withdrawQ = queueWithdraw(withdrawQ, [id]);
+    saveWithdraw();
+  }
+  refreshMapAlerts();
+  refreshMarksInfo();
+  toast('Đã xoá dấu camera.', () => {
+    // hoàn tác: đặt lại dấu, bỏ khỏi hàng chờ rút; dấu sẽ được gửi lại khi đồng bộ
+    withdrawQ = withdrawQ.filter((x) => x !== id);
+    saveWithdraw();
+    const back = { ...m, synced: false };
+    marks = addMark(marks, back).marks;
+    saveMarks();
+    engine.addAlert(markToAlert(back));
+    refreshMapAlerts();
+    refreshMarksInfo();
+    $('toast').hidden = true;
+    void syncMarks(true);
+  });
+  // chờ hết thời gian hoàn tác rồi mới gửi yêu cầu rút
+  if (wdTimer !== null) clearTimeout(wdTimer);
+  wdTimer = window.setTimeout(() => void flushWithdraw(), 6500);
+}
+
+function renderMarksList(): void {
+  const here = lastFix;
+  $('marks-list').replaceChildren(
+    ...[...marks]
+      .sort((a, b) => b.t - a.t)
+      .slice(0, 30)
+      .map((m) => {
+        const li = document.createElement('li');
+        li.className = 'off-row';
+        const txt = document.createElement('span');
+        txt.textContent = `${fmtVnTime(m.t)}${here ? ` · cách ${formatDistance(haversine(here, m))}` : ''}${m.synced ? '' : ' · chưa gửi'}`;
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'secondary';
+        del.textContent = 'Xoá';
+        del.setAttribute('aria-label', `Xoá dấu camera lúc ${fmtVnTime(m.t)}`);
+        del.addEventListener('click', () => deleteMark(m.id));
+        li.append(txt, del);
+        return li;
+      }),
+  );
+}
+
 function refreshMarksInfo(): void {
+  renderMarksList();
   const pending = marks.filter((m) => !m.synced).length;
   $('marks-info').textContent = marks.length
     ? `${marks.length} dấu trên máy, ${pending} chưa đồng bộ. Bấm “Đánh dấu camera” khi xe đi ngang camera.`
@@ -209,6 +296,7 @@ async function syncMarks(silent: boolean): Promise<void> {
   const say = (t: string) => {
     if (!silent) status.textContent = t;
   };
+  void flushWithdraw();
   const pending = marks.filter((m) => !m.synced);
   if (!pending.length) return say('Không có dấu nào cần đồng bộ.');
   if (!navigator.onLine) return say('Đang ngoại tuyến. Dấu vẫn lưu trên máy, sẽ gửi khi có mạng.');
@@ -271,11 +359,11 @@ $('btn-clear-marks').addEventListener('click', () => {
   refreshMapAlerts();
   refreshMarksInfo();
 });
-refreshMarksInfo();
 
 /* ---------- Dẫn đường ---------- */
 const navBox = $('nav');
 let lastFix: GpsSample | null = null;
+refreshMarksInfo(); // sau khi khai báo lastFix (danh sách dấu có ghi khoảng cách)
 let guidance: Guidance | null = null;
 let navRoute: Route | null = null;
 let navDest: Place | null = null;
