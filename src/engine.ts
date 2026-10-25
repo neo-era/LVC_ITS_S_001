@@ -5,7 +5,7 @@ import type { CellData } from './core/cells';
 import { alertVoiceText, overspeedVoiceText, speedState, type SpeedState } from './core/format';
 import { bearing, cellKey, cellsAround, haversine, type LatLng } from './core/geo';
 import { SpeedFilter, type GpsSample, type GpsStatus } from './core/gps';
-import { findLimit, matchSegment, type RoadSegment } from './core/speedlimit';
+import { limitOf, SegmentTracker, type RoadSegment } from './core/speedlimit';
 
 export interface ViewState {
   status: GpsStatus | 'idle';
@@ -159,6 +159,8 @@ export class Engine {
     }
   }
 
+  private readonly tracker = new SegmentTracker();
+
   private nearby(pos: LatLng): { segments: RoadSegment[]; alerts: AlertPoint[] } {
     const segs = new Map<string, RoadSegment>();
     for (const key of cellsAround(pos.lat, pos.lng, 60)) {
@@ -173,8 +175,8 @@ export class Engine {
 
   private compute(kmh: number | null, status: GpsStatus, pos: LatLng, t: number): void {
     const { segments, alerts } = this.nearby(pos);
-    const lim = kmh !== null ? findLimit(segments, pos, this.heading, this.vehicle) : null;
-    const seg = matchSegment(segments, pos, this.heading);
+    const seg = this.tracker.match(segments, pos, this.heading);
+    const lim = kmh !== null ? limitOf(seg, this.vehicle) : null;
     const camRoute = seg?.cam === true;
     const truckBan = (this.vehicle === 'truck' || this.vehicle === 'bus') && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
     const limit = lim ? lim.kmh : null;

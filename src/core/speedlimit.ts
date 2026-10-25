@@ -80,9 +80,79 @@ export function findLimit(
 ): LimitResult | null {
   const seg = matchSegment(segments, pos, heading);
   if (!seg) return null;
-  const distM = distToSegment(pos, seg.a, seg.b);
-  if (validSpeed(seg.maxspeed)) return { kmh: seg.maxspeed, segmentId: seg.id, distM, estimated: false };
+  const r = limitOf(seg, vehicle);
+  return r ? { ...r, distM: distToSegment(pos, seg.a, seg.b) } : null;
+}
+
+/** Giới hạn của một đoạn: số thật nếu có, không thì ước tính theo luật; null nếu không có dữ liệu. */
+export function limitOf(seg: RoadSegment | null, vehicle: Vehicle = 'car'): Omit<LimitResult, 'distM'> | null {
+  if (!seg) return null;
+  if (validSpeed(seg.maxspeed)) return { kmh: seg.maxspeed, segmentId: seg.id, estimated: false };
   const est = seg.ef !== undefined ? estimateLimit(seg.ef, vehicle) : (seg.est ?? null);
-  if (est !== null && validSpeed(est)) return { kmh: est, segmentId: seg.id, distM, estimated: true };
+  if (est !== null && validSpeed(est)) return { kmh: est, segmentId: seg.id, estimated: true };
   return null;
+}
+
+/** Mã con đường của đoạn: "w123_4" → "w123" (các đoạn cùng một đường OSM). */
+const wayOf = (id: string) => {
+  const i = id.lastIndexOf('_');
+  return i > 0 ? id.slice(0, i) : id;
+};
+
+/**
+ * Khớp đường có "trí nhớ": đường chính và đường song hành/nhánh rẽ chạy sát nhau (cách 5–20 m)
+ * thì GPS nhiễu làm đoạn gần nhất đổi qua lại → biển nhảy 50↔60. Giữ con đường đang đi chừng nào
+ * nó còn trong 25 m và cùng hướng; chỉ đổi khi đường khác thắng liên tiếp 3 mẫu,
+ * hoặc ngay lập tức khi đường cũ không còn hợp lệ (đã rẽ).
+ */
+export class SegmentTracker {
+  private way: string | null = null;
+  private pend: string | null = null;
+  private pendN = 0;
+
+  match(segments: RoadSegment[], pos: LatLng, heading: number | null): RoadSegment | null {
+    const best = matchSegment(segments, pos, heading);
+    if (!best) {
+      this.reset();
+      return null;
+    }
+    const bw = wayOf(best.id);
+    if (this.way === null || bw === this.way) return this.take(bw, best);
+    const prev = this.stillOn(segments, pos, heading);
+    if (!prev) return this.take(bw, best);
+    if (this.pend === bw) this.pendN++;
+    else {
+      this.pend = bw;
+      this.pendN = 1;
+    }
+    return this.pendN >= 3 ? this.take(bw, best) : prev;
+  }
+
+  reset(): void {
+    this.way = null;
+    this.pend = null;
+    this.pendN = 0;
+  }
+
+  private take(way: string, seg: RoadSegment): RoadSegment {
+    this.way = way;
+    this.pend = null;
+    this.pendN = 0;
+    return seg;
+  }
+
+  /** Đoạn gần nhất của con đường đang đi, nếu còn trong 25 m và cùng hướng (≤ 35°). */
+  private stillOn(segments: RoadSegment[], pos: LatLng, heading: number | null): RoadSegment | null {
+    let best: RoadSegment | null = null;
+    let bd = Infinity;
+    for (const s of segments) {
+      if (wayOf(s.id) !== this.way) continue;
+      const d = distToSegment(pos, s.a, s.b);
+      if (d > MAX_MATCH_DIST_M || d >= bd) continue;
+      if (heading !== null && Number.isFinite(heading) && alignment(heading, s) > 35) continue;
+      best = s;
+      bd = d;
+    }
+    return best;
+  }
 }

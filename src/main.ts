@@ -604,7 +604,6 @@ function setMapFull(full: boolean): void {
   mapbox.classList.toggle('full', full);
   $('btn-map-expand').setAttribute('aria-pressed', String(full));
   $('btn-map-expand').setAttribute('aria-label', full ? 'Thu nhỏ bản đồ' : 'Mở rộng bản đồ');
-  mapView?.setInteractive(full);
   mapView?.resize();
   applyMapPadding();
   if (!full) mapView?.recenter();

@@ -77,8 +77,13 @@ export class MapView {
       center: [center.lng, center.lat],
       zoom: 16,
       attributionControl: { compact: true },
-      interactive: false,
+      // kéo/thu phóng được ngay trên màn hình lái; xoay bản đồ theo hướng xe nên tắt xoay bằng tay
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
+    map.touchZoomRotate.disableRotation();
+    map.keyboard.disable();
     this.map = map;
     map.on('error', (e) => {
       // Style chính lỗi (mạng, URL) → thử style dự phòng một lần.
@@ -97,7 +102,12 @@ export class MapView {
     });
     new ResizeObserver(() => map.resize()).observe(this.container);
     map.on('style.load', () => this.ensureLayers());
-    map.on('dragstart', () => this.setFollow(false));
+    map.on('dragstart', () => {
+      this.setFollow(false);
+      this.armAutoFollow();
+    });
+    // đang thao tác thì hoãn tự quay về xe
+    map.on('zoomstart', () => !this.follow && this.armAutoFollow());
 
     this.arrow = document.createElement('div');
     this.arrow.className = 'car-marker';
@@ -187,21 +197,42 @@ export class MapView {
     return c ? { lat: c.lat, lng: c.lng } : null;
   }
 
-  /** Ngừng bám theo xe (để người dùng kéo bản đồ chọn điểm). */
+  /** Ngừng bám theo xe (để người dùng kéo bản đồ chọn điểm). Không tự quay về. */
   stopFollow(): void {
+    this.holdFollow = true;
+    this.clearAutoFollow();
     this.setFollow(false);
   }
 
+  /** Sau khi kéo bản đồ lúc đang chạy: 15 s không chạm thì tự quay về theo xe (trừ khi đang chọn điểm). */
+  private autoTimer: number | null = null;
+  private holdFollow = false;
+  private clearAutoFollow(): void {
+    if (this.autoTimer !== null) clearTimeout(this.autoTimer);
+    this.autoTimer = null;
+  }
+  private armAutoFollow(): void {
+    this.clearAutoFollow();
+    if (this.holdFollow) return;
+    this.autoTimer = window.setTimeout(() => {
+      this.autoTimer = null;
+      if (!this.holdFollow && (this.last?.kmh ?? 0) > 5) this.recenter();
+    }, 15_000);
+  }
+
   recenter(): void {
+    this.holdFollow = false;
+    this.clearAutoFollow();
     this.setFollow(true);
     if (this.last) this.move(this.last.lat, this.last.lng, this.last.heading, this.last.kmh);
   }
 
-  /** Bật/tắt thao tác chạm (chỉ khi mở rộng toàn màn hình). */
+  /** Bật/tắt thao tác chạm. */
   setInteractive(on: boolean): void {
     const m = this.map;
     if (!m) return;
     for (const h of [m.dragPan, m.touchZoomRotate, m.scrollZoom, m.doubleClickZoom]) on ? h.enable() : h.disable();
+    if (on) m.touchZoomRotate.disableRotation();
   }
 
   resize(): void {
