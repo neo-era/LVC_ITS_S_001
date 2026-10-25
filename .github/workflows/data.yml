@@ -10,6 +10,8 @@ on:
       - src/pipeline/**
       - src/core/cells.ts
       - .github/workflows/data.yml
+      - tools/inspect-areas.json
+      - tools/inspect.ts
 permissions:
   contents: read
   actions: write # để gọi lại quy trình đăng trang sau khi có dữ liệu mới
@@ -43,6 +45,12 @@ jobs:
           GEOJSONSEQ: roads.geojsonseq
           NODE_OPTIONS: --max-old-space-size=12288
         run: npm run data
+      - name: Soi dữ liệu vùng cần kiểm tra (tools/inspect-areas.json)
+        if: hashFiles('tools/inspect-areas.json') != ''
+        continue-on-error: true
+        env:
+          GEOJSONSEQ: roads.geojsonseq
+        run: npx tsx tools/inspect.ts
       - name: Lưu dữ liệu cho các lần đăng trang
         uses: actions/cache/save@v4
         with:
