@@ -34,6 +34,16 @@ th { background: #1f2937; color: #fff; }
 blockquote { margin: 10px 0; padding: 8px 12px; background: var(--note); border-left: 4px solid #b8860b; border-radius: 6px; }
 code { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: 14px; }
 a { color: var(--link); }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.lookup { position: sticky; top: 61px; z-index: 1; background: var(--bg); padding: 8px 0 4px; }
+.search input { width: 100%; min-height: 48px; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 16px; padding: 0 18px; }
+.search input:focus { outline: none; border-color: var(--link); }
+.hint { margin: 4px 6px; font-size: 13px; color: var(--muted); min-height: 1em; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.chips button { flex: none; min-height: 36px; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+body.searching .toc { display: none; }
+.hide { display: none !important; }
+mark { background: #ffe35a; color: #111; border-radius: 3px; padding: 0 1px; }
 .top { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: #111; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size: 22px; font-weight: 800; box-shadow: 0 4px 14px rgb(0 0 0 / .3); }
 </style>
 </head>
@@ -41,10 +51,15 @@ a { color: var(--link); }
 <header>
   <a class="back" id="back" href="../" aria-label="Quay lại app" title="Quay lại app">‹</a>
   <h1>Hướng dẫn sử dụng</h1>
-  <a class="dl" href="Huong-dan-su-dung-Lai-An-Toan.docx" download>Tải Word</a>
 </header>
 <main>
-<details class="toc"><summary>Mục lục</summary><nav><ul>
+<section class="lookup" aria-label="Tra cứu">
+<label class="search"><span class="sr">Tìm trong hướng dẫn</span>
+<input id="q" type="search" placeholder="Tìm: camera, toạ độ, offline, SOS…" autocomplete="off" enterkeyhint="search"></label>
+<p class="hint" id="qinfo" aria-live="polite"></p>
+<div class="chips" id="chips"></div>
+</section>
+<details class="toc" open><summary>Mục lục</summary><nav><ul>
 <li><a href="#giới-thiệu" id="toc-giới-thiệu">1. Giới thiệu</a>
 <ul>
 <li><a href="#yêu-cầu-thiết-bị" id="toc-yêu-cầu-thiết-bị">1.1. Yêu cầu
@@ -632,11 +647,11 @@ so với nhanh nhất) → bấm <strong>Đi tuyến này</strong>.</p></li>
 <h2 id="b.-tìm-bằng-toạ-độ-hoặc-link-google-maps">6.1b. Tìm bằng toạ độ
 hoặc link Google Maps</h2>
 <ul>
-<li><p>Gõ/dán toạ độ vào ô tìm: `10.7725, 106.698`, `11,06176
-106,529633`, `(11.06176, 106.529633)` hoặc dạng độ-phút-giây
-`11°03'42.3"N 106°31'46.7"E`.</p></li>
+<li><p>Gõ/dán toạ độ vào ô tìm: “10.7725, 106.698”, “11,06176
+106,529633”, “(11.06176, 106.529633)” hoặc dạng độ-phút-giây
+“11°03'42.3"N 106°31'46.7"E”.</p></li>
 <li><p>Dán link chia sẻ từ Google Maps (kể cả link rút gọn
-`maps.app.goo.gl/…`), link OpenStreetMap. Kết quả hiện “Toạ độ …, cách …
+“maps.app.goo.gl/…”), link OpenStreetMap. Kết quả hiện “Toạ độ …, cách …
 km” → bấm để đi.</p></li>
 <li><p>Mở lại hộp tìm mà ô vẫn còn nội dung cũ thì app tự tìm
 lại.</p></li>
@@ -1174,6 +1189,63 @@ document.getElementById('back').addEventListener('click', function (e) {
     if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) { e.preventDefault(); history.back(); }
   } catch (_) {}
 });
+
+// Tra cứu: chia nội dung theo mục (h2), lọc mục chứa từ khoá (không phân biệt dấu), tô vàng chỗ khớp
+(function () {
+  const fold = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  const main = document.querySelector('main');
+  const lookup = document.querySelector('.lookup');
+  const blocks = [];
+  let cur = null;
+  [...main.children].forEach((el) => {
+    if (el === lookup || el.classList.contains('toc')) return;
+    if (el.tagName === 'H1' || el.tagName === 'H2') { cur = { head: el, els: [el], h1: el.tagName === 'H1' ? el : (cur ? cur.h1 : null) }; blocks.push(cur); }
+    else if (cur) cur.els.push(el);
+  });
+  blocks.forEach((b) => (b.text = fold(b.els.map((e) => e.textContent).join(' '))));
+  const q = document.getElementById('q');
+  const info = document.getElementById('qinfo');
+  function clearMarks() { main.querySelectorAll('mark').forEach((m) => m.replaceWith(document.createTextNode(m.textContent))); main.normalize(); }
+  function mark(el, words) {
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach((n) => {
+      const f = fold(n.data);
+      let best = -1, len = 0;
+      for (const x of words) { const i = f.indexOf(x); if (i >= 0 && (best < 0 || i < best)) { best = i; len = x.length; } }
+      if (best < 0) return;
+      const r = document.createRange(); r.setStart(n, best); r.setEnd(n, best + len);
+      const m = document.createElement('mark'); r.surroundContents(m);
+    });
+  }
+  function run() {
+    clearMarks();
+    const ph = fold(q.value.trim()).replace(/\s+/g, ' ');
+    const words = ph.length >= 2 ? [ph] : []; // tìm theo cả cụm từ
+    document.body.classList.toggle('searching', words.length > 0);
+    if (!words.length) { blocks.forEach((b) => b.els.forEach((e) => e.classList.remove('hide'))); info.textContent = ''; return; }
+    let n = 0;
+    const showH1 = new Set();
+    blocks.forEach((b) => {
+      const ok = words.every((x) => b.text.includes(x));
+      b.els.forEach((e) => e.classList.toggle('hide', !ok));
+      if (ok) { n++; if (b.h1) showH1.add(b.h1); b.els.forEach((e) => mark(e, words)); }
+    });
+    showH1.forEach((h) => h.classList.remove('hide'));
+    info.textContent = n ? `Có ${n} mục khớp “${q.value.trim()}”` : `Không thấy “${q.value.trim()}”. Thử từ khác hoặc xem Mục lục.`;
+    const first = blocks.find((b) => !b.head.classList.contains('hide'));
+    if (first) window.scrollTo({ top: Math.max(0, first.head.getBoundingClientRect().top + scrollY - 200) });
+  }
+  let t = null;
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(run, 200); });
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); q.blur(); } });
+  const quick = ['Cài đặt app', 'Camera', 'Tốc độ', 'Dẫn đường', 'Toạ độ', 'Lộ trình', 'Điểm lưu', 'Offline', 'Giọng nói', 'Tuần tra', 'SOS', 'Đội xe', 'Góp ý', 'Sự cố'];
+  const chips = document.getElementById('chips');
+  quick.forEach((k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = k; b.addEventListener('click', () => { q.value = k === 'Cài đặt app' ? 'cài đặt' : k === 'Sự cố' ? 'xử lý' : k; run(); }); chips.append(b); });
+  // bấm mục lục khi đang lọc → bỏ lọc rồi nhảy tới
+  document.querySelectorAll('.toc a').forEach((a) => a.addEventListener('click', () => { if (q.value) { q.value = ''; run(); } }));
+})();
 </script>
 </body>
 </html>
