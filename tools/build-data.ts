@@ -14,6 +14,7 @@ import { matchCameraRoute } from '../src/pipeline/camera-routes';
 import { CellWriter, FLAG, simplify, wayFlags } from '../src/pipeline/compact';
 import { NameIndex } from '../src/pipeline/names';
 import { parseHgv } from '../src/pipeline/hgv';
+import { matchPosted } from '../src/pipeline/posted-limits';
 import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
 
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
   const seenWays = new Set<number>();
   let nWays = 0;
   let nHgv = 0;
+  let nPosted = 0;
   let nCams = 0;
   let lines = 0;
 
@@ -81,7 +83,10 @@ async function main(): Promise<void> {
       const flags = wayFlags(tags) | (matchCameraRoute(tags.name, mid.lat, mid.lon) ? FLAG.cam : 0);
       const hgv = parseHgv(tags);
       if (hgv) nHgv++;
-      writer.addWay(id, pts, parseMaxspeed(tags.maxspeed), flags, hgv);
+      // biển báo thật do cơ quan chức năng công bố (tuyến lớn OSM thiếu/cũ) ghi đè maxspeed của OSM
+      const posted = matchPosted(tags, mid.lat, mid.lon);
+      if (posted) nPosted++;
+      writer.addWay(id, pts, posted ? posted.mixed : parseMaxspeed(tags.maxspeed), flags, hgv, posted?.car ?? null);
       nWays++;
     } else if (p['@type'] === 'node' && f.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates)) {
       const [lon, lat] = f.geometry.coordinates as number[];
@@ -151,7 +156,7 @@ async function main(): Promise<void> {
     .map(([k, c]) => `${k}: ${c.pct}% (${c.kmWithLimit}/${c.km} km)`);
   console.log(`Độ phủ giới hạn tốc độ: tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km)\n  ${byClass.join('\n  ')}`);
   console.log(`::notice title=Độ phủ giới hạn tốc độ (toàn quốc)::tổng ${coverage.total.pct}% (${coverage.total.kmWithLimit}/${coverage.total.km} km). ${byClass.join('; ')}`);
-  console.log(`::notice title=Kích thước dữ liệu::${files.size} ô, ${(bytes / 1048576).toFixed(1)} MB (đầu vào ${inMB} MB), ${nWays} đường (${nHgv} có cấm xe tải), ${nCams} camera OSM, ${nMarks} dấu đã duyệt`);
+  console.log(`::notice title=Kích thước dữ liệu::${files.size} ô, ${(bytes / 1048576).toFixed(1)} MB (đầu vào ${inMB} MB), ${nWays} đường (${nHgv} có cấm xe tải, ${nPosted} theo biển công bố), ${nCams} camera OSM, ${nMarks} dấu đã duyệt`);
 }
 
 main().catch(async (e) => {

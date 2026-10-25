@@ -367,7 +367,7 @@ function render(v: ViewState): void {
     limitBox.hidden = false;
     limitBox.classList.toggle('est', v.limitEstimated);
     limitSign.textContent = String(v.limit);
-    $('limit-label').textContent = v.limitEstimated ? 'Ước tính theo luật' : 'Giới hạn';
+    $('limit-label').textContent = v.limitEstimated ? 'Ước tính theo luật' : (v.limitNote ?? 'Giới hạn');
     limitSign.setAttribute(
       'aria-label',
       v.limitEstimated

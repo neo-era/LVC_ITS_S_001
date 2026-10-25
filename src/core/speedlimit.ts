@@ -16,6 +16,8 @@ export interface RoadSegment {
   est?: number;
   /** Giờ cấm xe tải (phút trong ngày, giờ VN). */
   hgv?: [number, number][];
+  /** Giới hạn làn dành cho ô tô (maxspeed khi đó là làn hỗn hợp). */
+  carLane?: number;
 }
 
 export interface LimitResult {
@@ -24,6 +26,8 @@ export interface LimitResult {
   distM: number;
   /** true = số ước tính theo luật, không phải biển thật. */
   estimated: boolean;
+  /** Ghi chú dưới biển (vd "Làn ô tô · hỗn hợp 50"). */
+  note?: string;
 }
 
 const MAX_MATCH_DIST_M = 25;
@@ -87,7 +91,12 @@ export function findLimit(
 /** Giới hạn của một đoạn: số thật nếu có, không thì ước tính theo luật; null nếu không có dữ liệu. */
 export function limitOf(seg: RoadSegment | null, vehicle: Vehicle = 'car'): Omit<LimitResult, 'distM'> | null {
   if (!seg) return null;
-  if (validSpeed(seg.maxspeed)) return { kmh: seg.maxspeed, segmentId: seg.id, estimated: false };
+  if (validSpeed(seg.maxspeed)) {
+    // tuyến tách làn: xe máy theo làn hỗn hợp; ô tô theo làn ô tô (kèm nhắc mức làn hỗn hợp)
+    if (seg.carLane && validSpeed(seg.carLane) && vehicle !== 'motorbike')
+      return { kmh: seg.carLane, segmentId: seg.id, estimated: false, note: `Làn ô tô · hỗn hợp ${seg.maxspeed}` };
+    return { kmh: seg.maxspeed, segmentId: seg.id, estimated: false };
+  }
   const est = seg.ef !== undefined ? estimateLimit(seg.ef, vehicle) : (seg.est ?? null);
   if (est !== null && validSpeed(est)) return { kmh: est, segmentId: seg.id, estimated: true };
   return null;

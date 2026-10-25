@@ -1828,3 +1828,8 @@ button.status-chip {
     bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
+/* ghi chú làn ô tô / làn hỗn hợp dưới biển: xuống dòng gọn, căn giữa */
+.limit-label {
+  text-align: center;
+  max-width: 130px;
+}

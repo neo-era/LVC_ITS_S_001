@@ -13,6 +13,8 @@ export interface ViewState {
   limit: number | null;
   /** Giới hạn đang hiện là ước tính theo luật (không phải biển thật). */
   limitEstimated: boolean;
+  /** Ghi chú dưới biển (làn ô tô / làn hỗn hợp), null nếu không có. */
+  limitNote?: string | null;
   state: SpeedState;
   /** Cảnh báo gần nhất phía trước; null nếu không có. */
   alert: AlertHit | null;
@@ -204,6 +206,7 @@ export class Engine {
       kmh,
       limit,
       limitEstimated: estimated,
+      limitNote: lim?.note ?? null,
       state,
       alert: hits[0] ?? null,
       upcoming: hits.slice(1, 4),
