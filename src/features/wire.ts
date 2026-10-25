@@ -668,14 +668,25 @@ export function setupFeatures(ctx: Ctx) {
             v.hidden = false;
             void v.play().catch(() => {});
           });
-          const dl = mk('Tải', async () => {
+          const dl = mk('Lưu/Gửi', async () => {
             const blob = await cam.blob(m.id);
             if (!blob) return;
             const ext = (m.mime ?? '').includes('mp4') ? 'mp4' : 'webm';
+            const name = `hanh-trinh-${fmtVnTime(m.startedAt).replace(/[/: ]/g, '-')}.${ext}`;
+            // iPhone/Android: mở bảng chia sẻ của máy → "Lưu video" vào Ảnh, hoặc "Lưu vào Tệp", gửi Zalo
+            const file = new File([blob], name, { type: blob.type || `video/${ext}` });
+            if (navigator.canShare?.({ files: [file] })) {
+              try {
+                await navigator.share({ files: [file], title: 'Video hành trình' });
+              } catch (e) {
+                if ((e as Error).name !== 'AbortError') ctx.toast('Không mở được bảng chia sẻ. Thử lại.');
+              }
+              return;
+            }
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `hanh-trinh-${fmtVnTime(m.startedAt).replace(/[/: ]/g, '-')}.${ext}`;
+            a.download = name;
             document.body.append(a);
             a.click();
             a.remove();
