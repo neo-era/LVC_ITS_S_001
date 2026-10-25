@@ -60,3 +60,43 @@ export function renamePlace(
   out[i] = { ...out[i], name };
   return { ok: true, list: out };
 }
+
+/* ===== Chia sẻ điểm đã lưu (link mở app, người nhận bấm là lưu/đi được) ===== */
+const r5 = (x: number) => Math.round(x * 1e5) / 1e5;
+
+function b64urlEncode(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode(s: string): string {
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+/** Link mở app kèm một hoặc nhiều điểm: <base>?diem=<base64url của [[tên, vĩ độ, kinh độ], …]>. */
+export function placesShareUrl(base: string, list: SavedPlace[]): string {
+  const data = list.slice(0, 30).map((p) => [p.name.trim().slice(0, 40), r5(p.lat), r5(p.lng)]);
+  return `${base}?diem=${b64urlEncode(JSON.stringify(data))}`;
+}
+
+export function placeShareText(base: string, p: SavedPlace): string {
+  return `${p.name}\nBản đồ: https://www.google.com/maps?q=${r5(p.lat)},${r5(p.lng)}\nMở bằng Lái An Toàn: ${placesShareUrl(base, [p])}`;
+}
+
+/** Đọc điểm từ link chia sẻ; dữ liệu hỏng hoặc ngoài Việt Nam bị bỏ. */
+export function parseSharedPlaces(search: string): SavedPlace[] {
+  const v = new URLSearchParams(search).get('diem');
+  if (!v || v.length > 8000) return [];
+  try {
+    const raw = JSON.parse(b64urlDecode(v));
+    if (!Array.isArray(raw)) return [];
+    const list = raw
+      .filter((e): e is [string, number, number] => Array.isArray(e) && typeof e[0] === 'string' && typeof e[1] === 'number' && typeof e[2] === 'number')
+      .map(([name, lat, lng]) => ({ name: name.trim().slice(0, 40), lat: r5(lat), lng: r5(lng) }));
+    return parsePlaces(list).slice(0, 30);
+  } catch {
+    return [];
+  }
+}

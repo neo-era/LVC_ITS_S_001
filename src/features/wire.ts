@@ -6,7 +6,7 @@ import type { Place } from '../nav/geocode';
 import { authHeaders, SUPABASE_URL } from '../sync';
 import { Dashcam } from './dashcam';
 import { fleetPingBody, isTeamCode } from './fleet';
-import { addPlace, renamePlace, findPlaceByName, parsePlaces, removePlace, type SavedPlace } from './places';
+import { addPlace, renamePlace, parseSharedPlaces, placeShareText, placesShareUrl, findPlaceByName, parsePlaces, removePlace, type SavedPlace } from './places';
 import { fmtVnTime, parseReports, REPORT_LABEL, reportsToCsv, type Report } from './reports';
 import { RestTracker } from './rest';
 import { TripRecorder, type TripSummary } from './trip';
@@ -80,6 +80,7 @@ export function setupFeatures(ctx: Ctx) {
   let editing: string | null = null;
   function renderPlaces(): void {
     const box = $('saved-places');
+    $('btn-share-all').hidden = places.length < 2;
     box.replaceChildren(
       ...places.map((p) => {
         const wrap = document.createElement('span');
@@ -149,6 +150,13 @@ export function setupFeatures(ctx: Ctx) {
           editing = p.name;
           renderPlaces();
         });
+        const share = document.createElement('button');
+        share.type = 'button';
+        share.className = 'x';
+        share.innerHTML =
+          '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>';
+        share.setAttribute('aria-label', `Chia sẻ ${p.name}`);
+        share.addEventListener('click', () => void sharePlaces(placeShareText(appBase(), p), p.name));
         const del = document.createElement('button');
         del.type = 'button';
         del.className = 'x';
@@ -165,11 +173,68 @@ export function setupFeatures(ctx: Ctx) {
             $('toast').hidden = true;
           });
         });
-        wrap.append(go, edit, del);
+        wrap.append(go, share, edit, del);
         return wrap;
       }),
     );
   }
+  const appBase = () => new URL('./', location.href).href.split('?')[0];
+  /** Gửi qua Zalo/tin nhắn (bảng chia sẻ của máy); không có thì chép vào bộ nhớ tạm. */
+  async function sharePlaces(text: string, title: string): Promise<void> {
+    try {
+      if (navigator.share) return void (await navigator.share({ title, text }));
+      await navigator.clipboard.writeText(text);
+      ctx.toast('Đã chép nội dung chia sẻ. Dán vào Zalo/tin nhắn để gửi.');
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') ctx.toast('Không chia sẻ được trên máy này.');
+    }
+  }
+  $('btn-share-all').addEventListener('click', () => {
+    const lines = places.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+    void sharePlaces(`Các điểm đã lưu (Lái An Toàn):\n${lines}\nMở để lưu vào app: ${placesShareUrl(appBase(), places)}`, 'Điểm đã lưu');
+  });
+
+  /* Mở app từ link chia sẻ (?diem=…): xem, lưu, dẫn đường */
+  const incoming = parseSharedPlaces(location.search);
+  let pendingGo: SavedPlace | null = null;
+  if (incoming.length) {
+    history.replaceState(null, '', location.pathname);
+    $('shared-title').textContent = incoming.length === 1 ? 'Điểm được chia sẻ' : `${incoming.length} điểm được chia sẻ`;
+    $('shared-list').replaceChildren(
+      ...incoming.map((p) => {
+        const li = document.createElement('li');
+        li.className = 'off-row';
+        const t = document.createElement('span');
+        t.textContent = `★ ${p.name}`;
+        li.append(t);
+        return li;
+      }),
+    );
+    $('btn-shared-go').hidden = incoming.length !== 1;
+    $('btn-shared-save').textContent = incoming.length === 1 ? 'Lưu vào điểm của tôi' : 'Lưu tất cả vào điểm của tôi';
+    const saveAll = () => {
+      for (const p of incoming) places = addPlace(places, p);
+      savePlaces();
+      renderPlaces();
+    };
+    $('btn-shared-save').addEventListener('click', () => {
+      saveAll();
+      ($('shared') as HTMLDialogElement).close();
+      ctx.toast(incoming.length === 1 ? `Đã lưu “${incoming[0].name}”.` : `Đã lưu ${incoming.length} điểm. Xem trong Dẫn đường.`);
+    });
+    $('btn-shared-go').addEventListener('click', () => {
+      saveAll();
+      ($('shared') as HTMLDialogElement).close();
+      const p = incoming[0];
+      if (ctx.lastFix()) return void ctx.goTo({ name: p.name, detail: 'Điểm được chia sẻ', lat: p.lat, lng: p.lng }, true).catch((e) => ctx.toast((e as Error).message));
+      // chưa chạy GPS: bắt đầu lái xe, có vị trí là tìm đường
+      pendingGo = p;
+      ($('btn-start') as HTMLButtonElement).click();
+      ctx.toast('Đang lấy vị trí để tìm đường…', undefined, undefined, 8000);
+    });
+    setTimeout(() => ($('shared') as HTMLDialogElement).showModal(), 300);
+  }
+
   $('btn-save-here').addEventListener('click', () => {
     const f = freshFix(ctx.lastFix());
     if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt để lưu (cần tín hiệu mới, sai số ≤ 50 m).');
@@ -720,6 +785,11 @@ export function setupFeatures(ctx: Ctx) {
     onSample(f: GpsSample, v: ViewState): void {
       renderHud(v);
       if (ctx.mode() !== 'gps') return;
+      if (pendingGo) {
+        const p = pendingGo;
+        pendingGo = null;
+        void ctx.goTo({ name: p.name, detail: 'Điểm được chia sẻ', lat: p.lat, lng: p.lng }, true).catch((e) => ctx.toast((e as Error).message));
+      }
       const now = Date.now();
       if ((v.kmh ?? 0) > 5) {
         if (trip && lastMovingT && f.t - lastMovingT > SPLIT_MS) endTrip(lastMovingT); // dừng > 15 phút: tách chuyến

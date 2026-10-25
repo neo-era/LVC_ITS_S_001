@@ -2015,3 +2015,17 @@ button.nav-foot {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+.link-plain {
+  align-self: flex-start;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0 4px;
+  cursor: pointer;
+}

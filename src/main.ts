@@ -1118,14 +1118,17 @@ function mergePlaces(local: Place[], online: Place[]): Place[] {
 }
 
 /** Link rút gọn maps.app.goo.gl → toạ độ, qua hàm máy chủ expand-link (trình duyệt không đọc được chuyển hướng). */
-async function expandMapLink(u: string, signal: AbortSignal): Promise<{ lat: number; lng: number } | null> {
+async function expandMapLink(u: string, signal: AbortSignal): Promise<{ lat: number; lng: number } | { q: string } | null> {
   if (!navigator.onLine) return null;
   try {
     const r = await fetch(`${SUPABASE_URL}/functions/v1/expand-link?u=${encodeURIComponent(u.trim())}`, { headers: authHeaders(), signal });
     if (!r.ok) return null;
-    const j = (await r.json()) as { url?: string; lat?: number; lng?: number };
+    const j = (await r.json()) as { url?: string; lat?: number; lng?: number; q?: string | null };
     if (typeof j.lat === 'number' && typeof j.lng === 'number') return { lat: j.lat, lng: j.lng };
-    return j.url ? parseCoords(j.url) : null;
+    const c = j.url ? parseCoords(j.url) : null;
+    if (c) return c;
+    // link theo tên địa điểm (không có toạ độ) → tìm theo tên
+    return typeof j.q === 'string' && j.q.trim() ? { q: j.q.trim() } : null;
   } catch {
     return null;
   }
@@ -1138,8 +1141,13 @@ async function doSearch(q: string): Promise<void> {
   let c = parseCoords(q);
   if (!c && isShortMapLink(q)) {
     destMsg('Đang mở link Google Maps…');
-    c = await expandMapLink(q, ctl.signal);
+    const ex = await expandMapLink(q, ctl.signal);
     if (ctl.signal.aborted) return;
+    if (ex && 'q' in ex) {
+      destMsg(`Link là địa điểm “${ex.q}” — đang tìm theo tên…`);
+      return doSearch(ex.q);
+    }
+    c = ex;
     if (!c) {
       renderResults([]);
       return destMsg('Chưa mở được link rút gọn. Cách khác: trong Google Maps chạm giữ vào điểm → chép toạ độ (dạng 10.77, 106.70) rồi dán vào đây.');

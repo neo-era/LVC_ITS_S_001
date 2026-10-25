@@ -216,6 +216,7 @@
       <input id="dest-q" type="search" autocomplete="off" enterkeyhint="search" placeholder="Chợ Bến Thành hoặc 10.7725, 106.698">
     </label>
     <div class="saved" id="saved-places"></div>
+    <button class="link-plain" id="btn-share-all" type="button" hidden>Chia sẻ tất cả điểm đã lưu</button>
     <button class="secondary" id="btn-dest-map" type="button">Chọn trên bản đồ</button>
     <div class="save-row">
       <input id="save-name" type="text" autocomplete="off" placeholder="Tên (vd: Nhà, Cơ quan)" aria-label="Tên địa điểm để lưu vị trí hiện tại">
@@ -386,6 +387,20 @@
   </div>
 </dialog>
 
+<dialog id="shared" class="settings" aria-labelledby="shared-title">
+  <div class="settings-form">
+    <div class="settings-head">
+      <h2 id="shared-title">Điểm được chia sẻ</h2>
+      <button class="icon-btn" data-close="shared" type="button" aria-label="Đóng">
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <ul class="off-list" id="shared-list"></ul>
+    <button class="primary" id="btn-shared-go" type="button">Lưu &amp; dẫn đường tới đây</button>
+    <button class="secondary" id="btn-shared-save" type="button">Lưu vào điểm của tôi</button>
+    <p class="muted note" id="shared-note"></p>
+  </div>
+</dialog>
 <dialog id="qrreport" class="settings" aria-labelledby="qrreport-title">
   <div class="settings-form">
     <div class="settings-head">
