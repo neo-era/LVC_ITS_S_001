@@ -1833,3 +1833,52 @@ button.status-chip {
   text-align: center;
   max-width: 130px;
 }
+/* điểm lưu: tên dài cắt gọn; sửa tên ngay trên chip */
+.saved-chip {
+  max-width: 100%;
+}
+.saved-chip button:first-child:not(.ok) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.saved-chip .x {
+  flex: none;
+  min-width: 44px;
+  padding: 0 8px;
+}
+.saved-chip.editing {
+  width: 100%;
+  padding-left: 6px;
+  gap: 4px;
+}
+.saved-chip.editing input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px; /* ≥16px: iPhone không tự phóng to khi gõ */
+  padding: 0 12px;
+}
+.saved-chip .ok {
+  flex: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  min-height: 40px;
+}
+/* nút ☆ Lưu cạnh kết quả: gọn, kết quả chiếm phần còn lại */
+.results li > button:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.results .save-star {
+  flex: none;
+  width: auto;
+  white-space: nowrap;
+}

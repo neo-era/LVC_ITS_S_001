@@ -42,3 +42,21 @@ export function findPlaceByName(list: SavedPlace[], q: string): SavedPlace | nul
   if (!f) return null;
   return list.find((x) => foldName(x.name) === f) ?? list.find((x) => ` ${foldName(x.name)} `.includes(` ${f} `)) ?? null;
 }
+
+/** Đổi tên điểm đã lưu. Không cho tên rỗng hoặc trùng tên điểm khác. Tên tối đa 40 ký tự. */
+export function renamePlace(
+  list: SavedPlace[],
+  oldName: string,
+  newName: string,
+): { ok: boolean; list: SavedPlace[]; reason?: 'empty' | 'dup' | 'missing' } {
+  const name = newName.trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (!name) return { ok: false, list, reason: 'empty' };
+  const fo = foldName(oldName);
+  const i = list.findIndex((x) => foldName(x.name) === fo);
+  if (i < 0) return { ok: false, list, reason: 'missing' };
+  const fn = foldName(name);
+  if (list.some((x, j) => j !== i && foldName(x.name) === fn)) return { ok: false, list, reason: 'dup' };
+  const out = [...list];
+  out[i] = { ...out[i], name };
+  return { ok: true, list: out };
+}

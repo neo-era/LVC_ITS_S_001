@@ -5,7 +5,7 @@ import type { Place } from '../nav/geocode';
 import { authHeaders, SUPABASE_URL } from '../sync';
 import { Dashcam } from './dashcam';
 import { fleetPingBody, isTeamCode } from './fleet';
-import { addPlace, findPlaceByName, parsePlaces, removePlace, type SavedPlace } from './places';
+import { addPlace, renamePlace, findPlaceByName, parsePlaces, removePlace, type SavedPlace } from './places';
 import { fmtVnTime, parseReports, REPORT_LABEL, reportsToCsv, type Report } from './reports';
 import { RestTracker } from './rest';
 import { TripRecorder, type TripSummary } from './trip';
@@ -75,16 +75,78 @@ export function setupFeatures(ctx: Ctx) {
   const PLACES = 'lat.places.v1';
   let places: SavedPlace[] = readJson(ctx, PLACES, parsePlaces, []);
   const savePlaces = () => ctx.lsSet(PLACES, JSON.stringify(places));
+  let editing: string | null = null;
   function renderPlaces(): void {
     const box = $('saved-places');
     box.replaceChildren(
       ...places.map((p) => {
         const wrap = document.createElement('span');
         wrap.className = 'saved-chip';
+        if (editing === p.name) {
+          // sửa tên ngay tại chỗ
+          wrap.classList.add('editing');
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.value = p.name;
+          inp.maxLength = 40;
+          inp.enterKeyHint = 'done';
+          inp.setAttribute('aria-label', 'Tên điểm');
+          const ok = document.createElement('button');
+          ok.type = 'button';
+          ok.className = 'ok';
+          ok.textContent = 'Lưu';
+          const cancel = document.createElement('button');
+          cancel.type = 'button';
+          cancel.className = 'x';
+          cancel.textContent = '×';
+          cancel.setAttribute('aria-label', 'Huỷ sửa tên');
+          const commit = () => {
+            const r = renamePlace(places, p.name, inp.value);
+            if (!r.ok) {
+              if (r.reason === 'dup') return ctx.toast('Đã có điểm trùng tên này. Đặt tên khác.');
+              if (r.reason === 'empty') return ctx.toast('Tên không được để trống.');
+            }
+            places = r.list;
+            editing = null;
+            savePlaces();
+            renderPlaces();
+          };
+          ok.addEventListener('click', commit);
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commit();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              e.stopPropagation();
+              editing = null;
+              renderPlaces();
+            }
+          });
+          cancel.addEventListener('click', () => {
+            editing = null;
+            renderPlaces();
+          });
+          wrap.append(inp, ok, cancel);
+          setTimeout(() => {
+            inp.focus();
+            inp.select();
+          }, 0);
+          return wrap;
+        }
         const go = document.createElement('button');
         go.type = 'button';
         go.textContent = `★ ${p.name}`;
         go.addEventListener('click', () => void ctx.goTo({ name: p.name, detail: 'Địa điểm đã lưu', lat: p.lat, lng: p.lng }));
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'x';
+        edit.textContent = '✎';
+        edit.setAttribute('aria-label', `Đổi tên ${p.name}`);
+        edit.addEventListener('click', () => {
+          editing = p.name;
+          renderPlaces();
+        });
         const del = document.createElement('button');
         del.type = 'button';
         del.className = 'x';
@@ -94,8 +156,14 @@ export function setupFeatures(ctx: Ctx) {
           places = removePlace(places, p.name);
           savePlaces();
           renderPlaces();
+          ctx.toast(`Đã xoá “${p.name}”.`, () => {
+            places = addPlace(places, p);
+            savePlaces();
+            renderPlaces();
+            $('toast').hidden = true;
+          });
         });
-        wrap.append(go, del);
+        wrap.append(go, edit, del);
         return wrap;
       }),
     );
@@ -104,10 +172,12 @@ export function setupFeatures(ctx: Ctx) {
     const f = freshFix(ctx.lastFix());
     if (!f) return ctx.toast('Chưa có vị trí GPS đủ tốt để lưu (cần tín hiệu mới, sai số ≤ 50 m).');
     const nameBox = $('save-name') as HTMLInputElement;
-    const name = nameBox.value.trim() || `Điểm đã lưu ${places.length + 1}`;
+    const typed = nameBox.value.trim();
+    const name = (typed || `Điểm đã lưu ${places.length + 1}`).slice(0, 40);
     nameBox.value = '';
     places = addPlace(places, { name, lat: f.lat, lng: f.lng });
     savePlaces();
+    if (!typed) editing = name; // chưa đặt tên → mở ô sửa tên ngay
     renderPlaces();
     ctx.toast(`Đã lưu “${name}”.`);
   });
@@ -125,8 +195,13 @@ export function setupFeatures(ctx: Ctx) {
       star.textContent = '☆ Lưu';
       star.setAttribute('aria-label', `Lưu ${place.name}`);
       star.addEventListener('click', () => {
-        places = addPlace(places, { name: place.name, lat: place.lat, lng: place.lng });
+        // dùng tên gõ ở ô "Tên" nếu có; sau khi lưu mở ngay ô sửa tên để đặt tên dễ nhớ
+        const nameBox = $('save-name') as HTMLInputElement;
+        const name = (nameBox.value.trim() || place.name).slice(0, 40);
+        nameBox.value = '';
+        places = addPlace(places, { name, lat: place.lat, lng: place.lng });
         savePlaces();
+        editing = places[places.length - 1].name;
         renderPlaces();
         star.textContent = '★ Đã lưu';
       });

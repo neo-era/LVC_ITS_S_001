@@ -996,6 +996,9 @@ $('btn-nav').addEventListener('click', () => {
   destMsg(lastFix ? '' : 'Hãy bấm “Bắt đầu lái xe” trước để có vị trí xuất phát.');
   destDlg.showModal();
   destQ.focus();
+  // ô tìm còn nội dung từ lần trước (vd link/toạ độ đã dán) → tìm lại ngay
+  const prev = destQ.value.trim();
+  if (prev.length >= 3) void doSearch(prev);
 });
 $('btn-dest-close').addEventListener('click', () => destDlg.close());
 
@@ -1039,6 +1042,15 @@ $('btn-pick-go').addEventListener('click', async () => {
   }
 });
 $('btn-nav-stop').addEventListener('click', stopNav);
+// bấm Enter / nút tìm trên bàn phím → tìm ngay, không chờ
+destQ.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = destQ.value.trim();
+  if (q.length < 2) return;
+  if (searchTimer !== null) window.clearTimeout(searchTimer);
+  void doSearch(q);
+});
 destQ.addEventListener('input', () => {
   if (searchTimer !== null) window.clearTimeout(searchTimer);
   const q = destQ.value.trim();
