@@ -2029,3 +2029,13 @@ button.nav-foot {
   padding: 0 4px;
   cursor: pointer;
 }
+
+/* Trạng thái máy chủ trong Cài đặt */
+.server-state { padding: 8px 10px; border-radius: 10px; background: var(--card-2, rgba(127,127,127,.12)); }
+.server-state[data-state='ok']::before { content: '● '; color: #22c55e; }
+.server-state[data-state='thieu']::before,
+.server-state[data-state='tat']::before { content: '● '; color: #f59e0b; }
+.server-state[data-state='offline']::before { content: '● '; color: #94a3b8; }
+
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.row-2 > button { width: 100%; }

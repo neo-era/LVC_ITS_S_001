@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from '../core/net';
 /** Nối giao diện nhóm 2: chia sẻ hành trình, thời tiết, cấm xe tải/ngập, SOS, tuần tra, QR trụ, đèn tín hiệu, OBD-II, nhận dạng biển. */
 import { haversine } from '../core/geo';
 import { formatDistance } from '../core/format';
@@ -40,12 +41,6 @@ const rand = (n: number) => {
 };
 
 /** fetch có hạn giờ (AbortSignal.timeout chưa có trên iOS < 16). */
-function fetchT(url: string, ms: number, init: RequestInit = {}): Promise<Response> {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), ms);
-  return fetch(url, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
-}
-
 function download(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
@@ -129,7 +124,7 @@ export function setupFeatures2(ctx: Ctx2) {
     const nav = ctx.navInfo();
     const name = nav ? shareName(ctx.lsGet('lat.fleet.name') || 'Xe', nav.dest, nav.etaT) : ctx.lsGet('lat.fleet.name') || 'Xe';
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_ping`, {
+      await fetchT(`${SUPABASE_URL}/rest/v1/rpc/fleet_ping`, NET_MS, {
         method: 'POST',
         headers: { ...authHeaders(), 'content-type': 'application/json' },
         body: JSON.stringify(fleetPingBody(shareToken, ctx.deviceId(), name, { lat: f.lat, lng: f.lng, kmh: v.kmh, heading: ctx.heading() })),
@@ -144,7 +139,7 @@ export function setupFeatures2(ctx: Ctx2) {
     shareToken = null;
     ssSet(SHARE_KEY, null);
     showShare();
-    void fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, {
+    void fetchT(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, NET_MS, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ p_team: tok, p_device: ctx.deviceId() }),
@@ -500,7 +495,7 @@ export function setupFeatures2(ctx: Ctx2) {
   let signalsLoaded = false;
   const loadSignals = () =>
     !signalsLoaded &&
-    void fetch('./rules/signals.json')
+    void fetchT('./rules/signals.json', NET_MS)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((j) => {
         signals = parseSignals(j);

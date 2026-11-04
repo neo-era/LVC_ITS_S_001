@@ -88,8 +88,8 @@ begin
   if p_device !~ '^[A-Za-z0-9_-]{8,64}$' then raise exception 'mã thiết bị không hợp lệ'; end if;
   th := encode(extensions.digest(p_team, 'sha256'), 'hex');
   dh := encode(extensions.digest(p_team || '|' || p_device, 'sha256'), 'hex');
-  -- dọn dòng cũ của đội này (không cần pg_cron)
-  delete from public.lat_fleet where team_hash = th and updated_at < now() - interval '24 hours';
+  -- dọn mọi vị trí cũ hơn 24 giờ (không cần pg_cron)
+  delete from public.lat_fleet where updated_at < now() - interval '24 hours';  -- dọn toàn bảng (A9)
   select count(*) into n from public.lat_fleet where team_hash = th and device_hash <> dh;
   if n >= 50 then raise exception 'đội đã đủ 50 xe'; end if;
   insert into public.lat_fleet (team_hash, device_hash, name, lat, lng, speed, heading, updated_at)
@@ -174,3 +174,14 @@ create policy lat_feedback_insert on public.lat_feedback for insert to anon with
 --   select date_trunc('week', created_at) tuan, count(*) so_luot, round(avg(rating), 2) sao_tb from public.lat_feedback group by 1 order by 1 desc;
 -- Đánh dấu đã xử lý:
 --   update public.lat_feedback set status = 'da_xu_ly', note = 'Đã sửa ở bản ...' where id = '...';
+
+-- Kiểm tra sức khoẻ máy chủ (A7): app gọi để biết máy chủ + bảng đã sẵn sàng
+create or replace function public.lat_health()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'ok', to_regclass('public.lat_camera_marks') is not null and to_regclass('public.lat_reports') is not null
+          and to_regclass('public.lat_fleet') is not null and to_regclass('public.lat_feedback') is not null,
+    'v', 1, 'at', now());
+$$;
+revoke all on function public.lat_health() from public;
+grant execute on function public.lat_health() to anon;

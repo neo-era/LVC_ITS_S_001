@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig } from 'vite';
 import { stampSw } from './src/update';
@@ -11,7 +11,10 @@ const stampServiceWorker = () => ({
   apply: 'build' as const,
   closeBundle() {
     const f = join(__dirname, 'dist', 'sw.js');
-    writeFileSync(f, stampSw(readFileSync(f, 'utf8'), BUILD));
+    const assets = readdirSync(join(__dirname, 'dist', 'assets'))
+      .filter((n) => !/^ocr|tesseract|\.map$/i.test(n))
+      .map((n) => 'assets/' + n);
+    writeFileSync(f, stampSw(readFileSync(f, 'utf8'), BUILD, assets));
   },
 });
 

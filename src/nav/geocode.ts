@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from '../core/net';
 export interface Place {
   name: string;
   detail: string;
@@ -53,7 +54,7 @@ export async function searchPlaces(q: string, near: { lat: number; lng: number }
     url.searchParams.set('lat', String(near.lat));
     url.searchParams.set('lon', String(near.lng));
   }
-  const res = await fetch(url, { signal });
+  const res = await fetchT(url, NET_MS, { signal });
   if (!res.ok) throw new Error(`Máy chủ tìm địa điểm trả lỗi ${res.status}`);
   return parsePhoton(await res.json());
 }
@@ -74,7 +75,7 @@ export async function reversePlace(lat: number, lng: number, signal?: AbortSigna
     url.searchParams.set('lon', String(lng));
     url.searchParams.set('limit', '1');
     url.searchParams.set('lang', 'default');
-    const res = await fetch(url, { signal });
+    const res = await fetchT(url, NET_MS, { signal });
     if (!res.ok) return [];
     return parsePhoton(await res.json());
   } catch {

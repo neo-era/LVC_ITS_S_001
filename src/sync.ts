@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from './core/net';
 import type { Mark } from './marks';
 
 /**
@@ -45,7 +46,7 @@ export async function pushMarks(device: string, marks: Mark[]): Promise<string[]
   const sent: string[] = [];
   for (let i = 0; i < marks.length; i += CHUNK) {
     const part = marks.slice(i, i + CHUNK);
-    const res = await fetch(insertUrl(), {
+    const res = await fetchT(insertUrl(), NET_MS, {
       method: 'POST',
       headers: {
         ...authHeaders(),
@@ -74,7 +75,7 @@ export function queueWithdraw(queue: string[], ids: string[]): string[] {
 
 export async function withdrawMarks(device: string, ids: string[]): Promise<void> {
   if (!ids.length) return;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/lat_mark_withdraw`, {
+  const res = await fetchT(`${SUPABASE_URL}/rest/v1/rpc/lat_mark_withdraw`, NET_MS, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify(withdrawBody(ids, device)),

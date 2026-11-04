@@ -1,3 +1,4 @@
+import { fetchT, ROUTE_MS } from '../core/net';
 import { COSTING, type Vehicle } from '../core/vehicle';
 import type { LatLng } from '../core/geo';
 import { decodePolyline } from './polyline';
@@ -69,7 +70,7 @@ export function parseValhalla(raw: unknown): Route | null {
 /** Gọi bằng GET (tham số json) để tránh yêu cầu tiền kiểm CORS. */
 export async function fetchRoute(from: LatLng, to: LatLng, vehicle: Vehicle = 'car', signal?: AbortSignal): Promise<Route> {
   const url = `${VALHALLA_URL}?json=${encodeURIComponent(buildRouteBody(from, to, vehicle))}`;
-  const res = await fetch(url, { signal });
+  const res = await fetchT(url, ROUTE_MS, { signal });
   if (!res.ok) throw new Error(`Máy chủ tìm đường trả lỗi ${res.status}`);
   const route = parseValhalla(await res.json());
   if (!route) throw new Error('Không tìm được đường đi tới nơi này.');
@@ -103,7 +104,7 @@ export function routeLabel(r: Route, fastest: Route): string {
 /** Lấy tối đa 1 + alternates tuyến; xếp nhanh nhất lên đầu. */
 export async function fetchRoutes(from: LatLng, to: LatLng, vehicle: Vehicle = 'car', alternates = 2, signal?: AbortSignal): Promise<Route[]> {
   const url = `${VALHALLA_URL}?json=${encodeURIComponent(buildRouteBody(from, to, vehicle, alternates))}`;
-  const res = await fetch(url, { signal });
+  const res = await fetchT(url, ROUTE_MS, { signal });
   if (!res.ok) throw new Error(`Máy chủ tìm đường trả lỗi ${res.status}`);
   const all = parseValhallaAll(await res.json());
   if (!all.length) throw new Error('Không tìm được đường đi tới nơi này.');

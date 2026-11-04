@@ -19,6 +19,21 @@ concurrency:
   group: data
   cancel-in-progress: true
 jobs:
+  # Gọi máy chủ Supabase mỗi đêm để dự án gói miễn phí không bị tự tạm dừng (sau 7 ngày không dùng).
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: src/sync.ts, sparse-checkout-cone-mode: false }
+      - name: Gọi lat_health
+        continue-on-error: true
+        run: |
+          KEY=$(grep -oE "eyJ[A-Za-z0-9._-]+" src/sync.ts | head -1)
+          URL=$(grep -oE "https://[a-z0-9]+\.supabase\.co" src/sync.ts | head -1)
+          R=$(curl -sS -m 30 -X POST "$URL/rest/v1/rpc/lat_health" -H "apikey: $KEY" -H "authorization: Bearer $KEY" -H 'content-type: application/json' -d '{}' || true)
+          echo "$R"
+          echo "$R" | grep -q '"ok": *true' || echo "::warning::Máy chủ Supabase chưa sẵn sàng: $R"
   data:
     runs-on: ubuntu-latest
     timeout-minutes: 90

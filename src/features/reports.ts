@@ -12,13 +12,20 @@ export interface Report {
   synced?: boolean;
   /** Máy chủ từ chối (dữ liệu không hợp lệ) — không gửi lại, vẫn xuất CSV được. */
   rejected?: boolean;
+  /** Mã lỗi máy chủ khi từ chối. */
+  rejectCode?: number;
+}
+
+/** Chỉ lỗi do dữ liệu mới bỏ hẳn; lỗi quyền/thiếu bảng/quá tải/máy chủ thì gửi lại sau. */
+export function isRejected(status: number): boolean {
+  return status === 400 || status === 409 || status === 422;
 }
 
 export const REPORT_LABEL: Record<ReportKind, string> = { den_tat: 'Đèn tắt', su_co: 'Sự cố chiếu sáng', ngap: 'Đường ngập' };
 
 export function parseReports(raw: unknown): Report[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter(
+  const ok = raw.filter(
     (r): r is Report =>
       !!r &&
       typeof r.id === 'string' &&
@@ -31,6 +38,8 @@ export function parseReports(raw: unknown): Report[] {
       r.lng <= 110 &&
       typeof r.t === 'number',
   );
+  // bản cũ đánh dấu từ chối cả khi máy chủ chưa có bảng (404) → cho gửi lại
+  return ok.map((r) => (r.rejected && typeof r.rejectCode !== 'number' ? { ...r, rejected: false } : r));
 }
 
 export function fmtVnTime(t: number): string {

@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from '../core/net';
 /** Nối giao diện cho 8 tính năng: HUD kính lái, địa điểm lưu, nhắc nghỉ, báo đèn tắt, nhật ký chuyến, đội xe, lệnh giọng nói, camera hành trình. */
 import type { GpsSample } from '../core/gps';
 import { shownSpeed } from '../core/speedcal';
@@ -7,7 +8,7 @@ import { authHeaders, SUPABASE_URL } from '../sync';
 import { Dashcam } from './dashcam';
 import { fleetPingBody, isTeamCode } from './fleet';
 import { addPlace, renamePlace, parseSharedPlaces, placeShareText, placesShareUrl, findPlaceByName, parsePlaces, removePlace, type SavedPlace } from './places';
-import { fmtVnTime, parseReports, REPORT_LABEL, reportsToCsv, type Report } from './reports';
+import { fmtVnTime, isRejected, parseReports, REPORT_LABEL, reportsToCsv, type Report } from './reports';
 import { RestTracker } from './rest';
 import { TripRecorder, type TripSummary } from './trip';
 import { parseCommand } from './voicecmd';
@@ -325,7 +326,7 @@ export function setupFeatures(ctx: Ctx) {
   let reports: Report[] = readJson(ctx, REPS, parseReports, []);
   const saveReps = () => ctx.lsSet(REPS, JSON.stringify(reports));
   const postReports = async (rows: Report[]) =>
-    fetch(`${SUPABASE_URL}/rest/v1/lat_reports?on_conflict=id`, {
+    fetchT(`${SUPABASE_URL}/rest/v1/lat_reports?on_conflict=id`, NET_MS, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=minimal' },
       body: JSON.stringify(rows.map((r) => ({ id: r.id, kind: r.kind, pole: r.pole ?? null, lat: r.lat, lng: r.lng, dir: r.dir ?? null, device: ctx.deviceId(), t_client: r.t }))),
@@ -340,13 +341,13 @@ export function setupFeatures(ctx: Ctx) {
     repSyncing = true;
     try {
       let res = await postReports(pending);
-      if (res.status >= 400 && res.status < 500 && pending.length > 1) {
+      if (isRejected(res.status) && pending.length > 1) {
         // một dòng bị từ chối không được chặn cả lô: gửi từng dòng, dòng hỏng đánh dấu để không gửi lại
         let okN = 0;
         for (const r of pending) {
           const one = await postReports([r]);
           if (one.ok) okN++;
-          reports = reports.map((x) => (x.id === r.id ? { ...x, synced: one.ok, rejected: one.status >= 400 && one.status < 500 } : x));
+          reports = reports.map((x) => (x.id === r.id ? { ...x, synced: one.ok, rejected: isRejected(one.status), rejectCode: isRejected(one.status) ? one.status : undefined } : x));
         }
         saveReps();
         say(`Đã gửi ${okN}/${pending.length} báo cáo.`);
@@ -355,8 +356,8 @@ export function setupFeatures(ctx: Ctx) {
         reports = reports.map((r) => (ids.has(r.id) ? { ...r, synced: true } : r));
         saveReps();
         say(`Đã gửi ${ids.size} báo cáo.`);
-      } else if (res.status >= 400 && res.status < 500) {
-        reports = reports.map((r) => (r.id === pending[0].id ? { ...r, rejected: true } : r));
+      } else if (isRejected(res.status)) {
+        reports = reports.map((r) => (r.id === pending[0].id ? { ...r, rejected: true, rejectCode: res.status } : r));
         saveReps();
         say(`Máy chủ từ chối báo cáo (mã ${res.status}). Đã giữ lại trên máy để xuất CSV.`);
       } else throw new Error(String(res.status));
@@ -556,7 +557,7 @@ export function setupFeatures(ctx: Ctx) {
     ctx.lsSet('lat.fleet.on', fOn.checked ? '1' : '0');
     fleetMsg(fOn.checked ? 'Đang chia sẻ vị trí khi lái.' : 'Đã tắt chia sẻ vị trí.');
     if (!fOn.checked && isTeamCode(fTeam.value.trim())) {
-      void fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, {
+      void fetchT(`${SUPABASE_URL}/rest/v1/rpc/fleet_leave`, NET_MS, {
         method: 'POST',
         headers: { ...authHeaders(), 'content-type': 'application/json' },
         body: JSON.stringify({ p_team: fTeam.value.trim(), p_device: ctx.deviceId() }),
@@ -571,7 +572,7 @@ export function setupFeatures(ctx: Ctx) {
     if (Date.now() - lastPing < (moving ? 15_000 : 60_000)) return;
     lastPing = Date.now();
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_ping`, {
+      const res = await fetchT(`${SUPABASE_URL}/rest/v1/rpc/fleet_ping`, NET_MS, {
         method: 'POST',
         headers: { ...authHeaders(), 'content-type': 'application/json' },
         body: JSON.stringify(fleetPingBody(fTeam.value.trim(), ctx.deviceId(), fName.value.trim() || 'Xe chưa đặt tên', { lat: f.lat, lng: f.lng, kmh: v.kmh, heading: ctx.heading() })),

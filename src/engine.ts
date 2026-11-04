@@ -55,6 +55,8 @@ export class Engine {
   private vehicle: Vehicle;
   private readonly speak: (text: string) => void;
   private readonly cells = new Map<string, CellData>();
+  /** Dấu người dùng tự đánh dấu, tách riêng khỏi dữ liệu ô (không chặn nạp ô, không mất khi bỏ ô). */
+  private readonly own = new Map<string, AlertPoint[]>();
   private heading: number | null = null;
   private lastPos: LatLng | null = null;
   private prevState: SpeedState = 'unknown';
@@ -103,18 +105,44 @@ export class Engine {
     for (const a of data.alerts) add(cellKey(a.lat, a.lng), { alerts: [a] });
   }
 
-  /** Thêm một điểm cảnh báo vào ô của nó; trùng id thì thay thế (dùng cho dấu người dùng tự đánh dấu). */
+  /** Thêm một điểm cảnh báo của người dùng (dấu tự đánh dấu); trùng id thì thay thế. */
   addAlert(a: AlertPoint): void {
     const key = cellKey(a.lat, a.lng);
-    const cur = this.cells.get(key) ?? { segments: [], alerts: [] };
-    cur.alerts = [...cur.alerts.filter((x) => x.id !== a.id), a];
-    this.cells.set(key, cur);
+    this.own.set(key, [...(this.own.get(key) ?? []).filter((x) => x.id !== a.id), a]);
   }
 
   removeAlert(a: { id: string; lat: number; lng: number }): void {
     const key = cellKey(a.lat, a.lng);
-    const cur = this.cells.get(key);
-    if (cur) cur.alerts = cur.alerts.filter((x) => x.id !== a.id);
+    const left = (this.own.get(key) ?? []).filter((x) => x.id !== a.id);
+    if (left.length) this.own.set(key, left);
+    else this.own.delete(key);
+  }
+
+  /** Số ô dữ liệu đang giữ trong bộ nhớ. */
+  cellCount(): number {
+    return this.cells.size;
+  }
+
+  /** Bỏ các ô xa hơn keepM khỏi bộ nhớ; vẫn quá maxCells thì bỏ tiếp ô xa nhất. Ô bị bỏ sẽ được nạp lại khi quay lại. */
+  evictFar(lat: number, lng: number, keepM: number, maxCells: number): void {
+    const here = { lat, lng };
+    const dist: [string, number][] = [];
+    for (const key of this.cells.keys()) {
+      const [y, x] = key.split('_').map(Number);
+      const d = haversine(here, { lat: (y + 0.5) * 0.01, lng: (x + 0.5) * 0.01 });
+      if (d > keepM) this.cells.delete(key);
+      else dist.push([key, d]);
+    }
+    if (dist.length > maxCells) {
+      dist.sort((a, b) => b[1] - a[1]);
+      for (const [key] of dist.slice(0, dist.length - maxCells)) this.cells.delete(key);
+    }
+  }
+
+  private alertsOf(key: string): AlertPoint[] {
+    const own = this.own.get(key);
+    const base = this.cells.get(key)?.alerts ?? [];
+    return own ? [...base, ...own] : base;
   }
 
   /** Hướng đi hiện tại (độ) nếu đã xác định. */
@@ -126,7 +154,7 @@ export class Engine {
   alertsNear(pos: LatLng, radiusM: number): AlertPoint[] {
     const out = new Map<string, AlertPoint>();
     for (const key of cellsAround(pos.lat, pos.lng, radiusM)) {
-      for (const a of this.cells.get(key)?.alerts ?? []) if (haversine(pos, a) <= radiusM) out.set(a.id, a);
+      for (const a of this.alertsOf(key)) if (haversine(pos, a) <= radiusM) out.set(a.id, a);
     }
     return [...out.values()];
   }
@@ -175,7 +203,7 @@ export class Engine {
     }
     const alerts = new Map<string, AlertPoint>();
     for (const key of cellsAround(pos.lat, pos.lng, this.radiusM * 1.6)) {
-      for (const a of this.cells.get(key)?.alerts ?? []) alerts.set(a.id, a);
+      for (const a of this.alertsOf(key)) alerts.set(a.id, a);
     }
     return { segments: [...segs.values()], alerts: [...alerts.values()] };
   }

@@ -1,8 +1,10 @@
+import { fetchT, NET_MS } from '../core/net';
 /** Hộp "Góp ý & đánh giá": chọn sao, loại, nội dung; báo sai tốc độ khi chạm biển; mời đánh giá sau 3 chuyến. */
 import type { GpsSample } from '../core/gps';
 import type { Vehicle } from '../core/vehicle';
 import type { ViewState } from '../engine';
 import { authHeaders, SUPABASE_URL } from '../sync';
+import { errorsForReport, parseErrors, ERRLOG_KEY } from './errlog';
 import { buildFeedback, feedbackRows, parseFeedback, pendingFeedback, shouldAskRating, type FeedbackItem, type FeedbackKind } from './feedback';
 
 declare const __APP_BUILD__: string;
@@ -68,7 +70,7 @@ export function setupFeedback(ctx: FbCtx) {
     if (!pend.length || !navigator.onLine || sending) return false;
     sending = true;
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/lat_feedback?on_conflict=id`, {
+      const res = await fetchT(`${SUPABASE_URL}/rest/v1/lat_feedback?on_conflict=id`, NET_MS, {
         method: 'POST',
         headers: { ...authHeaders(), 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=minimal' },
         body: JSON.stringify(feedbackRows(pend)),
@@ -112,6 +114,7 @@ export function setupFeedback(ctx: FbCtx) {
       at: f ? { lat: f.lat, lng: f.lng } : null,
       withLocation: loc.checked,
       road: { limit: v.limit, estimated: v.limitEstimated, segment: ctx.segment(), posted: k === 'sai_toc_do' && posted.value !== '' ? Number(posted.value) : null },
+      errors: errorsForReport(parseErrors(ctx.lsGet(ERRLOG_KEY))),
     });
     if (!r.ok) return void (status.textContent = r.reason);
     if (loc.checked && !f) status.textContent = 'Chưa có vị trí GPS — góp ý vẫn gửi, không kèm vị trí.';
@@ -126,6 +129,8 @@ export function setupFeedback(ctx: FbCtx) {
   });
 
   $('btn-feedback').addEventListener('click', () => open());
+  // Cài đặt → "Gửi chẩn đoán": mở góp ý loại Lỗi app, tự đính kèm lỗi gần đây (không có vị trí)
+  $('btn-diag').addEventListener('click', () => open('loi'));
   // chạm biển tốc độ → báo sai giới hạn ngay tại đoạn đường đang đi
   $('limit').addEventListener('click', () => open('sai_toc_do', true));
   paintStars();

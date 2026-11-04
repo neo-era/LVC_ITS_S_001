@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from './core/net';
 import type { AlertPoint } from './core/alerts';
 import { alertsToGeoJSON, STYLE_URLS } from './map-data';
 import { registerLatmap } from './offline/protocol';
@@ -51,7 +52,7 @@ export class MapView {
     let st: unknown = dark ? STYLE_URLS.dark : STYLE_URLS.light;
     if (this.offline) {
       try {
-        const r = await fetch(`./map/style-${key}.json`);
+        const r = await fetchT(`./map/style-${key}.json`, NET_MS);
         if (r.ok) {
           const j = await r.json();
           const base = new URL('./', location.href).href;

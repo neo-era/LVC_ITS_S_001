@@ -1,3 +1,7 @@
+import { makeBackup, readBackup } from './features/backup';
+import { addError, ERRLOG_KEY, parseErrors } from './features/errlog';
+import { checkServer, serverText, type ServerState } from './features/health';
+import { fetchT, mapLimit, NET_MS } from './core/net';
 import './styles.css';
 import { parseCell } from './core/cells';
 import { alertLabel, formatDistance, speakDistance } from './core/format';
@@ -26,6 +30,17 @@ import { freshFix, setupFeatures } from './features/wire';
 import { setupFeatures2 } from './features/wire2';
 import { Voice } from './voice';
 import { setSpeedCal, shownSpeed, SPEED_CAL_OPTIONS } from './core/speedcal';
+
+/** Ghi lỗi chạy app vào nhật ký trên máy (không toạ độ) để đính kèm khi báo "Lỗi app". */
+function logError(msg: string): void {
+  try {
+    localStorage.setItem(ERRLOG_KEY, JSON.stringify(addError(parseErrors(localStorage.getItem(ERRLOG_KEY)), msg, Date.now())));
+  } catch {
+    /* bỏ qua */
+  }
+}
+window.addEventListener('error', (e) => logError(`${e.message} @${String(e.filename).split('/').pop()}:${e.lineno}`));
+window.addEventListener('unhandledrejection', (e) => logError(`promise: ${(e.reason as Error)?.message ?? String(e.reason)}`));
 
 /* ---------- Cài đặt (localStorage có thể không dùng được → luôn bọc try/catch) ---------- */
 interface Settings {
@@ -613,12 +628,15 @@ const RETRY_MS = 30_000;
 let dataStamp = '';
 
 async function ensureCells(lat: number, lng: number): Promise<void> {
-  for (const key of cellsAround(lat, lng, 1500)) {
-    if (engine.hasCell(key) || loading.has(key)) continue;
-    if (Date.now() - (failedAt.get(key) ?? 0) < RETRY_MS) continue;
-    loading.add(key);
+  engine.evictFar(lat, lng, 5000, 300); // giữ bộ nhớ ổn định khi chạy đường dài
+  const want = cellsAround(lat, lng, 1500).filter(
+    (key) => !engine.hasCell(key) && !loading.has(key) && Date.now() - (failedAt.get(key) ?? 0) >= RETRY_MS,
+  );
+  for (const key of want) loading.add(key);
+  // nạp song song 4 ô, mỗi ô hạn 8 s (service worker trả bản đã lưu nếu mạng chậm)
+  await mapLimit(want, 4, async (key) => {
     try {
-      const res = await fetch(`./data/cells/${key}.json`, { cache: 'no-cache' });
+      const res = await fetchT(`./data/cells/${key}.json`, NET_MS, { cache: 'no-cache' });
       if (res.status === 404) {
         engine.loadCell(key, { segments: [], alerts: [] }); // vùng chưa có dữ liệu: nhớ để khỏi hỏi lại
       } else if (res.ok) {
@@ -633,12 +651,12 @@ async function ensureCells(lat: number, lng: number): Promise<void> {
     } finally {
       loading.delete(key);
     }
-  }
+  });
 }
 
 async function loadVersion(): Promise<void> {
   try {
-    const res = await fetch('./data/version.json', { cache: 'no-cache' });
+    const res = await fetchT('./data/version.json', NET_MS, { cache: 'no-cache' });
     if (!res.ok) throw new Error(String(res.status));
     const j = (await res.json()) as { updated?: string };
     dataStamp = j.updated ? `Dữ liệu cập nhật: ${j.updated}` : 'Dữ liệu đã tải';
@@ -831,7 +849,21 @@ $('btn-voice').addEventListener('click', () => {
   saveSettings();
   applyVoiceUi();
 });
+/** Trạng thái máy chủ (Cài đặt): hỏi khi mở app, khi có mạng lại, khi mở Cài đặt. */
+let serverState: ServerState | null = null;
+async function refreshServer(): Promise<void> {
+  serverState = await checkServer(navigator.onLine);
+  const el = $('settings-server');
+  el.textContent = serverText(serverState);
+  el.dataset.state = serverState;
+  document.body.dataset.server = serverState;
+}
+void refreshServer();
+window.addEventListener('online', () => void refreshServer());
+window.addEventListener('offline', () => void refreshServer());
+
 $('btn-settings').addEventListener('click', () => {
+  void refreshServer();
   ($('set-radius') as HTMLSelectElement).value = String(settings.radius);
   ($('set-speedcal') as HTMLSelectElement).value = String(settings.speedCal);
   ($('set-theme') as HTMLSelectElement).value = settings.theme;
@@ -912,7 +944,7 @@ let dl: { slug: string; got: number; total: number; ctl: AbortController } | nul
 
 async function loadProvinces(): Promise<void> {
   if (provinces.length) return;
-  const r = await fetch('./map/provinces.json', { cache: 'no-cache' });
+  const r = await fetchT('./map/provinces.json', NET_MS, { cache: 'no-cache' });
   if (!r.ok) throw new Error('chưa có');
   const j = (await r.json()) as { updated?: string; provinces?: ProvinceInfo[] };
   provinces = Array.isArray(j.provinces) ? j.provinces : [];
@@ -1077,7 +1109,7 @@ async function localEntries(): Promise<NameEntry[]> {
       .filter((k) => !nameShards.has(k))
       .map(async (k) => {
         try {
-          const r = await fetch(`./data/names/${k}.json`);
+          const r = await fetchT(`./data/names/${k}.json`, NET_MS);
           nameShards.set(k, r.ok ? parseNameShard(await r.json()) : []);
         } catch {
           /* mất mạng & chưa lưu: bỏ qua mảnh này */
@@ -1121,7 +1153,7 @@ function mergePlaces(local: Place[], online: Place[]): Place[] {
 async function expandMapLink(u: string, signal: AbortSignal): Promise<{ lat: number; lng: number } | { q: string } | null> {
   if (!navigator.onLine) return null;
   try {
-    const r = await fetch(`${SUPABASE_URL}/functions/v1/expand-link?u=${encodeURIComponent(u.trim())}`, { headers: authHeaders(), signal });
+    const r = await fetchT(`${SUPABASE_URL}/functions/v1/expand-link?u=${encodeURIComponent(u.trim())}`, NET_MS, { headers: authHeaders(), signal });
     if (!r.ok) return null;
     const j = (await r.json()) as { url?: string; lat?: number; lng?: number; q?: string | null };
     if (typeof j.lat === 'number' && typeof j.lng === 'number') return { lat: j.lat, lng: j.lng };
@@ -1405,3 +1437,44 @@ $('btn-obd-open').addEventListener('click', () => {
 applyTheme();
 applyVoiceUi();
 refreshNotes();
+
+/* ===== Sao lưu / khôi phục (A11) ===== */
+$('btn-backup').addEventListener('click', async () => {
+  const json = makeBackup({ keys: () => Object.keys(localStorage), get: (k) => localStorage.getItem(k) }, Date.now());
+  const d = new Date();
+  const name = `lai-an-toan-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+  const file = new File([json], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare?.({ files: [file] })) return void (await navigator.share({ files: [file], title: 'Sao lưu Lái An Toàn' }));
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+});
+$('btn-restore').addEventListener('click', () => ($('restore-file') as HTMLInputElement).click());
+$('restore-file').addEventListener('change', async (ev) => {
+  const input = ev.target as HTMLInputElement;
+  const f = input.files?.[0];
+  input.value = '';
+  if (!f) return;
+  const r = readBackup(await f.text());
+  if (!r.ok) return void toast(r.reason);
+  const when = r.at ? new Date(r.at).toLocaleString('vi-VN') : 'không rõ ngày';
+  if (!confirm(`Khôi phục bản sao lưu (${when}, ${Object.keys(r.entries).length} mục)? Dữ liệu cùng loại trên máy này sẽ được thay thế.`)) return;
+  for (const [k, v] of Object.entries(r.entries)) {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      /* bỏ qua */
+    }
+  }
+  toast('Đã khôi phục. Đang tải lại app…');
+  setTimeout(() => location.reload(), 900);
+});

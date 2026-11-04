@@ -1,3 +1,4 @@
+import { fetchT, NET_MS } from './core/net';
 import './styles.css';
 import { fleetFresh, isTeamCode } from './features/fleet';
 import { fmtVnTime } from './features/reports';
@@ -55,7 +56,7 @@ async function load(): Promise<void> {
   if (loading || document.hidden) return;
   loading = true;
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/fleet_list`, {
+    const r = await fetchT(`${SUPABASE_URL}/rest/v1/rpc/fleet_list`, NET_MS, {
       method: 'POST',
       headers: { ...authHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ p_team: team }),

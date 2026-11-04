@@ -47,6 +47,8 @@ export function buildFeedback(o: {
   at?: { lat: number; lng: number } | null;
   withLocation?: boolean;
   road?: RoadCtx | null;
+  /** Lỗi gần đây trên máy (đã bỏ toạ độ) — chỉ đính kèm khi báo "Lỗi app". */
+  errors?: string[];
   rand?: () => number;
 }): { ok: true; item: FeedbackItem } | { ok: false; reason: string } {
   if (!(o.kind in FEEDBACK_KINDS)) return { ok: false, reason: 'Loại góp ý không hợp lệ.' };
@@ -61,6 +63,7 @@ export function buildFeedback(o: {
     if (o.road.segment) ctx.segment = o.road.segment;
     if (o.road.posted !== undefined && o.road.posted !== null) ctx.posted = o.road.posted;
   }
+  if (o.kind === 'loi' && o.errors?.length) ctx.errors = o.errors.slice(-5).map((e) => e.slice(0, 100)); // ctx trên máy chủ ≤ 2000 byte
   const item: FeedbackItem = {
     id: `f${o.now.toString(36)}${(o.rand ?? Math.random)().toString(36).slice(2, 6)}`,
     rating: o.rating,

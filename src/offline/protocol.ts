@@ -1,3 +1,4 @@
+import { fetchT } from '../core/net';
 import { parseLatmapUrl } from './core';
 import type { OfflineMaps } from './store';
 
@@ -8,7 +9,7 @@ let template: Promise<string | null> | null = null;
 function remoteTemplate(): Promise<string | null> {
   template ??= (async () => {
     try {
-      const r = await fetch('https://tiles.openfreemap.org/planet', { signal: AbortSignal.timeout(5000) });
+      const r = await fetchT('https://tiles.openfreemap.org/planet', 5000);
       const j = (await r.json()) as { tiles?: string[] };
       if (j.tiles?.[0]) {
         try {
