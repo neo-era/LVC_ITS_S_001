@@ -40,7 +40,7 @@ jobs:
       - name: Kiểm tra bản đăng (có dữ liệu, dưới giới hạn 1 GB của Pages)
         run: |
           test -s dist/data/version.json || { echo "::error::Thiếu dữ liệu cảnh báo (dist/data/version.json)"; exit 1; }
-          SIZE=$(du -sm dist | cut -f1)
+          SIZE=$(du -sm --apparent-size dist | cut -f1) # dung lượng thật (không tính khối đĩa của 170 nghìn tệp nhỏ)
           echo "Dung lượng: ${SIZE} MB"
           [ "$SIZE" -lt 900 ] || { echo "::error::Bản đăng ${SIZE} MB vượt 900 MB"; exit 1; }
       - uses: actions/upload-pages-artifact@v3
