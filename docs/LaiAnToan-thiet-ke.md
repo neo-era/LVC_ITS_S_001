@@ -108,3 +108,51 @@ Hướng dẫn sử dụng cho người dùng: `docs/Huong-dan-su-dung-Lai-An-To
 - Chờ anh: dán `supabase/lat_camera_marks.sql` vào SQL Editor dự án `lai-an-toan`; chạy thử trên xe (GPS, giọng, offline trên iPhone).
 - Tiếp theo: camera hành trình (Android/Capacitor), lưu địa điểm, iOS (khi quyết định tài khoản Apple), báo sự cố giai đoạn 2.
 - Bài học: service worker phải `res.clone()` ngay (không trong promise); `pkill -f` trong cùng lệnh shell giết luôn shell; Playwright `setOffline` không mô phỏng đúng service worker → thử offline bằng cách tắt máy chủ.
+
+## 10. Rà soát bổ sung tính năng (04/11/2026)
+Ba chuyên gia độc lập (nghiệp vụ ATGT, kỹ thuật PWA/Supabase, UX lái xe) cùng kết luận **DUYỆT CÓ ĐIỀU KIỆN**. Kế hoạch làm theo 3 đợt; trạng thái cập nhật ở cột cuối.
+
+### Đợt A — Độ tin cậy khi lái lâu, sóng yếu (bắt buộc, kỹ thuật)
+| # | Vấn đề | Sửa | Đạt khi | TT |
+|---|---|---|---|---|
+| A1 | Cache dữ liệu ô đổi tên mỗi lần đăng trang → mất offline mỗi đêm | Tên cache dữ liệu cố định `lat-data`, giới hạn 3.000 mục | Sau cập nhật, ô đã xem vẫn đọc được khi máy bay | |
+| A2 | maplibre nạp động không được lưu sẵn | Lưu sẵn mọi `assets/*` theo manifest build | Mở app sau cập nhật khi mất mạng vẫn có bản đồ | |
+| A3 | `/data/` không hạn giờ, nạp ô tuần tự | Mạng > 3 s dùng bản lưu; nạp song song 4 ô, hạn 8 s | Test giả lập mạng treo | |
+| A4 | Engine giữ mọi ô đã nạp | Chỉ giữ ô ≤ 5 km, tối đa 300 ô | Test 300 km số ô ổn định | |
+| A5 | Báo cáo 4xx (cả 404) bị bỏ vĩnh viễn | Chỉ 400/409/422 là từ chối; còn lại gửi lại sau | Test 404 | |
+| A6 | Lệnh mạng không hạn giờ, kẹt cờ tìm lại đường | `fetchT` dùng chung (tìm đường 10 s, khác 8 s) | Test treo → nhả cờ | |
+| A7 | Supabase tạm dừng/thiếu bảng, báo lỗi mơ hồ | Kiểm tra sức khoẻ máy chủ, hiện trạng thái; tính năng phụ thuộc mờ đi; job đêm giữ sống | Cài đặt hiện "Máy chủ: …" | |
+| A8 | Có thể đăng trang thiếu dữ liệu | pages.yml kiểm `version.json` + dung lượng < 900 MB | Build thất bại khi thiếu | |
+| A9 | Vị trí đội xe nằm mãi trên máy chủ | Dọn toàn bảng > 24 h (SQL) | | |
+| A10 | Không có ghi lỗi | Ghi 20 lỗi gần nhất (không toạ độ), "Gửi chẩn đoán" khi đồng ý | | |
+| A11 | Dữ liệu chỉ ở localStorage | Sao lưu / khôi phục JSON | Vòng xuất → nhập khớp | |
+
+### Đợt B — Nghiệp vụ (bắt buộc)
+| # | Vấn đề | Sửa | TT |
+|---|---|---|---|
+| B1 | Thiếu loại xe | Thêm xe gắn máy (≤ 50 cc, 40 km/h); ô tô kéo rơ moóc/xi téc/trộn (60/50 ngoài đô thị) | |
+| B2 | Ước tính 80–90 ở vùng ven TP.HCM | Trong TP.HCM: mọi ô (trừ cao tốc) coi là khu đông dân cư khi ước tính | |
+| B3 | Biển công bố nguồn cũ | Mỗi mục có ngày rà lại; quá 12 tháng → hạ thành ước tính (không đọc giọng) | |
+| B4 | Lời cảnh báo dễ hiểu lầm pháp lý | "Tuyến được báo có camera (báo chí 01/2026)"; "Giới hạn" chỉ cho biển thật; ước tính ghi "Ước tính"; cấm tải ghi "theo OSM, chưa đủ vùng cấm" | |
+| B5 | Số hiệu văn bản | VBHN 74/2026/VBHN-TT-BXD (hợp nhất TT 38/2024 + TT 09/2025) | |
+| B6 | Thiếu trạm thu phí | OSM `barrier=toll_booth`: báo trước 1 km theo chiều đi | |
+
+### Đợt C — Trải nghiệm khi lái (bắt buộc, qua chốt UI)
+| # | Vấn đề | Sửa | TT |
+|---|---|---|---|
+| C1 | Mũi tên rẽ luôn chỉ thẳng | Biểu tượng theo loại rẽ ≥ 64 px | |
+| C2 | Câu dẫn đường 4 dòng, đè bản đồ, toạ độ thô | Thẻ nền đặc tối đa 2 dòng; "Điểm đã chọn" thay toạ độ; dải km/phút/giờ đến | |
+| C3 | Chữ phủ khó đọc ngoài nắng | Nền đục ≥ 90%, tương phản ≥ 4.5:1 | |
+| C4 | 10 nút khi đang chạy, 2 nút dừng | > 10 km/h còn 4 nút + "⋯"; ■ thành "Kết thúc" có xác nhận; Chia sẻ rời thẻ dẫn đường | |
+| C5 | Gõ chữ/cài đặt khi đang chạy | > 10 km/h khoá, "Dừng xe để thao tác" (có "Tôi ngồi cạnh") | |
+| C6 | Trạng thái lỗi | Mất GPS > 3 s dải vàng + đọc 1 lần; ngoại tuyến khi dẫn đường; tìm lại > 10 s báo lỗi + thử lại | |
+| C7 | Dải trắng đáy iPhone | Khung app phủ đủ màn hình cài đặt | |
+| C8 | Cảnh báo vượt tốc một kiểu | 3 mức (+1–5, +6–10, > 10), tiếng bíp + rung; ước tính chỉ bíp nhẹ | |
+| C9 | Camera đọc một lần | Đọc ở 500 m, nhắc ở 150 m | |
+| C10 | Người mới | Màn đầu 3 bước: loại xe → quyền vị trí → thử giọng | |
+
+### Để sau (P2/P3)
+Cộng đồng báo biển (ảnh + 2 người xác nhận) và vùng cấm xe tải nội đô TP.HCM (số hoá QĐ 23/2018 + theo dõi dự thảo 2026) — cần máy chủ chạy ổn định trước; đường một chiều/cấm rẽ; trường học; ngập/kẹt do cộng đồng (tự hết hạn 2 h); chế độ tiết kiệm pin; trang chẩn đoán; dự phòng Valhalla/Photon; ban đêm tự động; tương phản cao; làn đường.
+
+### Nhật ký duyệt
+- 04/11/2026 — Rà soát hiện trạng: chuyên gia nghiệp vụ ATGT, kỹ thuật PWA/Supabase, UX lái xe → DUYỆT CÓ ĐIỀU KIỆN; toàn bộ thay đổi bắt buộc đưa vào Đợt A–C.
