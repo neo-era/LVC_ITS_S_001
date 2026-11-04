@@ -156,6 +156,31 @@ describe('service worker', () => {
     }
   });
 
+  it('QA: phải sao chép phản hồi trước khi trang đọc nội dung (clone sau await thì hỏng)', async () => {
+    let handedOut = false;
+    const mk = (): Response => {
+      const r = new Response('moi');
+      const orig = r.clone.bind(r);
+      (r as any).clone = () => {
+        if (handedOut) throw new TypeError('body used');
+        return orig();
+      };
+      return r;
+    };
+    const f = vi.fn(async () => mk());
+    const a = load({ fetch: f });
+    const c = await a.caches.open('lat-data');
+    let given: Promise<Response> | undefined;
+    // trình duyệt dùng phản hồi ngay khi lời hứa của respondWith xong → sau đó không clone được nữa
+    const r = await a.fire('fetch', {
+      request: new Request('https://x.test/app/data/cells/8.json'),
+      respondWith: (p: Promise<Response>) => (given = p.then((x) => ((handedOut = true), x))),
+    });
+    await given;
+    await Promise.all(r!.waits);
+    expect(c.m.has('https://x.test/app/data/cells/8.json')).toBe(true);
+  });
+
   it('A3: chưa có bản lưu thì vẫn chờ mạng', async () => {
     vi.useFakeTimers();
     try {

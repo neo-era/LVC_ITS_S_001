@@ -20,11 +20,13 @@ function networkFirst(e, req, store, wait, trim) {
   // bản mới về sau vẫn được lưu lại.
   e.waitUntil(
     net
-      .then(async (res) => {
+      .then((res) => {
         if (!res.ok) return;
-        const c = await caches.open(store);
-        await c.put(req, res.clone());
-        if (trim) await trimData(c);
+        const copy = res.clone(); // sao chép NGAY, trước khi trang đọc nội dung
+        return caches.open(store).then(async (c) => {
+          await c.put(req, copy);
+          if (trim) await trimData(c);
+        });
       })
       .catch(() => {}),
   );
