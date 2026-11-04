@@ -129,6 +129,15 @@ export function encodeRun(wayId: number, start: number, pts: LatLng[], maxspeed:
 }
 
 /** Gom dữ liệu toàn quốc vào các ô, giữ ở dạng đã mã hoá để tốn ít bộ nhớ. */
+/**
+ * TP.HCM cũ (Củ Chi → Nhà Bè, Bình Chánh → Thủ Đức), trừ Cần Giờ: hầu hết đường là khu đông dân cư,
+ * nên khi thiếu biển thì ước tính theo mức đô thị (60/50) thay vì 80–90 — an toàn hơn (chuyên gia ATGT, 11/2026).
+ * Khung toạ độ ô 0,01°: vĩ độ 10,66–11,17; kinh độ 106,35–106,88.
+ */
+export function inHcmCore(y: number, x: number): boolean {
+  return y >= 1066 && y <= 1116 && x >= 10635 && x <= 10687;
+}
+
 export class CellWriter {
   private readonly ways = new Map<string, number[][]>();
   private readonly alerts = new Map<string, AlertPoint[]>();
@@ -174,6 +183,8 @@ export class CellWriter {
   }
 
   private isUrban(k: string): boolean {
+    const [cy, cx] = k.split('_').map(Number);
+    if (inHcmCore(cy, cx)) return true;
     const km = this.km.get(k) ?? 0;
     if (km >= URBAN_KM) return true;
     if (km < URBAN_EDGE_KM) return false;

@@ -28,24 +28,40 @@ function fill(w: CellWriter, y: number, x: number, km: number, id: number) {
 describe('khu đông dân cư làm mượt theo ô bên cạnh', () => {
   it('ô thưa (≥ 4 km đường) nằm giữa các ô dày → coi là đô thị', () => {
     const w = new CellWriter();
-    fill(w, 1090, 10655, 6, 1); // ô giữa: 6 km
-    fill(w, 1090, 10654, URBAN_KM + 3, 2); // trái: dày
-    fill(w, 1090, 10656, URBAN_KM + 3, 3); // phải: dày
+    fill(w, 1190, 10655, 6, 1); // ô giữa: 6 km
+    fill(w, 1190, 10654, URBAN_KM + 3, 2); // trái: dày
+    fill(w, 1190, 10656, URBAN_KM + 3, 3); // phải: dày
     const files = w.files();
-    expect(files.get('1090_10655')?.u).toBe(1);
+    expect(files.get('1190_10655')?.u).toBe(1);
   });
   it('ô thưa giữa đồng (bên cạnh không có ô dày) → vẫn ngoài đô thị', () => {
     const w = new CellWriter();
-    fill(w, 1090, 10655, 6, 1);
-    fill(w, 1090, 10654, 3, 2);
-    expect(w.files().get('1090_10655')?.u).toBeUndefined();
+    fill(w, 1190, 10655, 6, 1);
+    fill(w, 1190, 10654, 3, 2);
+    expect(w.files().get('1190_10655')?.u).toBeUndefined();
   });
   it('ô gần như không có đường (đồng ruộng, cao tốc) → không bị kéo theo', () => {
     const w = new CellWriter();
-    fill(w, 1090, 10655, 1.5, 1);
-    fill(w, 1090, 10654, URBAN_KM + 3, 2);
-    fill(w, 1090, 10656, URBAN_KM + 3, 3);
-    expect(w.files().get('1090_10655')?.u).toBeUndefined();
+    fill(w, 1190, 10655, 1.5, 1);
+    fill(w, 1190, 10654, URBAN_KM + 3, 2);
+    fill(w, 1190, 10656, URBAN_KM + 3, 3);
+    expect(w.files().get('1190_10655')?.u).toBeUndefined();
   });
 });
 void M;
+
+describe('B2: TP.HCM cũ (trừ Cần Giờ) coi là khu đông dân cư khi ước tính', () => {
+  it('ô thưa ở Củ Chi → đô thị', () => {
+    const w = new CellWriter();
+    fill(w, 1097, 10652, 1, 1); // ~10,97; 106,52 — Củ Chi, đường thưa
+    expect(w.files().get('1097_10652')?.u).toBe(1);
+  });
+  it('ô thưa ở Cần Giờ và ngoài TP.HCM → giữ theo mật độ', () => {
+    const w = new CellWriter();
+    fill(w, 1045, 10690, 1, 1); // Cần Giờ
+    fill(w, 1120, 10660, 1, 2); // phía bắc, ngoài khung
+    const f = w.files();
+    expect(f.get('1045_10690')?.u).toBeUndefined();
+    expect(f.get('1120_10660')?.u).toBeUndefined();
+  });
+});

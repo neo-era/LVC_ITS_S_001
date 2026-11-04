@@ -1,4 +1,4 @@
-import { OUTSIDE_LIMITS, type Vehicle } from './vehicle';
+import { OUTSIDE_LIMITS, VEHICLE_CAP, type Vehicle } from './vehicle';
 import type { AlertPoint, AlertType } from './alerts';
 import type { RoadSegment } from './speedlimit';
 
@@ -29,7 +29,7 @@ function parseAlerts(raw: unknown): AlertPoint[] {
   if (Array.isArray(raw)) {
     for (const p of raw as unknown[]) {
       if (!isObj(p) || !nonEmpty(p.id)) continue;
-      if (p.type !== 'camera' && p.type !== 'blackspot') continue;
+      if (p.type !== 'camera' && p.type !== 'blackspot' && p.type !== 'toll') continue;
       if (!okLat(p.lat) || !okLng(p.lng)) continue;
       const item: AlertPoint = { id: p.id, type: p.type as AlertType, lat: p.lat, lng: p.lng };
       if (num(p.dir) && p.dir >= 0 && p.dir <= 360) item.dir = p.dir;
@@ -46,12 +46,14 @@ export const EF_URBAN = 16;
 
 /**
  * Giới hạn ước tính theo luật khi OSM chưa có số
- * (Thông tư 38/2024/TT-BGTVT, sửa đổi bởi 09/2025/TT-BXD — VBHN 74/2026/VBHN-BXD):
+ * (Thông tư 38/2024/TT-BGTVT, sửa đổi bởi 09/2025/TT-BXD — VBHN 74/2026/VBHN-TT-BXD):
  * trong khu đông dân cư mọi xe 60 (đường đôi) / 50; ngoài khu đông dân cư theo loại xe.
  * Cao tốc không ước tính; đường nhỏ ngoài khu dân cư không ước tính.
  */
 export function estimateLimit(ef: number, vehicle: Vehicle = 'car'): number | null {
   if (ef & 4) return null;
+  const cap = VEHICLE_CAP[vehicle];
+  if (cap !== undefined) return cap; // xe gắn máy: 40 ở mọi nơi (không được đi cao tốc)
   const divided = (ef & 2) !== 0;
   if (ef & EF_URBAN) return divided ? 60 : 50;
   if (ef & 8) return null;

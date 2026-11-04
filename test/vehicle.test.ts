@@ -9,9 +9,9 @@ const DIV = 2;
 const NOEST = 4;
 const MINOR = 8;
 
-describe('estimateLimit theo loại xe (VBHN 74/2026/VBHN-BXD)', () => {
-  it('trong khu đông dân cư: mọi loại xe 60 (đường đôi) / 50', () => {
-    for (const v of VEHICLES) {
+describe('estimateLimit theo loại xe (VBHN 74/2026/VBHN-TT-BXD)', () => {
+  it('trong khu đông dân cư: mọi loại xe 60 (đường đôi) / 50 (trừ xe gắn máy: 40)', () => {
+    for (const v of VEHICLES.filter((x) => x !== 'moped')) {
       expect(estimateLimit(EF_URBAN | DIV, v)).toBe(60);
       expect(estimateLimit(EF_URBAN, v)).toBe(50);
     }

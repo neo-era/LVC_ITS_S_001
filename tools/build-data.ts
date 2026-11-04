@@ -14,7 +14,13 @@ import { matchCameraRoute } from '../src/pipeline/camera-routes';
 import { CellWriter, FLAG, simplify, wayFlags } from '../src/pipeline/compact';
 import { NameIndex } from '../src/pipeline/names';
 import { parseHgv } from '../src/pipeline/hgv';
-import { matchPosted } from '../src/pipeline/posted-limits';
+import { isStale, matchPosted, POSTED_RULES } from '../src/pipeline/posted-limits';
+
+// Nhắc rà lại biển công bố (B3): quá hạn thì không dùng; sắp hết hạn trong 30 ngày thì cảnh báo trên GitHub.
+for (const r of POSTED_RULES) {
+  if (isStale(r, Date.now())) console.log(`::warning::Biển công bố "${r.id}" quá 12 tháng chưa rà lại (${r.reviewed}) — đang KHÔNG dùng. Rà nguồn rồi cập nhật reviewed.`);
+  else if (isStale(r, Date.now() + 30 * 864e5)) console.log(`::notice::Biển công bố "${r.id}" sẽ hết hạn rà lại trong 30 ngày (${r.reviewed}).`);
+}
 import { convertElements, DRIVABLE, parseMaxspeed, summarizeWays, wayInfo, type OverpassElement, type WayInfo } from '../src/pipeline/osm';
 import { approvedUrl, authHeaders } from '../src/sync';
 

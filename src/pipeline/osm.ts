@@ -17,7 +17,7 @@ export interface CellFile {
   v: 1;
   cell: string;
   segments: { id: string; a: [number, number]; b: [number, number]; maxspeed: number | null; cam?: 1 }[];
-  alerts: { id: string; type: 'camera' | 'blackspot'; lat: number; lng: number; dir?: number }[];
+  alerts: { id: string; type: 'camera' | 'blackspot' | 'toll'; lat: number; lng: number; dir?: number }[];
 }
 
 /** "50", "50 km/h" → 50; mph, "none", "signals", "VN:urban"… → null (không đoán). */
@@ -76,6 +76,8 @@ export function convertElements(els: OverpassElement[]): { segments: RoadSegment
       const dir = cameraDir(tags);
       if (dir !== undefined) a.dir = dir;
       alerts.push(a);
+    } else if (e.type === 'node' && typeof e.lat === 'number' && typeof e.lon === 'number' && tags.barrier === 'toll_booth') {
+      alerts.push({ id: `n${e.id}`, type: 'toll', lat: r6(e.lat), lng: r6(e.lon) });
     }
   }
   return { segments, alerts };

@@ -1,6 +1,7 @@
+import { isHeavy } from './core/vehicle';
 import type { Vehicle } from './core/vehicle';
 import { hgvBlockedAt } from './pipeline/hgv';
-import { AlertDeduper, findAlerts, type AlertHit, type AlertPoint } from './core/alerts';
+import { AlertDeduper, findAlerts, TOLL_RADIUS_M, type AlertHit, type AlertPoint } from './core/alerts';
 import type { CellData } from './core/cells';
 import { alertVoiceText, overspeedVoiceText, speedState, type SpeedState } from './core/format';
 import { bearing, cellKey, cellsAround, haversine, type LatLng } from './core/geo';
@@ -51,6 +52,7 @@ const idleView = (): ViewState => ({
 export class Engine {
   private readonly filter = new SpeedFilter();
   private deduper: AlertDeduper;
+  private readonly tollDeduper = new AlertDeduper(TOLL_RADIUS_M);
   private radiusM: number;
   private vehicle: Vehicle;
   private readonly speak: (text: string) => void;
@@ -202,7 +204,7 @@ export class Engine {
       for (const s of this.cells.get(key)?.segments ?? []) segs.set(s.id, s);
     }
     const alerts = new Map<string, AlertPoint>();
-    for (const key of cellsAround(pos.lat, pos.lng, this.radiusM * 1.6)) {
+    for (const key of cellsAround(pos.lat, pos.lng, Math.max(this.radiusM, TOLL_RADIUS_M) * 1.6)) {
       for (const a of this.alertsOf(key)) alerts.set(a.id, a);
     }
     return { segments: [...segs.values()], alerts: [...alerts.values()] };
@@ -214,7 +216,7 @@ export class Engine {
     this.segId = seg?.id ?? null;
     const lim = kmh !== null ? limitOf(seg, this.vehicle) : null;
     const camRoute = seg?.cam === true;
-    const truckBan = (this.vehicle === 'truck' || this.vehicle === 'bus') && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
+    const truckBan = isHeavy(this.vehicle) && !!seg?.hgv && hgvBlockedAt(seg.hgv, t);
     const limit = lim ? lim.kmh : null;
     const state = speedState(kmh, limit);
 
@@ -226,14 +228,30 @@ export class Engine {
     }
     this.prevState = state;
 
-    const hits = findAlerts(alerts, pos, this.heading, this.radiusM);
+    const tolls = alerts.filter((a) => a.type === 'toll');
+    const hits = findAlerts(alerts.filter((a) => a.type !== 'toll'), pos, this.heading, this.radiusM);
     const hitIds = new Set(hits.map((h) => h.id));
     for (const h of hits) {
       if (this.deduper.shouldAnnounce(h.id, h.distM)) this.speak(alertVoiceText(h.type, h.distM));
     }
     for (const a of alerts) {
-      if (!hitIds.has(a.id)) this.deduper.shouldAnnounce(a.id, haversine(pos, a));
+      if (a.type !== 'toll' && !hitIds.has(a.id)) this.deduper.shouldAnnounce(a.id, haversine(pos, a));
     }
+    // Trạm thu phí: báo ở ~1 km phía trước; trạm hai chiều sát nhau (cùng ô ~300 m) tính là một.
+    const tollHits = findAlerts(tolls, pos, this.heading, TOLL_RADIUS_M);
+    const tollKey = (a: { lat: number; lng: number }) => `${Math.round(a.lat / 0.003)}_${Math.round(a.lng / 0.003)}`;
+    const tollPt = new Map(tolls.map((a) => [a.id, a]));
+    const seenTollKeys = new Set<string>();
+    for (const h of tollHits) {
+      const k = tollKey(tollPt.get(h.id)!);
+      if (seenTollKeys.has(k)) continue;
+      seenTollKeys.add(k);
+      if (this.tollDeduper.shouldAnnounce(k, h.distM)) this.speak(alertVoiceText('toll', h.distM));
+    }
+    for (const a of tolls) if (!seenTollKeys.has(tollKey(a))) this.tollDeduper.shouldAnnounce(tollKey(a), haversine(pos, a));
+    const allHits = [...hits, ...tollHits.filter((h, i, arr) => arr.findIndex((x) => tollKey(tollPt.get(x.id)!) === tollKey(tollPt.get(h.id)!)) === i)].sort(
+      (a, b) => a.distM - b.distM,
+    );
 
     this.v = {
       status,
@@ -242,8 +260,8 @@ export class Engine {
       limitEstimated: estimated,
       limitNote: lim?.note ?? null,
       state,
-      alert: hits[0] ?? null,
-      upcoming: hits.slice(1, 4),
+      alert: allHits[0] ?? null,
+      upcoming: allHits.slice(1, 4),
       camRoute,
       truckBan,
     };

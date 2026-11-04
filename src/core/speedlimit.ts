@@ -1,5 +1,5 @@
 import { estimateLimit } from './cells';
-import type { Vehicle } from './vehicle';
+import { isTwoWheel, VEHICLE_CAP, type Vehicle } from './vehicle';
 import { angleDiff, bearing, distToSegment, type LatLng } from './geo';
 
 export interface RoadSegment {
@@ -92,8 +92,10 @@ export function findLimit(
 export function limitOf(seg: RoadSegment | null, vehicle: Vehicle = 'car'): Omit<LimitResult, 'distM'> | null {
   if (!seg) return null;
   if (validSpeed(seg.maxspeed)) {
-    // tuyến tách làn: xe máy theo làn hỗn hợp; ô tô theo làn ô tô (kèm nhắc mức làn hỗn hợp)
-    if (seg.carLane && validSpeed(seg.carLane) && vehicle !== 'motorbike')
+    const cap = VEHICLE_CAP[vehicle];
+    if (cap !== undefined && seg.maxspeed > cap) return { kmh: cap, segmentId: seg.id, estimated: false, note: `Xe gắn máy tối đa ${cap}` };
+    // tuyến tách làn: xe hai bánh theo làn hỗn hợp; ô tô theo làn ô tô (kèm nhắc mức làn hỗn hợp)
+    if (seg.carLane && validSpeed(seg.carLane) && !isTwoWheel(vehicle))
       return { kmh: seg.carLane, segmentId: seg.id, estimated: false, note: `Làn ô tô · hỗn hợp ${seg.maxspeed}` };
     return { kmh: seg.maxspeed, segmentId: seg.id, estimated: false };
   }

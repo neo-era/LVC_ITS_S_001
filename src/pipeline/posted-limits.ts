@@ -19,7 +19,12 @@ interface Rule extends PostedLimit {
   refs: string[];
   box: { s: number; w: number; n: number; e: number };
   source: { title: string; url: string; date: string };
+  /** Ngày người phát triển đối chiếu lại nguồn còn đúng (YYYY-MM-DD). Quá 12 tháng không rà → không dùng. */
+  reviewed: string;
 }
+
+const REVIEW_MS = 365 * 864e5;
+export const isStale = (r: Pick<Rule, 'reviewed'>, now: number) => !(now - Date.parse(r.reviewed) <= REVIEW_MS);
 
 export const POSTED_RULES: Rule[] = [
   {
@@ -35,6 +40,7 @@ export const POSTED_RULES: Rule[] = [
       url: 'https://csgt-congan.hochiminhcity.gov.vn/wps/portal/Home/trang-chu/noi-dung-chi-tiet/tin-tuc-hoat-dong/as_phongnhanh2024',
       date: '2024-06-11',
     },
+    reviewed: '2026-10-25',
   },
   {
     id: 'vvk-ql1-logom',
@@ -49,6 +55,7 @@ export const POSTED_RULES: Rule[] = [
       url: 'https://thanhnien.vn/nhieu-duong-o-tphcm-cho-o-to-chay-80-kmgio-185542473.htm',
       date: '2016-03-02',
     },
+    reviewed: '2026-10-25',
   },
 ];
 
@@ -56,11 +63,12 @@ export const POSTED_RULES: Rule[] = [
 const MAIN = new Set(['trunk', 'primary', 'secondary', 'tertiary']);
 const normRef = (r: string) => r.toLowerCase().replace(/[^a-z0-9;]/g, '');
 
-export function matchPosted(tags: Record<string, string | undefined>, lat: number, lng: number): PostedLimit | null {
+export function matchPosted(tags: Record<string, string | undefined>, lat: number, lng: number, now = Date.now()): PostedLimit | null {
   if (!MAIN.has(tags.highway ?? '')) return null;
   const name = foldName(`${tags['name:vi'] ?? ''} ${tags.name ?? ''}`);
   const refs = normRef(tags.ref ?? '').split(';').filter(Boolean);
   for (const r of POSTED_RULES) {
+    if (isStale(r, now)) continue; // nguồn quá hạn rà lại: để OSM/ước tính quyết định
     const { s, w, n, e } = r.box;
     if (lat < s || lat > n || lng < w || lng > e) continue;
     // đường có số hiệu khác (vd CT.40) thì không khớp theo tên

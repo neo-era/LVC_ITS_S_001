@@ -25,13 +25,13 @@ describe('wayFlags', () => {
 /** Ô có nhiều đường (đô thị) hay ít đường (ngoài khu dân cư). */
 function cellWith(extraKm: number, tags: Record<string, string>, maxspeed: number | null) {
   const w = new CellWriter();
-  const base = { lat: 10.7705, lng: 106.7005 };
+  const base = { lat: 11.9705, lng: 106.7005 }; // ngoài TP.HCM (trong TP.HCM luôn coi là đô thị)
   w.addWay(1, [base, { lat: base.lat + 300 / M, lng: base.lng }], maxspeed, wayFlags(tags));
   // thêm đường để tăng mật độ (các đường song song trong cùng ô)
   const n = Math.ceil((extraKm * 1000) / 600);
   for (let i = 0; i < n; i++) {
     const lng = 106.7008 + i * 0.00008;
-    w.addWay(100 + i, [{ lat: 10.7702, lng }, { lat: 10.7702 + 600 / M, lng }], null, wayFlags({ highway: 'residential' }));
+    w.addWay(100 + i, [{ lat: 11.9702, lng }, { lat: 11.9702 + 600 / M, lng }], null, wayFlags({ highway: 'residential' }));
   }
   const files = [...w.files().values()];
   const f = files.find((x) => x.w.some((e) => e[0] === 1))!;
@@ -39,7 +39,7 @@ function cellWith(extraKm: number, tags: Record<string, string>, maxspeed: numbe
   return { ...seg, est: estimateLimit(seg.ef ?? 0, 'car') ?? undefined };
 }
 
-describe('ước tính giới hạn theo luật (VBHN 74/2026/VBHN-BXD)', () => {
+describe('ước tính giới hạn theo luật (VBHN 74/2026/VBHN-TT-BXD)', () => {
   it('ô đô thị: hai chiều 50, đường đôi 60', () => {
     expect(cellWith(URBAN_KM + 2, { highway: 'primary' }, null).est).toBe(50);
     expect(cellWith(URBAN_KM + 2, { highway: 'primary', oneway: 'yes', lanes: '3' }, null).est).toBe(60);

@@ -1,3 +1,4 @@
+import type { AlertType } from './core/alerts';
 import { alertLabel, formatDistance } from './core/format';
 import { shownSpeed } from './core/speedcal';
 import type { ViewState } from './engine';
@@ -7,7 +8,7 @@ export interface MapHud {
   limit: string | null;
   estimated: boolean;
   state: ViewState['state'];
-  alert: { title: string; sub: string; dist: string; type: 'camera' | 'blackspot' } | null;
+  alert: { title: string; sub: string; dist: string; type: AlertType } | null;
 }
 
 /** Dữ liệu hiển thị cho lớp tốc độ + cảnh báo nổi trên bản đồ toàn màn hình. */

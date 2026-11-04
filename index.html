@@ -46,7 +46,7 @@
     <div class="status-chips" id="status-chips"></div>
     <p class="route-chip" id="route-chip" hidden>
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      <span>Tuyến này có camera phạt nguội</span>
+      <span>Tuyến được báo có camera (báo chí 01/2026)</span>
     </p>
 
     <section class="nav" id="nav" aria-label="Dẫn đường" hidden>
@@ -445,8 +445,10 @@
       <select id="set-vehicle">
         <option value="car">Ô tô con (đến 28 chỗ, tải đến 3,5 tấn)</option>
         <option value="motorbike">Xe mô tô (xe máy)</option>
+        <option value="moped">Xe gắn máy (đến 50 cc, xe đạp máy)</option>
         <option value="truck">Xe khách trên 28 chỗ, xe tải trên 3,5 tấn</option>
         <option value="bus">Xe buýt, đầu kéo sơ mi rơ moóc</option>
+        <option value="trailer">Ô tô kéo rơ moóc, xi téc, trộn bê tông</option>
       </select>
     </label>
 
@@ -546,7 +548,9 @@
     </div>
     <input type="file" id="restore-file" accept="application/json,.json" hidden />
     <p class="muted note">Sao lưu gồm điểm đã lưu, dấu camera, cài đặt, báo cáo, danh sách trụ — chuyển sang máy mới hoặc giữ phòng khi xoá app.</p>
-    <p class="muted note">Nhắc “tuyến có camera phạt nguội” dựa trên danh sách tên đường do báo chí nêu (cập nhật 01/2026), không phải vị trí camera và có thể chưa đầy đủ.</p>
+    <p class="muted note">Nhắc “tuyến được báo có camera” dựa trên danh sách tên đường do báo chí nêu (cập nhật 01/2026), không phải vị trí camera và có thể chưa đầy đủ.</p>
+    <p class="muted note">Biển số trên màn hình: nền trắng viền đỏ là biển có trong dữ liệu; viền nét đứt kèm chữ “Ước tính” là mức tính theo luật (VBHN 74/2026/VBHN-TT-BXD) khi chưa có dữ liệu biển — app không đọc giọng cảnh báo vượt tốc với mức ước tính.</p>
+    <p class="muted note">Cảnh báo cấm xe tải theo giờ lấy từ biển ghi trong OpenStreetMap, chưa đủ các vùng cấm xe tải nội đô TP.HCM — luôn theo biển báo thực tế.</p>
     <p class="muted note">Dữ liệu cảnh báo chỉ mang tính tham khảo. Luôn tuân thủ biển báo và quy định giao thông.</p>
   </form>
 </dialog>

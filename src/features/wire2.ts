@@ -1,3 +1,4 @@
+import { isTwoWheel } from '../core/vehicle';
 import { fetchT, NET_MS } from '../core/net';
 /** Nối giao diện nhóm 2: chia sẻ hành trình, thời tiết, cấm xe tải/ngập, SOS, tuần tra, QR trụ, đèn tín hiệu, OBD-II, nhận dạng biển. */
 import { haversine } from '../core/geo';
@@ -174,10 +175,10 @@ export function setupFeatures2(ctx: Ctx2) {
   /* ===== 13. Cấm xe tải / ngập ===== */
   let banSpokenAt = 0;
   function renderBan(v: ViewState): void {
-    chip('ban', v.truckBan ? 'Đường cấm xe tải giờ này' : '', 'danger');
+    chip('ban', v.truckBan ? 'Biển cấm xe tải giờ này (theo OSM)' : '', 'danger');
     if (v.truckBan && Date.now() - banSpokenAt > 120_000) {
       banSpokenAt = Date.now();
-      ctx.speak('Chú ý: đường này cấm xe tải vào giờ này.');
+      ctx.speak('Chú ý: đường này có biển cấm xe tải vào giờ này.');
     }
   }
 
@@ -199,7 +200,7 @@ export function setupFeatures2(ctx: Ctx2) {
   const onSosMotion = (e: DeviceMotionEvent) => {
     const a = e.accelerationIncludingGravity;
     if (!a || a.x === null || a.y === null || a.z === null || ctx.mode() !== 'gps') return;
-    const det = ctx.vehicle() === 'motorbike' ? sosDetectorMoto : sosDetector;
+    const det = isTwoWheel(ctx.vehicle()) ? sosDetectorMoto : sosDetector;
     if (det.push({ x: a.x, y: a.y, z: a.z }, Date.now())) onShock();
   };
   /** Cú sốc mạnh: chưa báo ngay, chờ xác nhận xe dừng hẳn (tránh báo nhầm khi qua ổ gà). */

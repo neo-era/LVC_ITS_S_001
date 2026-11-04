@@ -586,7 +586,7 @@ function render(v: ViewState): void {
   if (v.alert) {
     alertBox.hidden = false;
     alertTitle.textContent = alertLabel(v.alert.type);
-    alertSub.textContent = v.alert.type === 'camera' ? 'Chú ý tốc độ' : 'Chú ý quan sát';
+    alertSub.textContent = v.alert.type === 'camera' ? 'Chú ý tốc độ' : v.alert.type === 'toll' ? 'Chuẩn bị vào làn thu phí' : 'Chú ý quan sát';
     alertDist.textContent = formatDistance(v.alert.distM);
   } else {
     alertBox.hidden = true;

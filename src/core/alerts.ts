@@ -1,6 +1,9 @@
 import { angleDiff, bearing, haversine, type LatLng } from './geo';
 
-export type AlertType = 'camera' | 'blackspot';
+export type AlertType = 'camera' | 'blackspot' | 'toll';
+
+/** Trạm thu phí báo sớm hơn (khoảng 1 km) để kịp vào làn. */
+export const TOLL_RADIUS_M = 1000;
 
 export interface AlertPoint {
   id: string;

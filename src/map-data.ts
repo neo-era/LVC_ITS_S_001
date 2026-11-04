@@ -1,3 +1,4 @@
+import type { AlertType } from './core/alerts';
 import type { AlertPoint } from './core/alerts';
 
 export interface AlertFeatureCollection {
@@ -5,7 +6,7 @@ export interface AlertFeatureCollection {
   features: {
     type: 'Feature';
     geometry: { type: 'Point'; coordinates: [number, number] };
-    properties: { id: string; kind: 'camera' | 'blackspot' };
+    properties: { id: string; kind: AlertType };
   }[];
 }
 

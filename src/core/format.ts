@@ -30,7 +30,7 @@ export function speakDistance(m: number): string {
   if (!Number.isFinite(m) || m < 0) return '0 mét';
   const r = roundTo10(m);
   if (r < 1000) return `${r} mét`;
-  return `${oneDecimal(m / 1000)} ki lô mét`;
+  return `${oneDecimal(m / 1000).replace(/,0$/, '')} ki lô mét`; // đọc "1 ki lô mét", không "1,0"
 }
 
 export function overspeedVoiceText(limit: number): string {
@@ -38,11 +38,12 @@ export function overspeedVoiceText(limit: number): string {
 }
 
 export function alertLabel(type: AlertType): string {
-  return type === 'camera' ? 'Camera phạt nguội' : 'Điểm đen tai nạn';
+  return type === 'camera' ? 'Camera phạt nguội' : type === 'toll' ? 'Trạm thu phí' : 'Điểm đen tai nạn';
 }
 
 export function alertVoiceText(type: AlertType, distM: number): string {
   const d = speakDistance(distM);
+  if (type === 'toll') return `Phía trước ${d} có trạm thu phí.`;
   return type === 'camera'
     ? `Phía trước ${d} có camera phạt nguội. Chú ý tốc độ.`
     : `Phía trước ${d} có điểm đen tai nạn. Chú ý quan sát.`;

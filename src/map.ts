@@ -194,7 +194,7 @@ export class MapView {
       source: SRC,
       paint: {
         'circle-radius': 10,
-        'circle-color': ['match', ['get', 'kind'], 'camera', '#FFB020', '#E53935'],
+        'circle-color': ['match', ['get', 'kind'], 'camera', '#FFB020', 'toll', '#2563EB', '#E53935'],
         'circle-stroke-width': 2,
         'circle-stroke-color': '#1a1200',
       },
