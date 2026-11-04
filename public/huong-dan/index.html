@@ -80,8 +80,8 @@ dụng</a>
 <li><a href="#bố-cục-màn-hình-lái-xe"
 id="toc-bố-cục-màn-hình-lái-xe">3.1. Bố cục màn hình lái xe</a></li>
 <li><a href="#các-nút-ở-cột-bên-phải-từ-trên-xuống"
-id="toc-các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút ở cột bên
-phải (từ trên xuống)</a></li>
+id="toc-các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút và bảng “⋯”</a></li>
+<li><a href="#lần-đầu-mở-app" id="toc-lần-đầu-mở-app">3.2b. Lần đầu mở app</a></li>
 <li><a href="#điều-khiển-bản-đồ" id="toc-điều-khiển-bản-đồ">3.3. Điều
 khiển bản đồ</a></li>
 </ul></li>
@@ -177,6 +177,7 @@ id="toc-kết-nối-obd-ii-android">12.4. Kết nối OBD-II (Android)</a></li>
 <li><a href="#góp-ý-đánh-giá" id="toc-góp-ý-đánh-giá">12.5. Góp ý &amp;
 đánh giá</a></li>
 <li><a href="#giao-diện" id="toc-giao-diện">12.6. Giao diện</a></li>
+<li><a href="#máy-chủ-sao-lưu" id="toc-máy-chủ-sao-lưu">12.7. Máy chủ, báo lỗi, sao lưu</a></li>
 </ul></li>
 <li><a href="#bảng-tổng-hợp-cài-đặt" id="toc-bảng-tổng-hợp-cài-đặt">13.
 Bảng tổng hợp Cài đặt</a></li>
@@ -329,125 +330,31 @@ tốc độ và cảnh báo.</p></li>
 <li><p><strong>Chạy thử mô phỏng:</strong> xe ảo tự chạy một đoạn đường
 mẫu để anh/chị làm quen giao diện và nghe thử giọng cảnh báo, không cần
 ra đường.</p></li>
-<li><p>Bấm nút <strong>Dừng</strong> (ô vuông, dưới cùng bên phải) để
-kết thúc. Chuyến đi được lưu lại tự động.</p></li>
+<li><p>Kết thúc: bấm <strong>⋯ → Kết thúc lái xe</strong> rồi xác nhận. Chuyến đi được lưu lại tự động.</p></li>
 </ul>
 <h2 id="bố-cục-màn-hình-lái-xe">3.1. Bố cục màn hình lái xe</h2>
-<p>Bản đồ phủ <strong>toàn màn hình</strong>, các thông tin nổi trên nền
-trong suốt:</p>
+<p>Bản đồ phủ <strong>toàn màn hình</strong>; thông tin nằm trên các thẻ nền đặc để đọc rõ ngoài nắng. Xe luôn ở khoảng 2/3 màn hình phía dưới để thấy đường phía trước.</p>
 <div class="tw"><table>
-<colgroup>
-<col style="width: 22%" />
-<col style="width: 24%" />
-<col style="width: 52%" />
-</colgroup>
+<colgroup><col style="width: 22%" /><col style="width: 24%" /><col style="width: 54%" /></colgroup>
 <thead>
-<tr class="header">
-<th><strong>Vị trí</strong></th>
-<th><strong>Thành phần</strong></th>
-<th><strong>Ý nghĩa</strong></th>
-</tr>
-<tr class="odd">
-<th>Trên cùng bên trái</th>
-<th>Chấm trạng thái</th>
-<th>Xanh: <strong>GPS tốt</strong>; đỏ: <strong>mất tín hiệu
-GPS</strong>; “Mô phỏng” khi chạy thử</th>
-</tr>
-<tr class="header">
-<th>Góc trái</th>
-<th>Số lớn + km/h</th>
-<th>Tốc độ hiện tại. Chuyển <strong>đỏ</strong> khi vượt giới hạn</th>
-</tr>
-<tr class="odd">
-<th>Góc phải</th>
-<th>Biển tròn viền đỏ</th>
-<th>Tốc độ tối đa của đoạn đường (xem mục 4)</th>
-</tr>
-<tr class="header">
-<th>Dưới tốc độ</th>
-<th>Dòng cảnh báo / thẻ nhỏ (chip)</th>
-<th>Vượt tốc độ, tuyến có camera, thời tiết, đèn tín hiệu, cấm xe
-tải…</th>
-</tr>
-<tr class="odd">
-<th>Góc phải trên</th>
-<th>Bánh răng</th>
-<th><strong>Cài đặt</strong></th>
-</tr>
-<tr class="header">
-<th>Cột nút bên phải</th>
-<th>Các nút tròn</th>
-<th>Xem bảng 3.2</th>
-</tr>
-<tr class="odd">
-<th>Giữa màn hình</th>
-<th>Mũi tên xanh</th>
-<th>Vị trí và hướng xe</th>
-</tr>
+<tr class="header"><th><strong>Vị trí</strong></th><th><strong>Thành phần</strong></th><th><strong>Ý nghĩa</strong></th></tr><tr class="odd"><th>Trên cùng</th><th>Chấm trạng thái</th><th>Xanh: <strong>GPS tốt</strong>; đỏ: mất tín hiệu; “Mô phỏng” khi chạy thử</th></tr><tr class="header"><th>Trên cùng</th><th>Dải vàng báo lỗi</th><th>Mất GPS quá 3 giây; mất mạng khi đang dẫn đường; chưa tìm được đường mới (có nút <strong>Thử lại</strong>)</th></tr><tr class="odd"><th>Trên cùng</th><th>Thẻ xanh dẫn đường</th><th>Mũi tên đúng kiểu rẽ, khoảng cách, tên đường; dòng “rồi …” khi chỗ rẽ kế tiếp rất gần</th></tr><tr class="header"><th>Dưới thẻ xanh</th><th>Thẻ cảnh báo</th><th>Camera, điểm đen, trạm thu phí phía trước; viền đỏ khi camera còn dưới 150 m</th></tr><tr class="odd"><th>Góc dưới trái</th><th>Ô tốc độ + biển</th><th>Tốc độ hiện tại và giới hạn. Ô tốc độ đổi màu khi vượt: <strong>vàng</strong> (vượt 1–5), <strong>cam</strong> (6–10), <strong>đỏ</strong> (trên 10 km/h)</th></tr><tr class="header"><th>Góc dưới phải</th><th>Cột nút</th><th>Xem 3.2</th></tr><tr class="odd"><th>Dưới cùng (khi dẫn đường)</th><th>Dải giờ đến</th><th>Giờ đến dự kiến, km và phút còn lại, nơi đến; nút <strong>Kết thúc</strong>. Chạm vào giờ đến để xem lộ trình khác</th></tr>
 </thead>
 <tbody>
 </tbody>
 </table></div>
-<h2 id="các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút ở cột bên
-phải (từ trên xuống)</h2>
+<h2 id="các-nút-ở-cột-bên-phải-từ-trên-xuống">3.2. Các nút và bảng “⋯”</h2>
+<p>Cột bên phải chỉ giữ các nút cần khi đang chạy, xếp <strong>từ dưới lên</strong> (gần ngón cái nhất ở dưới):</p>
 <div class="tw"><table>
-<colgroup>
-<col style="width: 29%" />
-<col style="width: 70%" />
-</colgroup>
+<colgroup><col style="width: 38%" /><col style="width: 62%" /></colgroup>
 <thead>
-<tr class="header">
-<th><strong>Nút</strong></th>
-<th><strong>Chức năng</strong></th>
-</tr>
-<tr class="odd">
-<th>⤢ Mở rộng</th>
-<th>Thu gọn/mở rộng các khung thông tin để xem bản đồ rộng hơn; bấm lại
-để <strong>theo xe</strong></th>
-</tr>
-<tr class="header">
-<th>➤ Dẫn đường</th>
-<th>Mở hộp <strong>Đi đến đâu?</strong> (mục 6)</th>
-</tr>
-<tr class="odd">
-<th>📍 Đánh dấu camera</th>
-<th>Đánh dấu vị trí hiện tại là có camera (mục 5.3)</th>
-</tr>
-<tr class="header">
-<th>💡 Báo đèn tắt</th>
-<th>Báo nhanh đèn chiếu sáng tắt tại vị trí hiện tại (mục 9.1)</th>
-</tr>
-<tr class="odd">
-<th>🎥 Camera hành trình</th>
-<th>Bật/tắt quay video hành trình (mục 10)</th>
-</tr>
-<tr class="header">
-<th>🎤 Micro</th>
-<th>Ra lệnh bằng giọng nói (mục 8)</th>
-</tr>
-<tr class="odd">
-<th>🔊 Giọng nói</th>
-<th>Bật/tắt đọc cảnh báo bằng giọng nói</th>
-</tr>
-<tr class="header">
-<th>■ Dừng</th>
-<th>Kết thúc chuyến đi</th>
-</tr>
+<tr class="header"><th><strong>Nút</strong></th><th><strong>Chức năng</strong></th></tr><tr class="odd"><th>📍 Đánh dấu camera (nút vàng, to nhất)</th><th>Đánh dấu vị trí hiện tại có camera (mục 5.3)</th></tr><tr class="header"><th>🎤 Micro</th><th>Ra lệnh bằng giọng nói (mục 8)</th></tr><tr class="odd"><th>🔊 Giọng nói</th><th>Bật/tắt đọc cảnh báo</th></tr><tr class="header"><th>⋯ Thêm</th><th>Mở bảng: Dẫn đường, Báo đèn tắt, Camera hành trình, Chia sẻ hành trình, Bản đồ lớn, Cài đặt, <strong>Kết thúc lái xe</strong></th></tr><tr class="odd"><th>➤ Dẫn đường</th><th>Chỉ hiện khi xe dừng hoặc chạy dưới 10 km/h</th></tr>
 </thead>
 <tbody>
 </tbody>
 </table></div>
-<div class="tw"><table>
-<colgroup>
-<col style="width: 100%" />
-</colgroup>
-<tbody>
-<tr class="odd">
-<td>Tất cả các nút chỉ có biểu tượng. Nhấn giữ hoặc rê chuột vào nút để
-thấy tên.</td>
-</tr>
-</tbody>
-</table></div>
+<div class="tw"><table><colgroup><col style="width: 100%" /></colgroup><tbody><tr class="odd"><td><strong>Khi xe chạy trên 10 km/h</strong>, các mục cần gõ chữ (tìm điểm đến, Cài đặt) tạm khoá để tài xế không thao tác. Người ngồi cạnh bấm <strong>⋯ → “Tôi ngồi cạnh”</strong> để mở khoá đến hết chuyến. Bấm <strong>Kết thúc</strong> (dẫn đường) hoặc <strong>Kết thúc lái xe</strong> luôn có hộp hỏi lại để tránh bấm nhầm khi xe rung.</td></tr></tbody></table></div>
+<h2 id="lần-đầu-mở-app">3.2b. Lần đầu mở app</h2>
+<p>App hỏi 3 bước: <strong>loại xe</strong> → <strong>cho phép vị trí</strong> → <strong>nghe thử giọng</strong>. Có thể bấm “Bỏ qua”; đổi loại xe sau trong Cài đặt.</p>
 <h2 id="điều-khiển-bản-đồ">3.3. Điều khiển bản đồ</h2>
 <ul>
 <li><p><strong>Kéo</strong> bản đồ bằng một ngón để xem chỗ khác;
@@ -535,6 +442,16 @@ thấy số làn ô tô; xe máy thấy số làn hỗn hợp</th>
 <th>60 / 50 km/h</th>
 <th>70 / 60 km/h</th>
 </tr>
+<tr class="odd">
+<th>Ô tô kéo rơ moóc, kéo xe khác, xi téc, trộn bê tông</th>
+<th>60 / 50 km/h</th>
+<th>60 / 50 km/h</th>
+</tr>
+<tr class="header">
+<th>Xe gắn máy (đến 50 cc), xe đạp máy</th>
+<th>40 km/h</th>
+<th>40 km/h (kể cả khi biển cho phép cao hơn)</th>
+</tr>
 </thead>
 <tbody>
 </tbody>
@@ -547,7 +464,7 @@ thấy số làn ô tô; xe máy thấy số làn hỗn hợp</th>
 <tr class="odd">
 <td><strong>Quan trọng:</strong> chọn đúng <strong>Loại xe</strong>
 trong Cài đặt để mức ước tính và lộ trình dẫn đường phù hợp. Biển báo
-thực tế trên đường luôn được ưu tiên.</td>
+thực tế trên đường luôn được ưu tiên.<br>Trong khu vực TP.HCM cũ (Củ Chi → Nhà Bè, trừ Cần Giờ), khi chưa có dữ liệu biển app tính theo mức <strong>khu đông dân cư</strong> (60/50) cho an toàn. Mức ước tính chỉ hiện chữ “Ước tính”, đổi màu ô tốc độ và bíp nhẹ — không đọc giọng, không rung.</td>
 </tr>
 </tbody>
 </table></div>
@@ -584,7 +501,9 @@ sát”).</p></li>
 <li><p>Chỉ cảnh báo những điểm nằm <strong>cùng chiều đi</strong>, không
 báo camera phía sau hoặc ở đường song song.</p></li>
 </ul>
-<h2 id="tuyến-có-camera">5.2. Tuyến có camera</h2>
+<p><strong>Camera</strong> được đọc khi còn khoảng 500 m (theo bán kính trong Cài đặt) và <strong>nhắc lại ở 150 m</strong>. <strong>Trạm thu phí</strong> được báo trước khoảng <strong>1 km</strong> theo chiều xe chạy để kịp vào làn.</p>
+<p><strong>Vượt tốc độ</strong> có 3 mức: vượt 1–5 km/h ô tốc độ vàng + 1 tiếng bíp; vượt 6–10 km/h màu cam + 2 tiếng bíp + rung; vượt trên 10 km/h màu đỏ + 3 tiếng bíp + rung + đọc giọng (chỉ với biển thật).</p>
+<h2 id="tuyến-có-camera">5.2. Tuyến được báo có camera</h2>
 <p>Khi đi trên tuyến đường có camera phạt nguội, app hiện thẻ
 <strong>“Tuyến này có camera phạt nguội”</strong> để anh/chị giữ tốc độ
 đều cả tuyến.</p>
@@ -679,20 +598,16 @@ sửa → <strong>Lưu</strong>. <strong>Xoá</strong>: bấm <strong>×</strong
 </ul>
 <h2 id="trong-khi-dẫn-đường">6.4. Trong khi dẫn đường</h2>
 <ul>
-<li><p>Thẻ hướng dẫn cho biết khoảng cách tới chỗ rẽ, tên đường, quãng
-đường và thời gian còn lại.</p></li>
+<li><p>Thẻ xanh trên cùng có <strong>mũi tên đúng kiểu rẽ</strong>, khoảng cách và tên đường; dải dưới cùng cho biết <strong>giờ đến</strong>, km và phút còn lại. Điểm chọn bằng toạ độ hiện là “Điểm đã chọn”.</p></li>
 <li><p>Lộ trình được báo trước là <strong>có đi qua camera</strong> hay
 không.</p></li>
 <li><p>Đi lệch đường: app tự tính lại lộ trình (thử lại định kỳ nếu mất
 sóng).</p></li>
-<li><p>Muốn đổi tuyến giữa chừng: <strong>chạm dòng “… còn x km · khoảng
-y phút”</strong> dưới thẻ dẫn đường → app tìm các lộ trình khác từ vị
-trí hiện tại để chọn.</p></li>
-<li><p>Kết thúc: bấm <strong>Dừng</strong> trên thẻ dẫn đường hoặc nói
-“dừng dẫn đường”.</p></li>
+<li><p>Muốn đổi tuyến giữa chừng: <strong>chạm giờ đến ở dải dưới cùng</strong> → app tìm các lộ trình khác từ vị trí hiện tại để chọn.</p></li>
+<li><p>Kết thúc: bấm <strong>Kết thúc</strong> ở dải dưới cùng rồi xác nhận, hoặc nói “dừng dẫn đường”.</p></li>
 </ul>
 <h2 id="chia-sẻ-hành-trình">6.5. Chia sẻ hành trình</h2>
-<p>Bấm nút <strong>Chia sẻ hành trình</strong> trên thẻ dẫn đường để gửi
+<p>Bấm <strong>⋯ → Chia sẻ hành trình</strong> để gửi
 cho người thân đường link xem vị trí xe trên bản đồ, kèm điểm đến và giờ
 đến dự kiến (qua Zalo, tin nhắn…). Khi đang chia sẻ, màn hình có thẻ
 xanh <strong>“Đang chia sẻ hành trình · bấm để tắt”</strong>; bấm vào
@@ -989,6 +904,13 @@ thể. Mất mạng thì góp ý được lưu và tự gửi sau.</p>
 <h2 id="giao-diện">12.6. Giao diện</h2>
 <p><strong>Cài đặt → Giao diện:</strong> Theo thiết bị / Tối / Sáng. Ban
 đêm nên dùng <strong>Tối</strong> để đỡ chói mắt.</p>
+<h2 id="máy-chủ-sao-lưu">12.7. Máy chủ, báo lỗi, sao lưu</h2>
+<ul>
+<li><p><strong>Cài đặt → Máy chủ</strong>: chấm xanh là máy chủ hoạt động; chấm vàng là chưa kết nối — báo cáo, góp ý, dấu camera vẫn lưu trên máy và tự gửi khi máy chủ sẵn sàng.</p></li>
+<li><p><strong>Báo lỗi app (gửi kèm chẩn đoán)</strong>: gửi kèm 5 lỗi gần nhất của app (không có vị trí) để người phát triển sửa nhanh.</p></li>
+<li><p><strong>Sao lưu dữ liệu</strong>: lưu một tệp gồm điểm đã lưu, dấu camera, cài đặt, báo cáo, danh sách trụ. <strong>Khôi phục</strong>: chọn tệp đó trên máy mới.</p></li>
+<li><p>Bản đồ và dữ liệu cảnh báo đã tải được giữ lại khi app tự cập nhật; mạng chậm quá 3 giây app dùng bản đã lưu.</p></li>
+</ul>
 <h1 id="bảng-tổng-hợp-cài-đặt">13. Bảng tổng hợp Cài đặt</h1>
 <div class="tw"><table>
 <colgroup>
@@ -1024,7 +946,7 @@ alt="Hình 10. Cài đặt (phần Lái xe)" /></p>
 </tr>
 <tr class="odd">
 <th>Loại xe</th>
-<th>Ô tô con / Xe mô tô / Xe khách, tải lớn / Xe buýt, đầu kéo</th>
+<th>Ô tô con / Xe mô tô / Xe gắn máy / Xe khách, tải lớn / Xe buýt, đầu kéo / Ô tô kéo rơ moóc, xi téc</th>
 <th>Ảnh hưởng mức ước tính và lộ trình</th>
 </tr>
 <tr class="header">
