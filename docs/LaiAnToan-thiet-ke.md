@@ -115,44 +115,47 @@ Ba chuyên gia độc lập (nghiệp vụ ATGT, kỹ thuật PWA/Supabase, UX l
 ### Đợt A — Độ tin cậy khi lái lâu, sóng yếu (bắt buộc, kỹ thuật)
 | # | Vấn đề | Sửa | Đạt khi | TT |
 |---|---|---|---|---|
-| A1 | Cache dữ liệu ô đổi tên mỗi lần đăng trang → mất offline mỗi đêm | Tên cache dữ liệu cố định `lat-data`, giới hạn 3.000 mục | Sau cập nhật, ô đã xem vẫn đọc được khi máy bay | |
-| A2 | maplibre nạp động không được lưu sẵn | Lưu sẵn mọi `assets/*` theo manifest build | Mở app sau cập nhật khi mất mạng vẫn có bản đồ | |
-| A3 | `/data/` không hạn giờ, nạp ô tuần tự | Mạng > 3 s dùng bản lưu; nạp song song 4 ô, hạn 8 s | Test giả lập mạng treo | |
-| A4 | Engine giữ mọi ô đã nạp | Chỉ giữ ô ≤ 5 km, tối đa 300 ô | Test 300 km số ô ổn định | |
-| A5 | Báo cáo 4xx (cả 404) bị bỏ vĩnh viễn | Chỉ 400/409/422 là từ chối; còn lại gửi lại sau | Test 404 | |
-| A6 | Lệnh mạng không hạn giờ, kẹt cờ tìm lại đường | `fetchT` dùng chung (tìm đường 10 s, khác 8 s) | Test treo → nhả cờ | |
-| A7 | Supabase tạm dừng/thiếu bảng, báo lỗi mơ hồ | Kiểm tra sức khoẻ máy chủ, hiện trạng thái; tính năng phụ thuộc mờ đi; job đêm giữ sống | Cài đặt hiện "Máy chủ: …" | |
-| A8 | Có thể đăng trang thiếu dữ liệu | pages.yml kiểm `version.json` + dung lượng < 900 MB | Build thất bại khi thiếu | |
-| A9 | Vị trí đội xe nằm mãi trên máy chủ | Dọn toàn bảng > 24 h (SQL) | | |
-| A10 | Không có ghi lỗi | Ghi 20 lỗi gần nhất (không toạ độ), "Gửi chẩn đoán" khi đồng ý | | |
-| A11 | Dữ liệu chỉ ở localStorage | Sao lưu / khôi phục JSON | Vòng xuất → nhập khớp | |
+| A1 | Cache dữ liệu ô đổi tên mỗi lần đăng trang → mất offline mỗi đêm | Tên cache dữ liệu cố định `lat-data`, giới hạn 3.000 mục | Sau cập nhật, ô đã xem vẫn đọc được khi máy bay || ✔ 04/11 |
+| A2 | maplibre nạp động không được lưu sẵn | Lưu sẵn mọi `assets/*` theo manifest build | Mở app sau cập nhật khi mất mạng vẫn có bản đồ || ✔ 04/11 |
+| A3 | `/data/` không hạn giờ, nạp ô tuần tự | Mạng > 3 s dùng bản lưu; nạp song song 4 ô, hạn 8 s | Test giả lập mạng treo || ✔ 04/11 |
+| A4 | Engine giữ mọi ô đã nạp | Chỉ giữ ô ≤ 5 km, tối đa 300 ô | Test 300 km số ô ổn định || ✔ 04/11 |
+| A5 | Báo cáo 4xx (cả 404) bị bỏ vĩnh viễn | Chỉ 400/409/422 là từ chối; còn lại gửi lại sau | Test 404 || ✔ 04/11 |
+| A6 | Lệnh mạng không hạn giờ, kẹt cờ tìm lại đường | `fetchT` dùng chung (tìm đường 10 s, khác 8 s) | Test treo → nhả cờ || ✔ 04/11 |
+| A7 | Supabase tạm dừng/thiếu bảng, báo lỗi mơ hồ | Kiểm tra sức khoẻ máy chủ, hiện trạng thái; tính năng phụ thuộc mờ đi; job đêm giữ sống | Cài đặt hiện "Máy chủ: …" || ✔ 04/11 |
+| A8 | Có thể đăng trang thiếu dữ liệu | pages.yml kiểm `version.json` + dung lượng < 900 MB | Build thất bại khi thiếu || ✔ 04/11 |
+| A9 | Vị trí đội xe nằm mãi trên máy chủ | Dọn toàn bảng > 24 h (SQL) | || ✔ SQL trong lat_buoc2_xoa.sql (chờ anh chạy) |
+| A10 | Không có ghi lỗi | Ghi 20 lỗi gần nhất (không toạ độ), "Gửi chẩn đoán" khi đồng ý | || ✔ 04/11 |
+| A11 | Dữ liệu chỉ ở localStorage | Sao lưu / khôi phục JSON | Vòng xuất → nhập khớp || ✔ 04/11 |
 
 ### Đợt B — Nghiệp vụ (bắt buộc)
 | # | Vấn đề | Sửa | TT |
 |---|---|---|---|
-| B1 | Thiếu loại xe | Thêm xe gắn máy (≤ 50 cc, 40 km/h); ô tô kéo rơ moóc/xi téc/trộn (60/50 ngoài đô thị) | |
-| B2 | Ước tính 80–90 ở vùng ven TP.HCM | Trong TP.HCM: mọi ô (trừ cao tốc) coi là khu đông dân cư khi ước tính | |
-| B3 | Biển công bố nguồn cũ | Mỗi mục có ngày rà lại; quá 12 tháng → hạ thành ước tính (không đọc giọng) | |
-| B4 | Lời cảnh báo dễ hiểu lầm pháp lý | "Tuyến được báo có camera (báo chí 01/2026)"; "Giới hạn" chỉ cho biển thật; ước tính ghi "Ước tính"; cấm tải ghi "theo OSM, chưa đủ vùng cấm" | |
-| B5 | Số hiệu văn bản | VBHN 74/2026/VBHN-TT-BXD (hợp nhất TT 38/2024 + TT 09/2025) | |
-| B6 | Thiếu trạm thu phí | OSM `barrier=toll_booth`: báo trước 1 km theo chiều đi | |
+| B1 | Thiếu loại xe | Thêm xe gắn máy (≤ 50 cc, 40 km/h); ô tô kéo rơ moóc/xi téc/trộn (60/50 ngoài đô thị) || ✔ 04/11 |
+| B2 | Ước tính 80–90 ở vùng ven TP.HCM | Trong TP.HCM: mọi ô (trừ cao tốc) coi là khu đông dân cư khi ước tính || ✔ 04/11 |
+| B3 | Biển công bố nguồn cũ | Mỗi mục có ngày rà lại; quá 12 tháng → hạ thành ước tính (không đọc giọng) || ✔ 04/11 |
+| B4 | Lời cảnh báo dễ hiểu lầm pháp lý | "Tuyến được báo có camera (báo chí 01/2026)"; "Giới hạn" chỉ cho biển thật; ước tính ghi "Ước tính"; cấm tải ghi "theo OSM, chưa đủ vùng cấm" || ✔ 04/11 |
+| B5 | Số hiệu văn bản | VBHN 74/2026/VBHN-TT-BXD (hợp nhất TT 38/2024 + TT 09/2025) || ✔ 04/11 |
+| B6 | Thiếu trạm thu phí | OSM `barrier=toll_booth`: báo trước 1 km theo chiều đi || ✔ 04/11 |
 
 ### Đợt C — Trải nghiệm khi lái (bắt buộc, qua chốt UI)
 | # | Vấn đề | Sửa | TT |
 |---|---|---|---|
-| C1 | Mũi tên rẽ luôn chỉ thẳng | Biểu tượng theo loại rẽ ≥ 64 px | |
-| C2 | Câu dẫn đường 4 dòng, đè bản đồ, toạ độ thô | Thẻ nền đặc tối đa 2 dòng; "Điểm đã chọn" thay toạ độ; dải km/phút/giờ đến | |
-| C3 | Chữ phủ khó đọc ngoài nắng | Nền đục ≥ 90%, tương phản ≥ 4.5:1 | |
-| C4 | 10 nút khi đang chạy, 2 nút dừng | > 10 km/h còn 4 nút + "⋯"; ■ thành "Kết thúc" có xác nhận; Chia sẻ rời thẻ dẫn đường | |
-| C5 | Gõ chữ/cài đặt khi đang chạy | > 10 km/h khoá, "Dừng xe để thao tác" (có "Tôi ngồi cạnh") | |
-| C6 | Trạng thái lỗi | Mất GPS > 3 s dải vàng + đọc 1 lần; ngoại tuyến khi dẫn đường; tìm lại > 10 s báo lỗi + thử lại | |
-| C7 | Dải trắng đáy iPhone | Khung app phủ đủ màn hình cài đặt | |
-| C8 | Cảnh báo vượt tốc một kiểu | 3 mức (+1–5, +6–10, > 10), tiếng bíp + rung; ước tính chỉ bíp nhẹ | |
-| C9 | Camera đọc một lần | Đọc ở 500 m, nhắc ở 150 m | |
-| C10 | Người mới | Màn đầu 3 bước: loại xe → quyền vị trí → thử giọng | |
+| C1 | Mũi tên rẽ luôn chỉ thẳng | Biểu tượng theo loại rẽ ≥ 64 px || ✔ 04/11 |
+| C2 | Câu dẫn đường 4 dòng, đè bản đồ, toạ độ thô | Thẻ nền đặc tối đa 2 dòng; "Điểm đã chọn" thay toạ độ; dải km/phút/giờ đến || ✔ 04/11 |
+| C3 | Chữ phủ khó đọc ngoài nắng | Nền đục ≥ 90%, tương phản ≥ 4.5:1 || ✔ 04/11 |
+| C4 | 10 nút khi đang chạy, 2 nút dừng | > 10 km/h còn 4 nút + "⋯"; ■ thành "Kết thúc" có xác nhận; Chia sẻ rời thẻ dẫn đường || ✔ 04/11 |
+| C5 | Gõ chữ/cài đặt khi đang chạy | > 10 km/h khoá, "Dừng xe để thao tác" (có "Tôi ngồi cạnh") || ✔ (Tôi ngồi cạnh) |
+| C6 | Trạng thái lỗi | Mất GPS > 3 s dải vàng + đọc 1 lần; ngoại tuyến khi dẫn đường; tìm lại > 10 s báo lỗi + thử lại || ✔ 04/11 |
+| C7 | Dải trắng đáy iPhone | Khung app phủ đủ màn hình cài đặt || ✔ 04/11 |
+| C8 | Cảnh báo vượt tốc một kiểu | 3 mức (+1–5, +6–10, > 10), tiếng bíp + rung; ước tính chỉ bíp nhẹ || ✔ 04/11 |
+| C9 | Camera đọc một lần | Đọc ở 500 m, nhắc ở 150 m || ✔ 04/11 |
+| C10 | Người mới | Màn đầu 3 bước: loại xe → quyền vị trí → thử giọng || ✔ 04/11 |
 
 ### Để sau (P2/P3)
 Cộng đồng báo biển (ảnh + 2 người xác nhận) và vùng cấm xe tải nội đô TP.HCM (số hoá QĐ 23/2018 + theo dõi dự thảo 2026) — cần máy chủ chạy ổn định trước; đường một chiều/cấm rẽ; trường học; ngập/kẹt do cộng đồng (tự hết hạn 2 h); chế độ tiết kiệm pin; trang chẩn đoán; dự phòng Valhalla/Photon; ban đêm tự động; tương phản cao; làn đường.
 
 ### Nhật ký duyệt
 - 04/11/2026 — Rà soát hiện trạng: chuyên gia nghiệp vụ ATGT, kỹ thuật PWA/Supabase, UX lái xe → DUYỆT CÓ ĐIỀU KIỆN; toàn bộ thay đổi bắt buộc đưa vào Đợt A–C.
+- 04/11/2026 — Chốt UI Đợt C: 3 phương án A/B/C (dọc + ngang, sáng + tối) → chuyên gia UX độc lập chọn **C** + dòng "rồi…" và cột 4 nút của A; bắt buộc: xe ở 62–65 % chiều cao, nút Đánh dấu camera 72 px gần ngón cái, "Kết thúc" dạng viền có xác nhận, không cắt tên đường, nền ô tốc độ đổi màu theo 3 mức, viền tương phản ≥ 3:1. Đã áp.
+- 04/11/2026 — Máy chủ: khôi phục dự án Supabase, tạo bảng + RLS + lat_health; 3 hàm có lệnh xoá (fleet_leave, lat_mark_withdraw, dọn đội xe 24 h) để anh chạy tay: supabase/lat_buoc2_xoa.sql. Job đêm gọi lat_health giữ máy chủ không tạm dừng.
+- 05/11/2026 — QA + pháp lý độc lập: DUYỆT CÓ ĐIỀU KIỆN; 4 bắt buộc đã sửa (âm thanh iOS mở trong thao tác chạm; chống bíp lặp quanh ngưỡng — TierAlarm 8 s; dải "chưa tìm được đường" tự tắt khi về tuyến; service worker ghi kho đồng bộ waitUntil). Nhận thêm: không báo mất GPS trước điểm đầu, onboarding Esc, khôi phục báo mục lỗi, nhãn "(trừ xi téc)", chặn ngày rà lại ở tương lai. Không nhận: giới hạn theo loại xe khi đường có biển P.127 (biển áp cho mọi xe trừ khi có biển phụ — giữ theo biển; chỉ xe gắn máy bị chặn 40 theo Điều 8).
