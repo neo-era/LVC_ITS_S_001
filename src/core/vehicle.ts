@@ -7,7 +7,7 @@ export const VEHICLE_LABEL: Record<Vehicle, string> = {
   motorbike: 'Xe mô tô (xe máy)',
   moped: 'Xe gắn máy (đến 50 cc, xe đạp máy)',
   truck: 'Xe khách trên 28 chỗ, xe tải trên 3,5 tấn',
-  bus: 'Xe buýt, đầu kéo sơ mi rơ moóc',
+  bus: 'Xe buýt, đầu kéo sơ mi rơ moóc (trừ xi téc)',
   trailer: 'Ô tô kéo rơ moóc, xi téc, trộn bê tông',
 };
 

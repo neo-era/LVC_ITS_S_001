@@ -15,18 +15,19 @@ async function trimData(cache) {
 
 /** Lấy mạng; quá hạn mà đã có bản lưu thì trả bản lưu, mạng vẫn chạy nền để cập nhật kho. */
 function networkFirst(e, req, store, wait, trim) {
-  const net = fetch(req).then((res) => {
-    if (res.ok) {
-      const copy = res.clone(); // phải sao chép ngay, trước khi trang đọc hết nội dung
-      e.waitUntil(
-        caches.open(store).then(async (c) => {
-          await c.put(req, copy);
-          if (trim) await trimData(c);
-        }),
-      );
-    }
-    return res;
-  });
+  const net = fetch(req);
+  // Ghi kho ngay trong lúc xử lý sự kiện (waitUntil gọi đồng bộ): kể cả khi đã trả bản lưu vì mạng chậm,
+  // bản mới về sau vẫn được lưu lại.
+  e.waitUntil(
+    net
+      .then(async (res) => {
+        if (!res.ok) return;
+        const c = await caches.open(store);
+        await c.put(req, res.clone());
+        if (trim) await trimData(c);
+      })
+      .catch(() => {}),
+  );
   return new Promise((resolve) => {
     let done = false;
     const fallback = async () => {

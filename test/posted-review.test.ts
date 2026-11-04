@@ -15,5 +15,7 @@ describe('hạn rà lại biển công bố', () => {
     expect(isStale(r, t + 370 * 864e5)).toBe(true);
     expect(matchPosted(QL22, 10.872, 106.594, t + 300 * 864e5)).toEqual({ mixed: 50, car: 60 });
     expect(matchPosted(QL22, 10.872, 106.594, t + 370 * 864e5)).toBeNull();
+    expect(isStale({ reviewed: 'không rõ' }, t)).toBe(true);
+    expect(isStale({ reviewed: '2099-01-01' }, t)).toBe(true);
   });
 });

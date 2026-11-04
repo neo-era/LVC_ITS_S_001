@@ -48,3 +48,25 @@ const km = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1
 export function stripText(remainM: number, remainS: number): string {
   return `${km(remainM)} · ${Math.max(1, Math.round(remainS / 60))} phút`;
 }
+
+/**
+ * C8 + QA: quyết định khi nào bíp/rung. Lên mức mới chỉ báo nếu cách lần báo trước ≥ 8 s (GPS dao động
+ * ±1 km/h quanh ngưỡng không gây bíp liên tục); riêng lên mức 3 báo ngay; ở mức ≥ 2 nhắc lại mỗi 20 s.
+ * Trả mức cần báo (0 = im).
+ */
+export class TierAlarm {
+  private peak = 0; // mức cao nhất đã báo trong lượt vượt hiện tại
+  private at = Number.NEGATIVE_INFINITY;
+  update(tier: number, now: number): number {
+    if (tier <= 0) {
+      this.peak = 0;
+      return 0;
+    }
+    const since = now - this.at;
+    const fire = (tier === 3 && this.peak < 3) || (tier > this.peak && since >= 8000) || (tier >= 2 && since >= 20_000);
+    if (!fire) return 0;
+    this.peak = Math.max(this.peak, tier);
+    this.at = now;
+    return tier;
+  }
+}

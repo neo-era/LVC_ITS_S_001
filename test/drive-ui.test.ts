@@ -112,3 +112,29 @@ describe('C8: vượt tốc 3 mức', () => {
     expect(overTier(80, null)).toBe(0);
   });
 });
+
+import { TierAlarm } from '../src/ui/drive';
+describe('QA: báo vượt tốc không lặp khi tốc độ dao động quanh ngưỡng', () => {
+  it('55↔56 mỗi giây chỉ báo 1 lần trong 8 s; vượt hẳn lên mức 3 vẫn báo ngay', () => {
+    const a = new TierAlarm();
+    const fired: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      const t = i * 1000;
+      const r = a.update(i % 2 ? 2 : 1, t);
+      if (r) fired.push(r);
+    }
+    expect(fired).toEqual([1]);
+    // mức 3 luôn báo ngay khi vừa lên
+    expect(a.update(3, 8500)).toBe(3);
+    // ở lại mức ≥ 2: nhắc lại sau 20 s
+    expect(a.update(3, 20_000)).toBe(0);
+    expect(a.update(3, 29_000)).toBe(3);
+  });
+  it('hạ về 0 rồi vượt lại sau 8 s → báo lại', () => {
+    const a = new TierAlarm();
+    expect(a.update(1, 0)).toBe(1);
+    expect(a.update(0, 1000)).toBe(0);
+    expect(a.update(1, 2000)).toBe(0);
+    expect(a.update(1, 9500)).toBe(1);
+  });
+});

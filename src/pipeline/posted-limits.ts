@@ -24,7 +24,10 @@ interface Rule extends PostedLimit {
 }
 
 const REVIEW_MS = 365 * 864e5;
-export const isStale = (r: Pick<Rule, 'reviewed'>, now: number) => !(now - Date.parse(r.reviewed) <= REVIEW_MS);
+export const isStale = (r: Pick<Rule, 'reviewed'>, now: number) => {
+  const age = now - Date.parse(r.reviewed);
+  return !(age >= -864e5 && age <= REVIEW_MS); // ngày sai hoặc ở tương lai (gõ nhầm) cũng coi là quá hạn
+};
 
 export const POSTED_RULES: Rule[] = [
   {

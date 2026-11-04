@@ -63,11 +63,22 @@ function load(opts: { fetch: (req: Request | string) => Promise<Response>; preca
   const fire = async (type: string, extra: any = {}) => {
     const waits: Promise<unknown>[] = [];
     let resp: Promise<Response> | undefined;
-    const e = { waitUntil: (p: Promise<unknown>) => waits.push(p), respondWith: (p: Promise<Response>) => (resp = p), ...extra };
+    let dispatching = true;
+    // như trình duyệt: waitUntil chỉ gọi được khi đang xử lý sự kiện hoặc còn lời hứa waitUntil chưa xong
+    const e = {
+      waitUntil: (p: Promise<unknown>) => {
+        if (!dispatching && waits.length === 0) throw new Error('InvalidStateError');
+        waits.push(p);
+      },
+      respondWith: (p: Promise<Response>) => (resp = p),
+      ...extra,
+    };
     handlers[type](e);
+    dispatching = false;
     const r = resp ? await resp : undefined;
-    await Promise.all(waits);
-    return r;
+    // không chờ mạng treo mãi; các kiểm thử cần ghi kho tự chờ "waits"
+    await Promise.race([Promise.all(waits), new Promise((ok) => setTimeout(ok, 10))]);
+    return { res: r, waits };
   };
   return { stores, fire, caches };
 }
@@ -120,7 +131,26 @@ describe('service worker', () => {
       const p = a.fire('fetch', { request: new Request('https://x.test/app/data/cells/5.json') });
       await vi.advanceTimersByTimeAsync(3100);
       const r = await p;
-      expect(await r!.text()).toBe('cu');
+      expect(await r!.res!.text()).toBe('cu');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('QA: mạng chậm trả bản lưu, nhưng khi mạng về vẫn ghi bản mới vào kho', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn(() => new Promise<Response>((res) => setTimeout(() => res(new Response('moi')), 5000)));
+      const a = load({ fetch: f });
+      const c = await a.caches.open('lat-data');
+      await c.put('https://x.test/app/data/cells/7.json', new Response('cu'));
+      const p = a.fire('fetch', { request: new Request('https://x.test/app/data/cells/7.json') });
+      await vi.advanceTimersByTimeAsync(6000);
+      const r = await p;
+      expect(await r!.res!.text()).toBe('cu');
+      expect(r!.waits.length).toBeGreaterThan(0);
+      await Promise.all(r!.waits);
+      expect(await (await c.match('https://x.test/app/data/cells/7.json'))!.text()).toBe('moi');
     } finally {
       vi.useRealTimers();
     }
@@ -133,7 +163,7 @@ describe('service worker', () => {
       const a = load({ fetch: f });
       const p = a.fire('fetch', { request: new Request('https://x.test/app/data/cells/9.json') });
       await vi.advanceTimersByTimeAsync(5100);
-      expect(await (await p)!.text()).toBe('moi');
+      expect(await (await p)!.res!.text()).toBe('moi');
     } finally {
       vi.useRealTimers();
     }

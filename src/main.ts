@@ -1,5 +1,5 @@
 import { cardLine, iconKind, iconSvg, nextLine } from './nav/maneuver';
-import { destLabel, driveLocked, etaClock, overTier, pickBanner, stripText } from './ui/drive';
+import { destLabel, driveLocked, etaClock, overTier, pickBanner, stripText, TierAlarm } from './ui/drive';
 import { makeBackup, readBackup } from './features/backup';
 import { addError, ERRLOG_KEY, parseErrors } from './features/errlog';
 import { checkServer, serverText, type ServerState } from './features/health';
@@ -391,6 +391,7 @@ let guidance: Guidance | null = null;
 let navRoute: Route | null = null;
 let navDest: Place | null = null;
 let rerouting = false;
+let rerouteFailed = false; // C6: tìm lại đường thất bại / quá 10 s
 let lastRerouteAt = 0;
 
 function renderNav(s: NavState | null): void {
@@ -399,6 +400,7 @@ function renderNav(s: NavState | null): void {
   app.classList.toggle('navigating', s !== null);
   $('btn-nav').classList.toggle('active', s !== null);
   if (!s || !navRoute) return;
+  if (!s.offRoute && !rerouting) rerouteFailed = false; // đã quay lại tuyến → tắt dải "chưa tìm được đường"
   const narrow = LANDSCAPE.matches ? 22 : 26;
   if (s.offRoute) {
     $('nav-ic').innerHTML = iconSvg('uturn');
@@ -579,12 +581,23 @@ function renderMapHud(v: ViewState): void {
 
 /* ---------- Đợt C: vượt tốc 3 mức, đang chạy, dải lỗi ---------- */
 let audioCtx: AudioContext | null = null;
+/** iOS chỉ cho phát âm thanh khi ngữ cảnh được tạo/mở trong thao tác chạm → gọi ở nút Bắt đầu. */
+function unlockAudio(): void {
+  try {
+    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    audioCtx ??= new AC();
+    if (audioCtx.state === 'suspended') void audioCtx.resume();
+  } catch {
+    /* thiết bị không hỗ trợ âm thanh */
+  }
+}
 /** Tiếng bíp ngắn (n lần). soft = nhỏ, cho mức ước tính. */
 function beep(n: number, soft: boolean): void {
-  if (!voice.enabled) return;
+  if (!voice.enabled || !audioCtx) return;
   try {
-    audioCtx ??= new AudioContext();
     const ctx = audioCtx;
+    if (ctx.state === 'suspended') void ctx.resume();
     for (let i = 0; i < n; i++) {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
@@ -596,35 +609,27 @@ function beep(n: number, soft: boolean): void {
       o.stop(t0 + 0.12);
     }
   } catch {
-    /* thiết bị không hỗ trợ âm thanh */
+    /* bỏ qua */
   }
 }
-let lastTier = 0;
-let tierAt = 0;
+const tierAlarm = new TierAlarm();
 function alertTier(tier: number, estimated: boolean): void {
   app.dataset.tier = String(tier);
-  const now = Date.now();
-  // báo khi lên mức, hoặc nhắc lại mỗi 20 s khi vẫn ở mức ≥ 2
-  if (tier > lastTier || (tier >= 2 && now - tierAt > 20_000)) {
-    if (tier > 0) {
-      tierAt = now;
-      if (estimated) {
-        if (tier >= 2) beep(1, true); // ước tính: chỉ bíp nhẹ, không rung, không đọc
-      } else {
-        beep(tier, false);
-        if (tier >= 2) navigator.vibrate?.(tier === 3 ? [200, 100, 200] : 200);
-      }
-    }
+  const fire = tierAlarm.update(tier, Date.now());
+  if (!fire) return;
+  if (estimated) {
+    if (fire >= 2) beep(1, true); // ước tính: chỉ bíp nhẹ, không rung, không đọc
+  } else {
+    beep(fire, false);
+    if (fire >= 2) navigator.vibrate?.(fire === 3 ? [200, 100, 200] : 200);
   }
-  lastTier = tier;
 }
 
 let passenger = false;
 let lostSince = 0;
-let rerouteFailed = false;
 let gpsSpoken = false;
 function renderBanner(v: ViewState): void {
-  if (v.status === 'lost' && mode === 'gps') lostSince ||= Date.now();
+  if (v.status === 'lost' && mode === 'gps' && lastFix) lostSince ||= Date.now(); // chưa có điểm đầu tiên thì không báo mất
   else lostSince = 0;
   const b = pickBanner({ gpsLostMs: lostSince ? Date.now() - lostSince : 0, online: navigator.onLine, navigating: !!guidance, rerouteFailed });
   $('sys-banner').hidden = !b;
@@ -818,6 +823,7 @@ function showStartError(msg: string): void {
 
 function startGps(): void {
   voice.unlock();
+  unlockAudio();
   if (!('geolocation' in navigator)) {
     showStartError('Thiết bị không hỗ trợ định vị.');
     return;
@@ -849,6 +855,7 @@ const simEngine = (): Engine => engine;
 
 function startSim(): void {
   voice.unlock();
+  unlockAudio();
   stopAll();
   mode = 'sim';
   startBox.hidden = true;
@@ -1587,13 +1594,15 @@ $('restore-file').addEventListener('change', async (ev) => {
   if (!r.ok) return void toast(r.reason);
   const when = r.at ? new Date(r.at).toLocaleString('vi-VN') : 'không rõ ngày';
   if (!confirm(`Khôi phục bản sao lưu (${when}, ${Object.keys(r.entries).length} mục)? Dữ liệu cùng loại trên máy này sẽ được thay thế.`)) return;
+  let bad = 0;
   for (const [k, v] of Object.entries(r.entries)) {
     try {
       localStorage.setItem(k, v);
     } catch {
-      /* bỏ qua */
+      bad++;
     }
   }
+  if (bad) return void toast(`Khôi phục được ${Object.keys(r.entries).length - bad} mục, ${bad} mục không ghi được (bộ nhớ máy đầy).`, undefined, undefined, 9000);
   toast('Đã khôi phục. Đang tải lại app…');
   setTimeout(() => location.reload(), 900);
 });
@@ -1683,6 +1692,7 @@ function paintObVehicles(): void {
 }
 $('btn-ob-next').addEventListener('click', () => (obStep < 3 ? obShow(obStep + 1) : obDone()));
 $('btn-ob-skip').addEventListener('click', obDone);
+obDlg.addEventListener('cancel', obDone); // đóng bằng Esc / vuốt cũng coi như xong
 $('btn-ob-loc').addEventListener('click', () => {
   const msg = $('ob-loc-msg');
   if (!('geolocation' in navigator)) return void (msg.textContent = 'Máy không hỗ trợ GPS.');
