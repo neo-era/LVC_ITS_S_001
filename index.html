@@ -27,6 +27,11 @@
   </header>
 
   <main class="main">
+    <div class="sys-banner" id="sys-banner" role="alert" hidden>
+      <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="sys-text"></span>
+      <button type="button" id="btn-sys-retry" hidden>Thử lại</button>
+    </div>
     <section class="hud" aria-label="Tốc độ hiện tại">
       <div class="speed">
         <span class="speed-num" id="speed-num">--</span>
@@ -51,17 +56,13 @@
 
     <section class="nav" id="nav" aria-label="Dẫn đường" hidden>
       <div class="nav-main">
-        <svg class="nav-icon" aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 20 21 12 17 4 21z"/></svg>
+        <span class="nav-ic" id="nav-ic" aria-hidden="true"></span>
         <div class="nav-text">
           <span class="nav-dist" id="nav-dist">--</span>
           <span class="nav-instr" id="nav-instr" role="status" aria-live="polite"></span>
         </div>
-        <button class="nav-stop" id="btn-share" type="button" aria-label="Chia sẻ hành trình" title="Chia sẻ hành trình">
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
-        </button>
-        <button class="nav-stop" id="btn-nav-stop" type="button">Dừng</button>
       </div>
-      <button class="nav-foot" id="nav-foot" type="button" title="Xem lộ trình khác"></button>
+      <p class="nav-next" id="nav-next" hidden></p>
     </section>
 
     <section class="alert" id="alert" role="status" aria-live="polite" hidden>
@@ -122,19 +123,19 @@
   </main>
 
   <nav class="bar" aria-label="Điều khiển">
-    <button class="bar-btn" id="btn-nav" type="button" aria-label="Dẫn đường" title="Dẫn đường">
+    <button class="bar-btn extra-stop" id="btn-nav" type="button" aria-label="Dẫn đường" title="Dẫn đường">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
       <span>Dẫn đường</span>
     </button>
-    <button class="bar-btn" id="btn-mark" type="button" aria-label="Đánh dấu camera" title="Đánh dấu camera">
+    <button class="bar-btn bar-main" id="btn-mark" type="button" aria-label="Đánh dấu camera" title="Đánh dấu camera">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       <span>Đánh dấu camera</span>
     </button>
-    <button class="bar-btn" id="btn-light" type="button" aria-label="Báo đèn tắt" title="Báo đèn tắt">
+    <button class="bar-btn in-more" id="btn-light" type="button" aria-label="Báo đèn tắt" title="Báo đèn tắt">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
       <span>Báo đèn tắt</span>
     </button>
-    <button class="bar-btn" id="btn-cam" type="button" aria-label="Camera hành trình" title="Camera hành trình" aria-pressed="false">
+    <button class="bar-btn in-more" id="btn-cam" type="button" aria-label="Camera hành trình" title="Camera hành trình" aria-pressed="false">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       <span>Camera hành trình</span>
     </button>
@@ -146,11 +147,70 @@
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
       <span id="btn-voice-text">Giọng nói: Bật</span>
     </button>
-    <button class="bar-btn" id="btn-stop" type="button" aria-label="Dừng" title="Dừng">
+    <button class="bar-btn in-more" id="btn-stop" type="button" aria-label="Dừng" title="Dừng">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
       <span>Dừng</span>
     </button>
+    <button class="bar-btn bar-more" id="btn-more" type="button" aria-label="Thêm" title="Thêm" aria-haspopup="dialog">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>
+      <span>Thêm</span>
+    </button>
   </nav>
+
+  <div class="nav-strip" id="nav-strip" hidden>
+    <button class="ns-info" id="nav-foot" type="button" title="Xem lộ trình khác">
+      <b class="ns-eta" id="ns-eta">--:--</b>
+      <span class="ns-left" id="ns-left"></span>
+      <span class="ns-dest" id="ns-dest"></span>
+    </button>
+    <button class="end-btn" id="btn-nav-stop" type="button">Kết thúc</button>
+  </div>
+
+  <dialog class="sheet" id="more" aria-label="Thêm thao tác">
+    <p class="lock-note" id="lock-note" hidden>Xe đang chạy — các mục cần gõ chữ tạm khoá. <button type="button" class="link-plain" id="btn-passenger">Tôi ngồi cạnh</button></p>
+    <div class="sheet-grid">
+      <button type="button" data-for="btn-nav" data-lock="1"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Dẫn đường</button>
+      <button type="button" data-for="btn-light"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>Báo đèn tắt</button>
+      <button type="button" data-for="btn-cam" id="more-cam"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>Camera hành trình</button>
+      <button type="button" data-for="btn-share" id="more-share"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>Chia sẻ hành trình</button>
+      <button type="button" data-for="btn-map-expand"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Bản đồ lớn</button>
+      <button type="button" data-for="btn-settings" data-lock="1"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Cài đặt</button>
+    </div>
+    <button type="button" class="secondary end-drive" data-for="btn-stop">Kết thúc lái xe</button>
+    <button type="button" class="primary" id="btn-more-close">Đóng</button>
+  </dialog>
+
+  <dialog class="confirm onboard" id="onboard" aria-labelledby="ob-title">
+    <p class="ob-step" id="ob-step">Bước 1/3</p>
+    <section data-ob="1">
+      <h2 id="ob-title">Anh/chị lái loại xe nào?</h2>
+      <p class="muted">Giới hạn tốc độ ước tính và cách tìm đường theo loại xe. Đổi lại được trong Cài đặt.</p>
+      <div class="ob-vehicles" id="ob-vehicles"></div>
+    </section>
+    <section data-ob="2" hidden>
+      <h2>Cho phép dùng vị trí</h2>
+      <p class="muted">App cần GPS để biết tốc độ và cảnh báo phía trước. Vị trí chỉ xử lý trên máy.</p>
+      <button type="button" class="primary big" id="btn-ob-loc">Cho phép vị trí</button>
+      <p class="muted note" id="ob-loc-msg" role="status"></p>
+    </section>
+    <section data-ob="3" hidden>
+      <h2>Thử giọng cảnh báo</h2>
+      <p class="muted">Chỉnh âm lượng điện thoại cho nghe rõ khi lái.</p>
+      <button type="button" class="secondary big" id="btn-ob-voice">Nghe thử</button>
+    </section>
+    <div class="ob-actions">
+      <button type="button" class="secondary" id="btn-ob-skip">Bỏ qua</button>
+      <button type="button" class="primary" id="btn-ob-next">Tiếp</button>
+    </div>
+  </dialog>
+
+  <dialog class="confirm" id="end-confirm" aria-labelledby="end-title">
+    <h2 id="end-title">Kết thúc dẫn đường?</h2>
+    <button type="button" class="primary big" id="btn-end-yes">Kết thúc</button>
+    <button type="button" class="secondary big" id="btn-end-no">Tiếp tục đi</button>
+  </dialog>
+
+  <button class="nav-stop" id="btn-share" type="button" aria-label="Chia sẻ hành trình" hidden></button>
 
   <div class="patrol-box" id="patrol-box" hidden>
     <div class="patrol-head"><strong id="pole-name"></strong><span id="pole-dist"></span></div>

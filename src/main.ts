@@ -1,3 +1,5 @@
+import { cardLine, iconKind, iconSvg, nextLine } from './nav/maneuver';
+import { destLabel, driveLocked, etaClock, overTier, pickBanner, stripText } from './ui/drive';
 import { makeBackup, readBackup } from './features/backup';
 import { addError, ERRLOG_KEY, parseErrors } from './features/errlog';
 import { checkServer, serverText, type ServerState } from './features/health';
@@ -7,7 +9,7 @@ import { parseCell } from './core/cells';
 import { alertLabel, formatDistance, speakDistance } from './core/format';
 import { cellsAround } from './core/geo';
 import type { GpsSample } from './core/gps';
-import { isVehicle, type Vehicle } from './core/vehicle';
+import { isVehicle, VEHICLE_LABEL, VEHICLES, type Vehicle } from './core/vehicle';
 import { Engine, type ViewState } from './engine';
 import { addMark, createMark, markToAlert, parseMarks, removeMark, type Mark } from './marks';
 import { authHeaders, pushMarks, queueWithdraw, SUPABASE_URL, withdrawMarks } from './sync';
@@ -393,12 +395,33 @@ let lastRerouteAt = 0;
 
 function renderNav(s: NavState | null): void {
   navBox.hidden = s === null;
+  $('nav-strip').hidden = s === null;
+  app.classList.toggle('navigating', s !== null);
   $('btn-nav').classList.toggle('active', s !== null);
   if (!s || !navRoute) return;
-  $('nav-dist').textContent = s.arrived ? 'Đã đến nơi' : s.next ? formatDistance(s.distToNextM) : formatDistance(s.remainingM);
-  $('nav-instr').textContent = s.offRoute ? 'Bạn đang đi lệch tuyến — đang tìm đường mới…' : s.next?.text ?? '';
-  const mins = Math.max(1, Math.round(((navRoute.durS * s.remainingM) / Math.max(1, navRoute.distM)) / 60));
-  $('nav-foot').textContent = `${navDest?.name ?? ''} · còn ${formatDistance(s.remainingM)} · khoảng ${mins} phút`;
+  const narrow = LANDSCAPE.matches ? 22 : 26;
+  if (s.offRoute) {
+    $('nav-ic').innerHTML = iconSvg('uturn');
+    $('nav-dist').textContent = 'Lệch tuyến';
+    $('nav-instr').textContent = 'Đang tìm đường mới…';
+    $('nav-next').hidden = true;
+  } else if (s.arrived) {
+    $('nav-ic').innerHTML = iconSvg('arrive');
+    $('nav-dist').textContent = 'Đã đến nơi';
+    $('nav-instr').textContent = destLabel(navDest?.name);
+    $('nav-next').hidden = true;
+  } else {
+    $('nav-ic').innerHTML = iconSvg(s.next ? iconKind(s.next.type) : 'arrive');
+    $('nav-dist').textContent = formatDistance(s.next ? s.distToNextM : s.remainingM);
+    $('nav-instr').textContent = s.next ? cardLine(s.next, narrow) : destLabel(navDest?.name);
+    const nl = nextLine(s.after ?? null, s.afterGapM ?? Infinity);
+    $('nav-next').textContent = nl;
+    $('nav-next').hidden = !nl;
+  }
+  const remainS = (navRoute.durS * s.remainingM) / Math.max(1, navRoute.distM);
+  $('ns-eta').textContent = etaClock(Date.now(), remainS);
+  $('ns-left').textContent = stripText(s.remainingM, remainS);
+  $('ns-dest').textContent = `→ ${destLabel(navDest?.name)}`;
 }
 
 /**
@@ -502,16 +525,20 @@ async function reroute(): Promise<void> {
     rerouteSpokenAt = Date.now();
     voice.speak('Đang tìm đường mới.');
   }
+  const slow = setTimeout(() => (rerouteFailed = true), 10_000); // C6: quá 10 s chưa có đường mới
   try {
     await beginRoute(navDest, false);
+    rerouteFailed = false;
   } catch {
-    /* giữ tuyến cũ; lần lệch kế tiếp sẽ thử lại */
+    rerouteFailed = true; // giữ tuyến cũ, hiện "Thử lại"; lần lệch kế tiếp cũng tự thử lại
   } finally {
+    clearTimeout(slow);
     rerouting = false;
   }
 }
 
 function stopNav(): void {
+  rerouteFailed = false;
   endRouteChoice();
   guidance = null;
   navRoute = null;
@@ -550,9 +577,81 @@ function renderMapHud(v: ViewState): void {
   }
 }
 
+/* ---------- Đợt C: vượt tốc 3 mức, đang chạy, dải lỗi ---------- */
+let audioCtx: AudioContext | null = null;
+/** Tiếng bíp ngắn (n lần). soft = nhỏ, cho mức ước tính. */
+function beep(n: number, soft: boolean): void {
+  if (!voice.enabled) return;
+  try {
+    audioCtx ??= new AudioContext();
+    const ctx = audioCtx;
+    for (let i = 0; i < n; i++) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = soft ? 660 : 880;
+      g.gain.value = soft ? 0.05 : 0.18;
+      o.connect(g).connect(ctx.destination);
+      const t0 = ctx.currentTime + i * 0.22;
+      o.start(t0);
+      o.stop(t0 + 0.12);
+    }
+  } catch {
+    /* thiết bị không hỗ trợ âm thanh */
+  }
+}
+let lastTier = 0;
+let tierAt = 0;
+function alertTier(tier: number, estimated: boolean): void {
+  app.dataset.tier = String(tier);
+  const now = Date.now();
+  // báo khi lên mức, hoặc nhắc lại mỗi 20 s khi vẫn ở mức ≥ 2
+  if (tier > lastTier || (tier >= 2 && now - tierAt > 20_000)) {
+    if (tier > 0) {
+      tierAt = now;
+      if (estimated) {
+        if (tier >= 2) beep(1, true); // ước tính: chỉ bíp nhẹ, không rung, không đọc
+      } else {
+        beep(tier, false);
+        if (tier >= 2) navigator.vibrate?.(tier === 3 ? [200, 100, 200] : 200);
+      }
+    }
+  }
+  lastTier = tier;
+}
+
+let passenger = false;
+let lostSince = 0;
+let rerouteFailed = false;
+let gpsSpoken = false;
+function renderBanner(v: ViewState): void {
+  if (v.status === 'lost' && mode === 'gps') lostSince ||= Date.now();
+  else lostSince = 0;
+  const b = pickBanner({ gpsLostMs: lostSince ? Date.now() - lostSince : 0, online: navigator.onLine, navigating: !!guidance, rerouteFailed });
+  $('sys-banner').hidden = !b;
+  if (b) {
+    $('sys-text').textContent = b.text;
+    $('btn-sys-retry').hidden = b.kind !== 'reroute';
+    if (b.kind === 'gps' && !gpsSpoken) {
+      gpsSpoken = true;
+      voice.speak('Mất tín hiệu GPS.');
+    }
+  }
+  if (!b || b.kind !== 'gps') gpsSpoken = false;
+}
+$('btn-sys-retry').addEventListener('click', () => {
+  rerouteFailed = false;
+  lastRerouteAt = 0;
+  void reroute();
+});
+
 let lastPadAt = 0;
 function render(v: ViewState): void {
   renderMapHud(v);
+  const moving = driveLocked(v.kmh, false);
+  app.classList.toggle('moving', moving);
+  alertTier(overTier(v.kmh, v.limit), v.limitEstimated);
+  renderBanner(v);
+  alertBox.dataset.near = v.alert && v.alert.type === 'camera' && v.alert.distM <= 150 ? '1' : '0';
   if (Date.now() - lastPadAt > 1500) {
     lastPadAt = Date.now();
     requestAnimationFrame(applyMapPadding);
@@ -768,6 +867,7 @@ function startSim(): void {
 }
 
 function stopAll(): void {
+  passenger = false;
   features.onStop();
   features2.onStop();
   feedback.onTripEnd();
@@ -793,23 +893,26 @@ const LANDSCAPE = matchMedia('(orientation: landscape) and (max-height: 520px)')
 function applyMapPadding(): void {
   if (!mapView) return;
   if (mapbox.classList.contains('full')) return mapView.setPadding({ top: 0, bottom: 0 });
-  const bar = document.querySelector('.bar') as HTMLElement;
-  if (bar) document.documentElement.style.setProperty('--bar-h', `${bar.offsetHeight}px`);
+  // phần phủ phía trên (thanh trạng thái, dải lỗi, thẻ rẽ, cảnh báo) — ô tốc độ ở dưới không tính
   let top = 0;
   let left = 0;
-  for (const el of document.querySelectorAll<HTMLElement>('.main > :not(.mapbox)')) {
+  for (const el of document.querySelectorAll<HTMLElement>('.topbar, .main > :not(.mapbox):not(.hud):not(.panel)')) {
     const r = el.getBoundingClientRect();
     if (r.height > 0) {
       top = Math.max(top, r.bottom);
       left = Math.max(left, r.right);
     }
   }
-  void bar;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
   if (LANDSCAPE.matches) {
-    // nằm ngang: thông tin ở cột trái → xe nằm giữa phần bản đồ bên phải, chừa cột nút 2 hàng
-    mapView.setPadding({ top: 0, bottom: 0, left: Math.min(left, window.innerWidth * 0.45), right: 120 });
+    // xe ở ~60 % bề ngang: padding trái − phải = 0,2 W
+    const L = Math.min(Math.max(left, W * 0.3), W * 0.46);
+    mapView.setPadding({ top: 0, bottom: 0, left: L, right: Math.max(0, L - W * 0.2) });
   } else {
-    mapView.setPadding({ top: Math.min(top, window.innerHeight * 0.55), bottom: 40, right: 60 });
+    // xe ở ~63 % chiều cao (chuyên gia UX): tâm = (H + T − B) / 2
+    const T = Math.min(Math.max(top + 12, H * 0.3), H * 0.55);
+    mapView.setPadding({ top: T, bottom: Math.max(0, T - H * 0.26), right: 0 });
   }
 }
 window.addEventListener('resize', applyMapPadding);
@@ -1274,7 +1377,23 @@ $('btn-pick-go').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
-$('btn-nav-stop').addEventListener('click', stopNav);
+// "Kết thúc" dẫn đường: luôn hỏi lại (tránh bấm nhầm khi xe rung)
+const endConfirm = $('end-confirm') as HTMLDialogElement;
+let endAction: (() => void) | null = null;
+function askEnd(title: string, yes: string, act: () => void): void {
+  $('end-title').textContent = title;
+  $('btn-end-yes').textContent = yes;
+  endAction = act;
+  endConfirm.showModal();
+}
+$('btn-end-yes').addEventListener('click', () => {
+  endConfirm.close();
+  const a = endAction;
+  endAction = null;
+  a?.();
+});
+$('btn-end-no').addEventListener('click', () => endConfirm.close());
+$('btn-nav-stop').addEventListener('click', () => askEnd('Kết thúc dẫn đường?', 'Kết thúc dẫn đường', stopNav));
 // bấm Enter / nút tìm trên bàn phím → tìm ngay, không chờ
 destQ.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -1478,3 +1597,112 @@ $('restore-file').addEventListener('change', async (ev) => {
   toast('Đã khôi phục. Đang tải lại app…');
   setTimeout(() => location.reload(), 900);
 });
+
+/* ===== Đợt C: bảng "⋯" (C4) và khoá thao tác khi xe chạy (C5) ===== */
+const moreDlg = $('more') as HTMLDialogElement;
+function lockedNow(): boolean {
+  return driveLocked(engine.view().kmh, passenger);
+}
+function paintMore(): void {
+  const locked = lockedNow();
+  $('lock-note').hidden = !locked;
+  for (const b of moreDlg.querySelectorAll<HTMLButtonElement>('[data-lock]')) b.disabled = locked;
+  const share = $('btn-share').classList.contains('active');
+  $('more-share').classList.toggle('active', share);
+  $('more-share').lastChild!.textContent = share ? 'Tắt chia sẻ' : 'Chia sẻ hành trình';
+  $('more-cam').classList.toggle('active', $('btn-cam').classList.contains('rec-on'));
+}
+$('btn-more').addEventListener('click', () => {
+  paintMore();
+  moreDlg.showModal();
+});
+$('btn-more-close').addEventListener('click', () => moreDlg.close());
+moreDlg.addEventListener('click', (e) => {
+  if (e.target === moreDlg) moreDlg.close(); // chạm nền để đóng
+});
+$('btn-passenger').addEventListener('click', () => {
+  passenger = true; // cho đến khi kết thúc lái xe
+  paintMore();
+});
+for (const b of moreDlg.querySelectorAll<HTMLButtonElement>('[data-for]')) {
+  b.addEventListener('click', () => {
+    const id = b.dataset.for!;
+    moreDlg.close();
+    if (id === 'btn-stop') return askEnd('Kết thúc lái xe?', 'Kết thúc lái xe', () => $('btn-stop').click());
+    $(id).click();
+  });
+}
+// C5: mở ô tìm đường / cài đặt khi xe đang chạy → nhắc dừng xe (trừ khi người ngồi cạnh)
+for (const id of ['btn-nav', 'btn-settings']) {
+  $(id).addEventListener(
+    'click',
+    (e) => {
+      if (!lockedNow()) return;
+      e.stopImmediatePropagation();
+      toast('Dừng xe để thao tác. Người ngồi cạnh: bấm ⋯ → “Tôi ngồi cạnh”.');
+    },
+    { capture: true },
+  );
+}
+
+/* ===== C10: giới thiệu 3 bước lần đầu: loại xe → quyền vị trí → thử giọng ===== */
+const OB_KEY = 'lat.onboarded';
+const obDlg = $('onboard') as HTMLDialogElement;
+let obStep = 1;
+function obShow(n: number): void {
+  obStep = n;
+  $('ob-step').textContent = `Bước ${n}/3`;
+  for (const sec of obDlg.querySelectorAll<HTMLElement>('[data-ob]')) sec.hidden = sec.dataset.ob !== String(n);
+  $('btn-ob-next').textContent = n === 3 ? 'Bắt đầu dùng' : 'Tiếp';
+}
+function obDone(): void {
+  try {
+    localStorage.setItem(OB_KEY, '1');
+  } catch {
+    /* bỏ qua */
+  }
+  obDlg.close();
+}
+function paintObVehicles(): void {
+  $('ob-vehicles').replaceChildren(
+    ...VEHICLES.map((v) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = VEHICLE_LABEL[v];
+      b.setAttribute('aria-pressed', String(settings.vehicle === v));
+      b.addEventListener('click', () => {
+        settings.vehicle = v;
+        engine.setVehicle(v);
+        ($('set-vehicle') as HTMLSelectElement).value = v;
+        saveSettings();
+        paintObVehicles();
+      });
+      return b;
+    }),
+  );
+}
+$('btn-ob-next').addEventListener('click', () => (obStep < 3 ? obShow(obStep + 1) : obDone()));
+$('btn-ob-skip').addEventListener('click', obDone);
+$('btn-ob-loc').addEventListener('click', () => {
+  const msg = $('ob-loc-msg');
+  if (!('geolocation' in navigator)) return void (msg.textContent = 'Máy không hỗ trợ GPS.');
+  msg.textContent = 'Đang xin quyền…';
+  navigator.geolocation.getCurrentPosition(
+    () => {
+      msg.textContent = 'Đã cho phép. ✓';
+      obShow(3);
+    },
+    (e) => (msg.textContent = e.code === 1 ? 'Chưa được phép. Mở Cài đặt máy → Quyền riêng tư → Vị trí → cho phép trình duyệt/app.' : 'Chưa lấy được vị trí, thử lại ngoài trời.'),
+    { enableHighAccuracy: true, timeout: 15_000 },
+  );
+});
+$('btn-ob-voice').addEventListener('click', () => voice.speak('Phía trước 500 mét có camera phạt nguội. Chú ý tốc độ.', true));
+try {
+  if (!localStorage.getItem(OB_KEY) && !new URLSearchParams(location.search).has('diem')) {
+    paintObVehicles();
+    obShow(1);
+    obDlg.showModal();
+  }
+} catch {
+  /* bỏ qua */
+}

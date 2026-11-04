@@ -13,6 +13,8 @@ export interface Maneuver {
   /** Độ dài đoạn của bước này (m). */
   lenM: number;
   type: number;
+  /** Tên đường của bước (Valhalla street_names). */
+  streets?: string[];
 }
 
 export interface Route {
@@ -57,6 +59,7 @@ export function parseValhalla(raw: unknown): Route | null {
       startIdx: m.begin_shape_index,
       lenM: num(m.length) ? Math.round(m.length * 1000) : 0,
       type: num(m.type) ? m.type : 0,
+      ...(Array.isArray(m.street_names) ? { streets: (m.street_names as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3) } : {}),
     });
   }
   if (maneuvers.length === 0) return null;

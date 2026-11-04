@@ -2039,3 +2039,627 @@ button.nav-foot {
 
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .row-2 > button { width: 100%; }
+
+/* =====================================================================
+   Đợt C — màn lái xe theo phương án C (chuyên gia UX duyệt 04/11/2026)
+   Thẻ rẽ nền đặc trên cùng · tốc độ + biển góc dưới trái · cột 4 nút + ⋯ góc dưới phải · dải đáy
+   ===================================================================== */
+:root {
+  --card: #ffffff;
+  --card-ink: #0b0f14;
+  --card-line: rgb(0 0 0 / 0.25);
+  --card-shadow: 0 4px 14px rgb(0 0 0 / 0.22);
+  --navcard: #14532d;
+  --navcard-2: #0f3d22;
+  --strip-h: 64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --card: #161c24;
+    --card-ink: #f2f5f8;
+    --card-line: rgb(242 245 248 / 0.55);
+    --card-shadow: 0 4px 14px rgb(0 0 0 / 0.5);
+  }
+}
+:root[data-theme='dark'] {
+  --card: #161c24;
+  --card-ink: #f2f5f8;
+  --card-line: rgb(242 245 248 / 0.55);
+  --card-shadow: 0 4px 14px rgb(0 0 0 / 0.5);
+}
+
+/* C7: khung app phủ kín màn hình kể cả vùng thanh Home (không còn dải trắng đáy iPhone) */
+html,
+body {
+  background: var(--bg);
+}
+.app {
+  position: fixed;
+  inset: 0;
+  height: auto;
+}
+
+/* Thẻ nổi: nền đặc ≥ 90 %, viền tương phản ≥ 3:1 (C3) */
+.app .sys-banner,
+.app .nav,
+.app .alert,
+.app .hud,
+.app .over-banner,
+.app .route-chip {
+  text-shadow: none;
+  border-radius: 18px !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+/* Dải báo lỗi (C6) */
+.sys-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fde047 !important;
+  color: #1a1500 !important;
+  border: 2px solid #a16207 !important;
+  font-weight: 800;
+  font-size: 17px;
+}
+.sys-banner[hidden] {
+  display: none;
+}
+.sys-banner button {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 2px solid #1a1500;
+  background: #fff;
+  color: #1a1500;
+  font: inherit;
+}
+
+/* Thẻ rẽ (C1/C2) */
+.app .nav {
+  background: var(--navcard) !important;
+  color: #fff !important;
+  border: 2px solid rgb(255 255 255 / 0.25) !important;
+  padding: 10px 14px !important;
+  gap: 0;
+}
+.app .nav-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.app .nav-ic {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  color: #fff;
+}
+.app .nav-ic svg {
+  width: 64px;
+  height: 64px;
+  filter: none;
+}
+.app .nav-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.app .nav-dist {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+}
+.app .nav-instr {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.app .nav-next {
+  margin: 8px -14px -10px;
+  padding: 6px 14px;
+  background: var(--navcard-2);
+  border-radius: 0 0 16px 16px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+}
+.app .nav-next[hidden] {
+  display: none;
+}
+
+/* Cảnh báo phía trước: thẻ vàng nền đặc */
+.app .alert {
+  background: #fff7ed !important;
+  color: #7c2d12 !important;
+  border: 2px solid #f59e0b !important;
+  padding: 8px 14px !important;
+}
+.app .alert .alert-sub {
+  color: #7c2d12;
+}
+.app .alert[data-near='1'] {
+  border-color: #dc2626 !important;
+  border-width: 3px !important;
+  transform: scale(1.03);
+}
+:root[data-theme='dark'] .app .alert {
+  background: #3a2606 !important;
+  color: #fde68a !important;
+}
+:root[data-theme='dark'] .app .alert .alert-sub {
+  color: #fde68a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .app .alert {
+    background: #3a2606 !important;
+    color: #fde68a !important;
+  }
+  :root:not([data-theme='light']) .app .alert .alert-sub {
+    color: #fde68a;
+  }
+}
+.app .over-banner {
+  background: var(--card) !important;
+  color: var(--over-ink) !important;
+  border: 2px solid var(--card-line) !important;
+  padding: 6px 12px !important;
+}
+.app .route-chip {
+  background: var(--card) !important;
+  color: var(--card-ink) !important;
+  border: 2px solid var(--card-line) !important;
+  padding: 6px 12px !important;
+  font-size: 15px;
+}
+
+/* Ô tốc độ + biển: góc dưới trái, trên dải đáy */
+.app .hud {
+  position: absolute !important;
+  z-index: 2 !important;
+  left: calc(12px + env(safe-area-inset-left));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.app.navigating .hud {
+  bottom: calc(var(--strip-h) + 14px + env(safe-area-inset-bottom));
+}
+.app .speed {
+  background: var(--card);
+  color: var(--card-ink);
+  border: 2px solid var(--card-line);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  padding: 4px 14px 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.app .speed-num {
+  font-size: 64px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: var(--card-ink);
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+.app .speed-unit {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--card-ink);
+}
+/* C8: vượt tốc 3 mức — đổi cả nền ô tốc độ */
+.app[data-tier='1'] .speed {
+  background: #fde047;
+  border-color: #a16207;
+}
+.app[data-tier='2'] .speed {
+  background: #fb923c;
+  border-color: #9a3412;
+}
+.app[data-tier='3'] .speed {
+  background: #dc2626;
+  border-color: #7f1d1d;
+}
+.app[data-tier='1'] .speed *,
+.app[data-tier='2'] .speed * {
+  color: #1a1200;
+}
+.app[data-tier='3'] .speed * {
+  color: #fff;
+}
+.app .limit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.app .limit[hidden] {
+  display: none;
+}
+.app .limit .sign {
+  width: 84px;
+  font-size: 34px;
+}
+.app .limit-label {
+  font-size: 16px;
+  font-weight: 800;
+  background: var(--card);
+  color: var(--card-ink);
+  border: 1.5px solid var(--card-line);
+  border-radius: 8px;
+  padding: 1px 8px;
+  text-shadow: none;
+  max-width: 150px;
+  text-align: center;
+}
+
+/* Lối thông tin phía trên: thứ tự banner → thẻ rẽ → cảnh báo; chừa cột nút bên phải */
+.app .main {
+  padding-right: 0;
+  gap: 8px;
+}
+.app .panel {
+  display: none !important;
+}
+
+/* Cột nút (C4): từ dưới lên Đánh dấu camera (72) → Giọng lệnh → Tiếng → ⋯ */
+.app .bar {
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+}
+.app.navigating .bar {
+  bottom: calc(var(--strip-h) + 14px + env(safe-area-inset-bottom));
+}
+.app .bar-btn {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  background: var(--card);
+  color: var(--card-ink);
+  border: 2px solid var(--card-line);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.app .bar-btn[aria-pressed='false'] {
+  opacity: 1;
+  color: var(--muted);
+}
+.app .bar-btn.bar-main {
+  order: -3;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+  background: #ffb020;
+  color: #1a1200;
+  border-color: #8a5a00;
+}
+.app #btn-mic {
+  order: -2;
+}
+.app #btn-voice {
+  order: -1;
+}
+.app .bar-btn.bar-more {
+  order: 1;
+}
+.app .bar-btn.extra-stop {
+  order: 2;
+}
+.app .bar-btn.in-more,
+.app.moving .bar-btn.extra-stop,
+.app.moving #btn-settings {
+  display: none;
+}
+.app .bar-btn.active {
+  background: #14532d;
+  color: #fff;
+  border-color: #14532d;
+}
+
+/* Dải đáy khi dẫn đường */
+.nav-strip {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--strip-h);
+  padding: 8px calc(12px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  background: var(--card);
+  color: var(--card-ink);
+  border-top: 2px solid var(--card-line);
+  box-shadow: 0 -4px 14px rgb(0 0 0 / 0.15);
+}
+.nav-strip[hidden] {
+  display: none;
+}
+.ns-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  min-height: 48px;
+}
+.ns-eta {
+  grid-row: 1 / 3;
+  font-size: 26px;
+  font-weight: 800;
+  color: #15803d;
+}
+:root[data-theme='dark'] .ns-eta {
+  color: #4ade80;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ns-eta {
+    color: #4ade80;
+  }
+}
+.ns-left {
+  font-size: 16px;
+  font-weight: 800;
+}
+.ns-dest {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* "Kết thúc": nút viền, cách nút khác ≥ 24 px; có xác nhận */
+.end-btn {
+  flex: none;
+  min-height: 52px;
+  padding: 0 18px;
+  margin-left: 12px;
+  border-radius: 14px;
+  border: 2px solid var(--card-line);
+  background: transparent;
+  color: var(--card-ink);
+  font: inherit;
+  font-weight: 800;
+  font-size: 17px;
+}
+.app.navigating .nav-strip ~ .bar,
+.app.navigating .bar {
+  right: calc(12px + env(safe-area-inset-right));
+}
+
+/* Bảng "⋯" và hộp xác nhận */
+.sheet,
+.confirm {
+  border: 0;
+  border-radius: 24px;
+  padding: 18px;
+  background: var(--surface);
+  color: var(--text);
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+}
+.sheet::backdrop,
+.confirm::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+.sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sheet-grid button {
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px;
+}
+.sheet-grid button.active {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+.sheet-grid button:disabled {
+  opacity: 0.4;
+}
+.sheet > button {
+  width: 100%;
+  margin-top: 8px;
+}
+.lock-note {
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+.confirm h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+}
+.confirm button {
+  width: 100%;
+  min-height: 56px;
+  margin-top: 10px;
+}
+
+/* Màn ngang (≤ 520 px cao): thẻ rẽ ≤ 46 % bề ngang, tối đa 2 hàng phủ phía trên */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app .main {
+    max-width: 46%;
+  }
+  .app .nav-dist {
+    font-size: 30px;
+  }
+  .app .nav-instr {
+    font-size: 20px;
+  }
+  .app .nav-ic,
+  .app .nav-ic svg {
+    width: 56px;
+    height: 56px;
+  }
+  .app .speed-num {
+    font-size: 52px;
+  }
+  .app .limit .sign {
+    width: 68px;
+    font-size: 28px;
+  }
+  .app .bar {
+    gap: 8px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .app .bar-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+  .app .bar-btn.bar-main {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    min-height: 60px;
+  }
+  .app.navigating .bar {
+    bottom: calc(var(--strip-h) + 10px + env(safe-area-inset-bottom));
+  }
+  .app .main > .alert ~ .route-chip,
+  .app .main > .status-chips {
+    display: none;
+  }
+}
+@media (max-height: 700px) and (orientation: portrait) {
+  .app .bar {
+    gap: 8px;
+  }
+  .app .bar-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+}
+.mapbox:not(.full) .map-expand {
+  display: none;
+}
+.mapbox:not(.full) .map-follow {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  bottom: calc(150px + env(safe-area-inset-bottom));
+}
+/* C10: màn giới thiệu 3 bước */
+.onboard h2 {
+  margin: 4px 0 8px;
+}
+.ob-step {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.ob-vehicles {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ob-vehicles button {
+  min-height: 52px;
+  text-align: left;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  margin: 0;
+}
+.ob-vehicles button[aria-pressed='true'] {
+  border-color: #16a34a;
+  background: rgb(22 163 74 / 0.12);
+}
+.ob-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.ob-actions button {
+  margin: 0;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .app .bar {
+    display: flex;
+    flex-direction: column-reverse;
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+  .app .bar > * {
+    grid-row: auto;
+    grid-column: auto;
+  }
+}
+/* Thanh trạng thái GPS: nền đặc, không viền sáng */
+.app .topbar .chip {
+  background: var(--card) !important;
+  color: var(--card-ink) !important;
+  border: 1.5px solid var(--card-line) !important;
+  border-radius: 999px;
+  padding: 3px 10px !important;
+  text-shadow: none !important;
+  font-weight: 700;
+  font-size: 14px;
+}
+/* Máy nhỏ: dải đáy gọn */
+@media (max-width: 380px) {
+  .ns-eta {
+    font-size: 22px;
+  }
+  .ns-left {
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .end-btn {
+    padding: 0 12px;
+    margin-left: 4px;
+  }
+}

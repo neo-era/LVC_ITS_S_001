@@ -4,7 +4,10 @@ import type { Route } from './route';
 
 export interface NavState {
   /** Bước rẽ kế tiếp phía trước; null khi đã tới nơi. */
-  next: { text: string; type: number } | null;
+  next: { text: string; type: number; streets?: string[] } | null;
+  /** Bước ngay sau bước kế tiếp (để hiện "rồi …") và khoảng cách giữa hai bước. */
+  after?: { text: string; type: number; streets?: string[] } | null;
+  afterGapM?: number;
   distToNextM: number;
   remainingM: number;
   offRoute: boolean;
@@ -65,7 +68,7 @@ export class Guidance {
 
   private firstNext(progress: number) {
     const i = this.nextIndex(progress);
-    return i < 0 ? null : { text: this.route.maneuvers[i].text, type: this.route.maneuvers[i].type };
+    return i < 0 ? null : { text: this.route.maneuvers[i].text, type: this.route.maneuvers[i].type, streets: this.route.maneuvers[i].streets };
   }
 
   /** Chiếu vị trí lên các đoạn trong cửa sổ [from, to]; trả đoạn gần nhất, khoảng lệch và quãng đã đi. */
@@ -137,8 +140,11 @@ export class Guidance {
       this.speak('Bạn đã đến nơi.');
     }
 
+    const af = ni >= 0 ? this.route.maneuvers[ni + 1] : undefined;
     this.state = {
-      next: next ? { text: next.text, type: next.type } : null,
+      next: next ? { text: next.text, type: next.type, streets: next.streets } : null,
+      after: af ? { text: af.text, type: af.type, streets: af.streets } : null,
+      afterGapM: af && next ? Math.max(0, this.cum[af.startIdx] - this.cum[next.startIdx]) : Infinity,
       distToNextM,
       remainingM,
       offRoute,

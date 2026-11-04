@@ -34,6 +34,7 @@ export interface EngineOptions {
 }
 
 const OVERSPEED_REPEAT_MS = 20_000;
+const CAM_REMIND_M = 150;
 const MIN_MOVE_M = 5;
 
 const idleView = (): ViewState => ({
@@ -53,6 +54,8 @@ export class Engine {
   private readonly filter = new SpeedFilter();
   private deduper: AlertDeduper;
   private readonly tollDeduper = new AlertDeduper(TOLL_RADIUS_M);
+  /** Camera đã nhắc lần 2 ở 150 m (C9). */
+  private readonly reminded = new Set<string>();
   private radiusM: number;
   private vehicle: Vehicle;
   private readonly speak: (text: string) => void;
@@ -233,7 +236,13 @@ export class Engine {
     const hitIds = new Set(hits.map((h) => h.id));
     for (const h of hits) {
       if (this.deduper.shouldAnnounce(h.id, h.distM)) this.speak(alertVoiceText(h.type, h.distM));
+      else if (h.type === 'camera' && h.distM <= CAM_REMIND_M && this.radiusM > CAM_REMIND_M + 100 && !this.reminded.has(h.id)) {
+        this.reminded.add(h.id);
+        this.speak('Camera còn 150 mét.');
+      }
     }
+    // camera đã đi qua / ra xa → cho phép nhắc lại ở lượt sau
+    for (const id of this.reminded) if (!hitIds.has(id)) this.reminded.delete(id);
     for (const a of alerts) {
       if (a.type !== 'toll' && !hitIds.has(a.id)) this.deduper.shouldAnnounce(a.id, haversine(pos, a));
     }
